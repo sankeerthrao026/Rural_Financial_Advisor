@@ -641,9 +641,10 @@ export function DigitalLogbookScreen() {
                     setShowAddForm(false);
                     setEditingEntryId(null);
                   }}
-                  className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
                 >
-                  ✕ Close
+                  <X className="size-3.5" />
+                  <span>{isTe ? 'మూసివేయి' : 'Close'}</span>
                 </button>
               </div>
 

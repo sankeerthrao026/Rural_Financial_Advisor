@@ -13,6 +13,9 @@ import {
   Sparkles,
   ShieldCheck,
   Languages,
+  UserCheck,
+  Store,
+  ShoppingBag,
 } from 'lucide-react';
 
 export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }) {
@@ -199,13 +202,13 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
                       setEmail('anita.dairy@ruralcred.in');
                       setPassword('demo123');
                     }}
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border transition-colors cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium border transition-colors cursor-pointer ${
                       email.includes('anita')
                         ? 'bg-primary/15 border-primary text-primary font-semibold'
                         : 'bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    <span>🥛</span>
+                    <UserCheck className="size-3 text-primary" />
                     <span>Anita (Dairy)</span>
                   </button>
                   <button
@@ -214,13 +217,13 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
                       setEmail('ramesh.kirana@ruralcred.in');
                       setPassword('demo123');
                     }}
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border transition-colors cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium border transition-colors cursor-pointer ${
                       email.includes('ramesh') || email.includes('kirana')
                         ? 'bg-primary/15 border-primary text-primary font-semibold'
                         : 'bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    <span>🛒</span>
+                    <Store className="size-3 text-primary" />
                     <span>Ramesh (Kirana)</span>
                   </button>
                   <button
@@ -229,13 +232,13 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
                       setEmail('lakshmi.handloom@ruralcred.in');
                       setPassword('demo123');
                     }}
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border transition-colors cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium border transition-colors cursor-pointer ${
                       email.includes('lakshmi') || email.includes('weaving') || email.includes('handloom')
                         ? 'bg-primary/15 border-primary text-primary font-semibold'
                         : 'bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    <span>🧵</span>
+                    <ShoppingBag className="size-3 text-primary" />
                     <span>Lakshmi (Weaver)</span>
                   </button>
                 </div>

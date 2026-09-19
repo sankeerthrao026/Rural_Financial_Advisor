@@ -98,17 +98,17 @@ const DISTRICT_OPTIONS = [
 ];
 
 const CATEGORY_OPTIONS = [
-  { id: 'Dairy', labelEn: 'Dairy Farming (పాడి పరిశ్రమ)', icon: '🥛' },
-  { id: 'Poultry', labelEn: 'Poultry Broiler/Layer (పౌల్ట్రీ)', icon: '🐔' },
-  { id: 'Kirana', labelEn: 'Kirana & General Store (కిరాణా)', icon: '🏪' },
-  { id: 'Weaving', labelEn: 'Handloom & Weaving (చేనేత)', icon: '🧵' },
-  { id: 'Tailoring', labelEn: 'Tailoring & Garments (టైలరింగ్)', icon: '✂️' },
-  { id: 'Agri Processing', labelEn: 'Agri / Flour Milling (పిండి మిల్లు)', icon: '🌾' },
-  { id: 'Pottery', labelEn: 'Pottery & Clay Craft (మట్టి పాత్రలు)', icon: '🏺' },
-  { id: 'Carpentry', labelEn: 'Carpentry & Woodwork (వడ్రంగి)', icon: '🪑' },
-  { id: 'Fishery', labelEn: 'Fishery & Aquaculture (చేపల పెంపకం)', icon: '🐟' },
-  { id: 'Auto Repair', labelEn: 'Auto & Tractor Repair (ఆటో రిపేర్)', icon: '🔧' },
-  { id: 'Street Food', labelEn: 'Street Food / Canteen (గ్రామీణ హోటల్)', icon: '🍲' },
+  { id: 'Dairy', labelEn: 'Dairy Farming', labelTe: 'పాడి పరిశ్రమ' },
+  { id: 'Poultry', labelEn: 'Poultry Broiler/Layer', labelTe: 'పౌల్ట్రీ పెంపకం' },
+  { id: 'Kirana', labelEn: 'Kirana & General Store', labelTe: 'కిరాణా దుకాణం' },
+  { id: 'Weaving', labelEn: 'Handloom & Weaving', labelTe: 'చేనేత వస్త్రాలు' },
+  { id: 'Tailoring', labelEn: 'Tailoring & Garments', labelTe: 'టైలరింగ్' },
+  { id: 'Agri Processing', labelEn: 'Agri / Flour Milling', labelTe: 'వ్యవసాయ మిల్లింగ్' },
+  { id: 'Pottery', labelEn: 'Pottery & Clay Craft', labelTe: 'మట్టి పాత్రల తయారీ' },
+  { id: 'Carpentry', labelEn: 'Carpentry & Woodwork', labelTe: 'వడ్రంగి పని' },
+  { id: 'Fishery', labelEn: 'Fishery & Aquaculture', labelTe: 'చేపల పెంపకం' },
+  { id: 'Auto Repair', labelEn: 'Auto & Tractor Repair', labelTe: 'ఆటో రిపేర్' },
+  { id: 'Street Food', labelEn: 'Street Food / Canteen', labelTe: 'గ్రామీణ హోటల్' },
 ];
 
 const SEASON_OPTIONS = [
@@ -491,7 +491,7 @@ export function BusinessAdvisorScreen() {
             >
               {CATEGORY_OPTIONS.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.icon} {c.labelEn}
+                  {isTe ? c.labelTe : c.labelEn}
                 </option>
               ))}
             </select>

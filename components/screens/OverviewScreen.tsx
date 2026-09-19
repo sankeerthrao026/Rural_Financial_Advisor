@@ -265,8 +265,9 @@ export function OverviewScreen({ setActive }: { setActive: (value: string) => vo
                   {isTe ? '3 పారదర్శక పారామితుల ఆధారంగా' : 'Transparent 3-factor diagnostic score'}
                 </p>
               </div>
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-800 dark:text-emerald-400">
-                ● {isTe ? healthScore.statusTe : healthScore.status}
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-800 dark:text-emerald-400">
+                <span className="size-1.5 rounded-full bg-emerald-500" />
+                {isTe ? healthScore.statusTe : healthScore.status}
               </span>
             </div>
 
@@ -401,7 +402,7 @@ export function OverviewScreen({ setActive }: { setActive: (value: string) => vo
           </div>
         </section>
 
-        {/* ✦ AI Business Advisor Teaser Card */}
+        {/* AI Business Advisor Teaser Card */}
         <section className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-card to-card p-6 shadow-xs flex flex-col justify-between hover-lift relative overflow-hidden">
           <div className="absolute top-0 right-0 p-6 pointer-events-none opacity-10">
             <Sparkles className="size-28 text-primary" />
