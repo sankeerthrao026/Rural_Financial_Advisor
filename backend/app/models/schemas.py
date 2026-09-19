@@ -290,6 +290,105 @@ class AdvisorAnalyzeResponse(BaseModel):
     sourcesUsed: List[str]
     providerUsed: str
 
+# ----------------- Unified Lender-Ready Business Plan -----------------
+class MonthlyCashFlowItem(BaseModel):
+    month: int
+    monthName: str
+    projectedRevenue: float
+    projectedExpense: float
+    netOperatingIncome: float
+    debtService: float
+    netCashFlow: float
+    closingCashBalance: float
+
+class DscrAnalysis(BaseModel):
+    dscrValue: float
+    annualNetOperatingIncome: float
+    annualDebtService: float
+    isHealthy: bool
+    benchmark: str = "Minimum 1.20x required by commercial banks & MFIs"
+    interpretation: str
+    interpretationTe: str
+
+class GuaranteeCoverageInfo(BaseModel):
+    schemeName: str
+    guaranteeAgency: str
+    coveragePercent: float
+    isCollateralFree: bool = True
+    statutoryBacking: str
+    plainLanguageExplanation: str
+    plainLanguageExplanationTe: str
+
+class CapitalAllocationItem(BaseModel):
+    item: str
+    itemTe: str
+    amount: float
+    percentage: float
+    category: Literal["capex", "working_capital", "contingency"]
+
+class SupportingDocument(BaseModel):
+    id: str
+    name: str
+    nameTe: str
+    importance: Literal["Mandatory", "Conditional", "Recommended"]
+    description: str
+    descriptionTe: str
+
+class BusinessPlanRequest(BaseModel):
+    entrepreneurName: Optional[str] = "Anita Sharma"
+    businessName: Optional[str] = "Sharma Dairy Farm"
+    location: str = "Warangal, Telangana"
+    category: str = "Dairy Farming"
+    gender: str = "female"
+    socialCategory: str = "OBC"
+    isNewEnterprise: bool = True
+    marginCapital: float = 100000.0
+    loanAmount: Optional[float] = None
+    projectCost: Optional[float] = None
+    selectedSchemeId: Optional[str] = None
+    monthlyRevenueEstimate: Optional[float] = None
+    monthlyExpenseEstimate: Optional[float] = None
+    businessAdvisorSummary: Optional[str] = None
+    language: str = "en"
+
+class BusinessPlanResponse(BaseModel):
+    enterpriseName: str
+    entrepreneurName: str
+    location: str
+    category: str
+    gender: str
+    socialCategory: str
+    isNewEnterprise: bool
+    generatedDate: str
+    executiveSummary: str
+    executiveSummaryTe: Optional[str] = None
+    marketOpportunitySummary: str
+    marketOpportunitySummaryTe: Optional[str] = None
+    localDemandDrivers: List[str]
+    seasonalAdvice: str
+    totalProjectCost: float
+    promoterMargin: float
+    promoterMarginPercent: float
+    requestedLoanAmount: float
+    selectedSchemeId: str
+    selectedSchemeName: str
+    selectedSchemeNameTe: str
+    interestRateAnnual: float
+    subsidyPercent: Optional[float] = None
+    subsidyAmount: Optional[float] = None
+    tenureYears: float
+    moratoriumMonths: int
+    monthlyEmi: float
+    quarterlyEmi: float
+    capitalAllocations: List[CapitalAllocationItem]
+    cashFlowForecast: List[MonthlyCashFlowItem]
+    dscr: DscrAnalysis
+    guaranteeInfo: GuaranteeCoverageInfo
+    documentChecklist: List[SupportingDocument]
+    riskMitigations: List[str]
+    riskMitigationsTe: List[str]
+    providerUsed: str
+
 # ----------------- Health -----------------
 class HealthResponse(BaseModel):
     status: str = "healthy"

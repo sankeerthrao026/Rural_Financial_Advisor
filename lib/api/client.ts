@@ -145,6 +145,7 @@ export interface FinanceAdviceResponse {
 }
 
 export type { SchemeEligibilityInput, SchemeCalculationResult } from '@/lib/finance/schemes';
+export type { UnifiedBusinessPlan, BusinessPlanRequest } from '@/lib/finance/plan';
 
 export interface ApiResult<T> {
   success: boolean;
@@ -375,6 +376,38 @@ export const apiClient = {
   ): Promise<ApiResult<any[]>> => {
     return requestJson<any[]>(
       '/finance/schemes/calculate',
+      {
+        method: 'POST',
+        body: JSON.stringify(req),
+      },
+      undefined,
+      timeoutMs
+    );
+  },
+
+  // 10. Unified Lender-Ready Business Plan Generator
+  generateBusinessPlan: async (
+    req: {
+      entrepreneurName?: string;
+      businessName?: string;
+      location: string;
+      category: string;
+      gender?: string;
+      socialCategory?: string;
+      isNewEnterprise?: boolean;
+      marginCapital: number;
+      loanAmount?: number;
+      projectCost?: number;
+      selectedSchemeId?: string;
+      monthlyRevenueEstimate?: number;
+      monthlyExpenseEstimate?: number;
+      businessAdvisorSummary?: string;
+      language?: string;
+    },
+    timeoutMs: number = 10000
+  ): Promise<ApiResult<any>> => {
+    return requestJson<any>(
+      '/plan/generate',
       {
         method: 'POST',
         body: JSON.stringify(req),

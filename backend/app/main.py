@@ -5,7 +5,7 @@ from app.config import settings
 from app.models.schemas import HealthResponse
 from app.services.chroma_service import chroma_service
 from app.services.gemini_service import gemini_service
-from app.api import profile, finance, logbook, risk, dashboard, advisor, voice
+from app.api import profile, finance, logbook, risk, dashboard, advisor, voice, plan
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -79,3 +79,4 @@ app.include_router(risk.router, prefix=settings.API_PREFIX)
 app.include_router(dashboard.router, prefix=settings.API_PREFIX)
 app.include_router(advisor.router, prefix=settings.API_PREFIX)
 app.include_router(voice.router, prefix=settings.API_PREFIX)
+app.include_router(plan.router, prefix=settings.API_PREFIX)
