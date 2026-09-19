@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     DATA_DIR: Path = PROJECT_ROOT / "data"
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=[".env", ".env.local", str(BASE_DIR / ".env")],
         extra="ignore"
     )
 

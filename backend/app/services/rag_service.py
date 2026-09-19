@@ -59,7 +59,7 @@ class RAGService:
                 language=req.language,
             )
             if ai_data:
-                provider_used = "gemini-2.5-flash (ChromaDB RAG)"
+                provider_used = f"{gemini_service.last_model_used} (ChromaDB RAG)" if gemini_service.last_model_used else "gemini-flash (ChromaDB RAG)"
 
         # 3. Grounded Fallback if Gemini key is not configured or failed
         if not ai_data:

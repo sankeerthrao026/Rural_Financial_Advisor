@@ -7,6 +7,7 @@ class GeminiService:
     def __init__(self):
         self.api_key = settings.GEMINI_API_KEY
         self.client = None
+        self.last_model_used = None
         self._init_client()
 
     def _init_client(self):
@@ -29,7 +30,7 @@ class GeminiService:
     ) -> Optional[Dict[str, Any]]:
         """
         Calls Gemini API with strict grounding on the retrieved ChromaDB context.
-        Enforces structured JSON response.
+        Enforces structured JSON response with automatic fallback across Flash models.
         """
         if not self.is_available():
             return None
@@ -86,30 +87,41 @@ Return a valid JSON object with the following structure:
   "assumptions": ["string", "string"]
 }}"""
 
-        try:
-            response = self.client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_prompt,
-                    response_mime_type="application/json",
-                    temperature=0.2,
-                ),
-            )
+        candidate_models = [
+            "gemini-3.5-flash-lite",
+            "gemini-3.7-flash",
+            "gemini-3.5-flash",
+            "gemini-flash-latest",
+            "gemini-3.6-flash",
+        ]
+        for model in candidate_models:
+            try:
+                response = self.client.models.generate_content(
+                    model=model,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_prompt,
+                        response_mime_type="application/json",
+                        temperature=0.2,
+                    ),
+                )
 
-            raw_text = response.text or ""
-            json_text = raw_text.strip()
-            if json_text.startswith("```"):
-                lines = json_text.split("\n")
-                if lines[0].startswith("```"):
-                    lines = lines[1:]
-                if lines and lines[-1].startswith("```"):
-                    lines = lines[:-1]
-                json_text = "\n".join(lines).strip()
+                raw_text = response.text or ""
+                json_text = raw_text.strip()
+                if json_text.startswith("```"):
+                    lines = json_text.split("\n")
+                    if lines[0].startswith("```"):
+                        lines = lines[1:]
+                    if lines and lines[-1].startswith("```"):
+                        lines = lines[:-1]
+                    json_text = "\n".join(lines).strip()
 
-            return json.loads(json_text)
-        except Exception as e:
-            print(f"[WARN] Gemini generation failed: {e}")
-            return None
+                parsed = json.loads(json_text)
+                self.last_model_used = model
+                return parsed
+            except Exception as e:
+                print(f"[WARN] Gemini generation with {model} failed: {e}")
+
+        return None
 
 gemini_service = GeminiService()
