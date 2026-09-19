@@ -85,6 +85,46 @@ class FinancialHealthResponse(BaseModel):
     breakdown: List[MetricBreakdown]
 
 # ----------------- Conversational AI Finance Advisor -----------------
+class SchemeEligibilityInput(BaseModel):
+    loanAmount: float = Field(..., gt=0, description="Requested loan amount in INR")
+    category: str = Field(default="Dairy Farming", description="Business trade or enterprise type")
+    gender: str = Field(default="female", description="Gender: female, male, other")
+    socialCategory: str = Field(default="General", description="Social category: General, OBC, SC, ST")
+    locationType: Literal["rural", "urban"] = Field(default="rural", description="Geographic location")
+    isNewEnterprise: bool = Field(default=True, description="Whether this is a new greenfield enterprise")
+    isArtisanTrade: Optional[bool] = Field(default=None, description="Explicit artisan craft flag")
+
+class SchemeCalculationResult(BaseModel):
+    schemeId: str
+    schemeName: str
+    schemeNameTe: str
+    category: str
+    agency: str
+    isEligible: bool
+    ineligibilityReason: Optional[str] = None
+    maxEligibleLoan: float
+    requestedLoanAmount: float
+    sanctionedLoanAmount: float
+    promoterContribution: float
+    promoterContributionPercent: float
+    totalProjectCost: float
+    interestRateAnnual: float
+    subsidyPercent: Optional[float] = None
+    subsidyAmount: Optional[float] = None
+    tenureYears: float
+    tenureMonths: int
+    moratoriumMonths: int
+    monthlyEmi: float
+    quarterlyEmi: float
+    totalInterestPaid: float
+    totalRepayment: float
+    collateralFree: bool
+    guaranteeCoverage: str
+    guaranteeCoverageTe: str
+    benefits: List[str]
+    benefitsTe: List[str]
+    isTopMatch: bool = False
+
 class TailoredSchemeRecommendation(BaseModel):
     id: str
     name: str

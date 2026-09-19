@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import { formatINR } from '@/lib/utils/currency';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import {
   WorkingCapitalBreakdown,
   SeasonalMoratoriumAdvice,
 } from '@/lib/api/client';
+import { calculateAllEligibleSchemes, SchemeCalculationResult } from '@/lib/finance/schemes';
 import { isSpeechRecognitionSupported, startSpeechListening } from '@/lib/voice/speech';
 import {
   Calculator,
@@ -41,6 +42,8 @@ import {
   Award,
   HelpCircle,
   Check,
+  Star,
+  ExternalLink,
 } from 'lucide-react';
 
 export interface AdvisorChatMessage {
@@ -66,6 +69,29 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
 
   // Working capital ratio slider (null = use category baseline default)
   const [customWcRatio, setCustomWcRatio] = useState<number | null>(null);
+
+  // Pure deterministic multi-scheme calculations for MUDRA, PM Vishwakarma, Stand-Up India, PMEGP, NBCFDC
+  const allCalculatedSchemes = useMemo<SchemeCalculationResult[]>(() => {
+    return calculateAllEligibleSchemes({
+      loanAmount: finance.loanAmount,
+      category: profile.category,
+      gender: selectedGender,
+      socialCategory: selectedSocialCategory,
+      locationType: 'rural',
+      isNewEnterprise: true,
+    });
+  }, [finance.loanAmount, profile.category, selectedGender, selectedSocialCategory]);
+
+  const [selectedSchemeId, setSelectedSchemeId] = useState<string>('');
+
+  useEffect(() => {
+    if (!selectedSchemeId || !allCalculatedSchemes.some((s) => s.schemeId === selectedSchemeId)) {
+      const topMatch = allCalculatedSchemes.find((s) => s.isTopMatch) || allCalculatedSchemes[0];
+      if (topMatch) setSelectedSchemeId(topMatch.schemeId);
+    }
+  }, [allCalculatedSchemes, selectedSchemeId]);
+
+  const activeScheme = allCalculatedSchemes.find((s) => s.schemeId === selectedSchemeId) || allCalculatedSchemes[0];
 
   // Advisory API state
   const [adviceData, setAdviceData] = useState<FinanceAdviceResponse | null>(null);
@@ -655,85 +681,171 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
         </section>
       )}
 
-      {/* 5. Tailored Government Credit Scheme Recommendations */}
+      {/* 5. Pure Deterministic Multi-Scheme Calculation & Side-by-Side Comparison Engine */}
       <section className="rounded-2xl border bg-card p-5 sm:p-6 shadow-xs hover-lift">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b">
           <div>
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/10 text-primary">
                 <Award className="size-3.5" />
-                {isTe ? 'జనాభా వివరాల ఆధారిత పథకాలు' : 'Demographic-Tailored Scheme Matching'}
+                {isTe ? 'జాతీయ రుణ పథకాల పోలిక మ్యాట్రిక్స్' : 'National Scheme Calculation & Comparison Engine'}
               </span>
               <span className="text-xs text-muted-foreground">
                 {selectedGender === 'female' ? (isTe ? 'మహిళా ప్రాధాన్యత' : 'Women Priority') : ''} • {selectedSocialCategory}
               </span>
             </div>
             <h3 className="mt-1 text-base font-semibold font-sora">
-              {isTe ? 'మీ ప్రొఫైల్‌కు ఉత్తమ ప్రభుత్వ రుణ పథకాలు' : 'Schemes Prioritized for Your Profile'}
+              {isTe ? 'అన్ని అర్హత కలిగిన ప్రభుత్వ పథకాల పోలిక' : 'Side-by-Side Comparison Across All 5 National Schemes'}
             </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {isTe
+                ? 'MUDRA, PM విశ్వకర్మ, స్టాండ్-అప్ ఇండియా, PMEGP మరియు NBCFDC లెక్కింపులు ఒకే చోట.'
+                : 'Deterministic calculations for MUDRA (auto-tiered), PM Vishwakarma, Stand-Up India, PMEGP, and NBCFDC.'}
+            </p>
           </div>
-          <span className="text-xs text-muted-foreground">
-            {isTe ? 'ప్రభుత్వ నిబంధనల ప్రకారం వర్గీకరణ' : 'Ranked by statutory eligibility and subsidy benefits'}
+          <span className="text-xs text-muted-foreground font-mono">
+            {allCalculatedSchemes.filter((s) => s.isEligible).length} of {allCalculatedSchemes.length} {isTe ? 'పథకాలకు అర్హత ఉంది' : 'Eligible Schemes'}
           </span>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {(adviceData?.recommendedSchemes || []).slice(0, 3).map((scheme, idx) => (
-            <div
-              key={scheme.id}
-              className={`rounded-xl border p-4 flex flex-col justify-between transition-all ${
-                scheme.isTopMatch
-                  ? 'bg-primary/5 border-primary/40 shadow-xs ring-1 ring-primary/20'
-                  : 'bg-background hover:bg-muted/30'
-              }`}
-            >
-              <div>
-                <div className="flex items-center justify-between gap-2">
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${
-                      scheme.isTopMatch
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-muted-foreground'
-                    }`}
-                  >
-                    {scheme.isTopMatch ? (
-                      <>
-                        <ShieldCheck className="size-3" />
-                        {isTe ? 'అగ్ర ఎంపిక (Top Match)' : 'Top Match'}
-                      </>
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {allCalculatedSchemes.map((scheme) => {
+            const isSelected = scheme.schemeId === selectedSchemeId;
+            return (
+              <div
+                key={scheme.schemeId}
+                className={`rounded-xl border p-4 flex flex-col justify-between transition-all relative ${
+                  isSelected
+                    ? 'bg-primary/5 border-primary shadow-sm ring-2 ring-primary/30'
+                    : scheme.isTopMatch
+                    ? 'bg-background border-primary/40 shadow-xs'
+                    : scheme.isEligible
+                    ? 'bg-background hover:bg-muted/20 border-border'
+                    : 'bg-muted/30 border-dashed border-muted-foreground/30 opacity-75'
+                }`}
+              >
+                <div>
+                  {/* Card Header Badges */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {scheme.isTopMatch && (
+                        <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold bg-primary text-primary-foreground shadow-xs">
+                          <ShieldCheck className="size-3" />
+                          {isTe ? 'టాప్ ఛాయిస్' : 'Top Match'}
+                        </span>
+                      )}
+                      <span className="text-[10px] font-semibold bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                        {scheme.category}
+                      </span>
+                    </div>
+
+                    <span className="text-[11px] font-mono font-bold text-muted-foreground">
+                      Max: {formatINR(scheme.maxEligibleLoan)}
+                    </span>
+                  </div>
+
+                  <h4 className="mt-2.5 font-bold font-sora text-sm text-foreground flex items-center gap-1.5">
+                    <span>{isTe && scheme.schemeNameTe ? scheme.schemeNameTe : scheme.schemeName}</span>
+                    {isSelected && <Check className="size-4 text-primary shrink-0" />}
+                  </h4>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{scheme.agency}</p>
+
+                  {/* Financial Metrics Grid */}
+                  <div className="mt-3 grid grid-cols-2 gap-2 bg-muted/40 rounded-lg p-2.5 text-xs">
+                    <div>
+                      <span className="text-[10px] text-muted-foreground block">{isTe ? 'వడ్డీ రేటు:' : 'Interest Rate:'}</span>
+                      <strong className="font-mono text-foreground">{scheme.interestRateAnnual.toFixed(1)}% p.a.</strong>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] text-muted-foreground block">{isTe ? 'ప్రభుత్వ సబ్సిడీ:' : 'Capital Subsidy:'}</span>
+                      {scheme.subsidyAmount && scheme.subsidyPercent ? (
+                        <strong className="font-mono text-emerald-800 dark:text-emerald-400">
+                          {scheme.subsidyPercent}% ({formatINR(scheme.subsidyAmount)})
+                        </strong>
+                      ) : (
+                        <span className="text-muted-foreground">{isTe ? 'రుణం మాత్రమే' : 'None (Direct loan)'}</span>
+                      )}
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] text-muted-foreground block">{isTe ? 'నెలవారీ EMI:' : 'Monthly EMI:'}</span>
+                      <strong className="font-mono text-primary">{formatINR(scheme.monthlyEmi)}</strong>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] text-muted-foreground block">{isTe ? 'త్రైమాసిక EMI:' : 'Quarterly EMI:'}</span>
+                      <strong className="font-mono text-primary">{formatINR(scheme.quarterlyEmi)}</strong>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] text-muted-foreground block">{isTe ? 'స్వంత మార్జిన్:' : 'Promoter Margin:'}</span>
+                      <span className="font-mono text-muted-foreground">
+                        {scheme.promoterContributionPercent}% ({formatINR(scheme.promoterContribution)})
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] text-muted-foreground block">{isTe ? 'కాలపరిమితి / గ్రేస్:' : 'Tenure / Grace:'}</span>
+                      <span className="font-mono text-muted-foreground">
+                        {scheme.tenureYears} Yrs ({scheme.moratoriumMonths}m grace)
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Guarantee Coverage Badge */}
+                  <div className="mt-2.5 rounded-md bg-background/80 border p-2 text-[11px] text-muted-foreground flex items-center gap-1.5">
+                    <ShieldCheck className="size-3.5 text-primary shrink-0" />
+                    <span className="truncate">{scheme.guaranteeCoverage}</span>
+                  </div>
+
+                  {/* Benefits */}
+                  <ul className="mt-2.5 space-y-1 text-xs text-muted-foreground">
+                    {(isTe && scheme.benefitsTe ? scheme.benefitsTe : scheme.benefits).slice(0, 2).map((b, bIdx) => (
+                      <li key={bIdx} className="flex items-start gap-1.5 text-[11px]">
+                        <Check className="size-3 text-emerald-800 dark:text-emerald-400 shrink-0 mt-0.5" />
+                        <span>{b}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* Ineligibility notice if not eligible */}
+                  {!scheme.isEligible && scheme.ineligibilityReason && (
+                    <div className="mt-2.5 rounded-md bg-amber-500/10 border border-amber-300/80 p-2 text-[11px] text-amber-950 dark:text-amber-200">
+                      <strong>{isTe ? 'అర్హత నిబంధన: ' : 'Condition: '}</strong>
+                      {scheme.ineligibilityReason}
+                    </div>
+                  )}
+                </div>
+
+                {/* Action footer */}
+                <div className="mt-3.5 pt-2.5 border-t flex items-center justify-between">
+                  <span className="text-[11px] text-muted-foreground">
+                    {scheme.isEligible ? (
+                      <span className="text-emerald-800 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                        <CheckCircle2 className="size-3" />
+                        {isTe ? 'అర్హత ఉంది' : '100% Eligible'}
+                      </span>
                     ) : (
-                      `#${idx + 1}`
+                      <span className="text-muted-foreground">{isTe ? 'ప్రత్యేక అర్హత అవసరం' : 'Criteria Required'}</span>
                     )}
                   </span>
-                  <span className="text-[11px] font-mono font-bold text-muted-foreground">
-                    Max: {formatINR(scheme.maxAmount)}
-                  </span>
+
+                  <Button
+                    variant={isSelected ? 'default' : 'outline'}
+                    size="sm"
+                    disabled={!scheme.isEligible}
+                    onClick={() => setSelectedSchemeId(scheme.schemeId)}
+                    className="h-7 text-xs px-2.5 cursor-pointer font-medium"
+                  >
+                    {isSelected
+                      ? (isTe ? 'ఎంచుకోబడింది' : 'Selected Active')
+                      : (isTe ? 'ఈ పథకం ఎంచుకోండి' : 'Select Baseline')}
+                  </Button>
                 </div>
-
-                <h4 className="mt-2.5 font-bold font-sora text-sm text-foreground">
-                  {isTe && scheme.nameTe ? scheme.nameTe : scheme.name}
-                </h4>
-                <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{scheme.agency}</p>
-
-                <div className="mt-2.5 rounded-lg bg-muted/40 p-2 text-[11px] font-medium text-emerald-800 dark:text-emerald-400">
-                  {isTe && scheme.subsidyOrConcessionTe ? scheme.subsidyOrConcessionTe : scheme.subsidyOrConcession}
-                </div>
-
-                <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-                  <strong className="text-foreground">{isTe ? 'ఎందుకు సరిపోతుంది: ' : 'Why recommended: '}</strong>
-                  {isTe && scheme.whyRecommendedTe ? scheme.whyRecommendedTe : scheme.whyRecommended}
-                </p>
               </div>
-
-              <div className="mt-3 pt-2.5 border-t flex items-center justify-between text-[11px]">
-                <span className="text-muted-foreground">{isTe ? 'అర్హత స్థితి: ' : 'Eligibility: '}</span>
-                <span className="font-semibold text-primary flex items-center gap-1">
-                  <Check className="size-3" />
-                  {isTe ? 'పూర్తి అర్హత ఉంది' : '100% Eligible'}
-                </span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 

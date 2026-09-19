@@ -144,6 +144,8 @@ export interface FinanceAdviceResponse {
   providerUsed: string;
 }
 
+export type { SchemeEligibilityInput, SchemeCalculationResult } from '@/lib/finance/schemes';
+
 export interface ApiResult<T> {
   success: boolean;
   data: T | null;
@@ -349,6 +351,30 @@ export const apiClient = {
   ): Promise<ApiResult<FinanceAdviceResponse>> => {
     return requestJson<FinanceAdviceResponse>(
       '/finance/advisor-chat',
+      {
+        method: 'POST',
+        body: JSON.stringify(req),
+      },
+      undefined,
+      timeoutMs
+    );
+  },
+
+  // 9. Pure Deterministic Multi-Scheme Calculation Engine
+  calculateSchemes: async (
+    req: {
+      loanAmount: number;
+      category: string;
+      gender: string;
+      socialCategory: string;
+      locationType: 'rural' | 'urban';
+      isNewEnterprise?: boolean;
+      isArtisanTrade?: boolean;
+    },
+    timeoutMs: number = 5000
+  ): Promise<ApiResult<any[]>> => {
+    return requestJson<any[]>(
+      '/finance/schemes/calculate',
       {
         method: 'POST',
         body: JSON.stringify(req),

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from fastapi import APIRouter, Depends
 from app.auth import get_auth_context, AuthContext
 from app.models.schemas import (
@@ -7,6 +7,8 @@ from app.models.schemas import (
     FinancialHealthResponse,
     FinanceAdviceRequest,
     FinanceAdviceResponse,
+    SchemeEligibilityInput,
+    SchemeCalculationResult,
 )
 from app.services.finance_service import (
     calculate_finance_plan,
@@ -68,4 +70,15 @@ def advisor_chat(req: FinanceAdviceRequest):
     working capital vs. capex split, seasonal moratorium guidance, and multi-turn conversational AI.
     """
     return generate_finance_advice(req)
+
+@router.post("/schemes/calculate", response_model=List[SchemeCalculationResult])
+def calculate_schemes_comparison(req: SchemeEligibilityInput):
+    """
+    Pure deterministic multi-scheme calculation engine:
+    Evaluates MUDRA (Shishu/Kishore/Tarun), PM Vishwakarma, Stand-Up India, PMEGP, and NBCFDC.
+    Calculates eligible loan, EMI, subsidy, margin, and collateral guarantee side by side.
+    """
+    from app.services.schemes_calculator import calculate_all_eligible_schemes
+    return calculate_all_eligible_schemes(req)
+
 
