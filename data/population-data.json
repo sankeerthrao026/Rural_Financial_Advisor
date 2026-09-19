@@ -1,0 +1,59 @@
+{
+  "districts": {
+    "warangal": {
+      "name": "Warangal (వరంగల్)",
+      "state": "Telangana",
+      "totalRuralHouseholds": 184500,
+      "averageVillagePopulation": 2400,
+      "majorCrops": ["Cotton", "Paddy", "Chilli", "Maize"],
+      "dairyCooperativePresence": "High (Mulkanoor, Vijaya Dairy)",
+      "averageMonthlyRuralIncome": 16500,
+      "commercialHubs": ["Warangal City", "Narsampet", "Wardhannapet", "Parkal"],
+      "bankingOutlets": "Branch network in mandal headquarters + Bank Mitras in major Gram Panchayats."
+    },
+    "karimnagar": {
+      "name": "Karimnagar (కరీంనగర్)",
+      "state": "Telangana",
+      "totalRuralHouseholds": 152000,
+      "averageVillagePopulation": 2800,
+      "majorCrops": ["Paddy", "Cotton", "Vegetables", "Maize"],
+      "dairyCooperativePresence": "Very High (Karimnagar Dairy)",
+      "averageMonthlyRuralIncome": 18200,
+      "commercialHubs": ["Karimnagar", "Huzurabad", "Jammikunta", "Choppadandi"],
+      "bankingOutlets": "Robust cooperative credit society (DCCB) and rural regional bank presence."
+    },
+    "nalgonda": {
+      "name": "Nalgonda (నల్గొండ)",
+      "state": "Telangana",
+      "totalRuralHouseholds": 210000,
+      "averageVillagePopulation": 2100,
+      "majorCrops": ["Paddy", "Cotton", "Sweet Orange (Mosambi)", "Pulses"],
+      "dairyCooperativePresence": "Moderate (Mother Dairy, Vijaya)",
+      "averageMonthlyRuralIncome": 15800,
+      "commercialHubs": ["Nalgonda", "Miryalaguda", "Devarakonda", "Nakrekal"],
+      "bankingOutlets": "Strong SHG bank linkage; extensive Stree Nidhi network."
+    },
+    "nizamabad": {
+      "name": "Nizamabad (నిజామాబాద్)",
+      "state": "Telangana",
+      "totalRuralHouseholds": 175000,
+      "averageVillagePopulation": 2600,
+      "majorCrops": ["Turmeric", "Paddy", "Soybean", "Sugarcane"],
+      "dairyCooperativePresence": "Moderate to High",
+      "averageMonthlyRuralIncome": 17400,
+      "commercialHubs": ["Nizamabad", "Armoor", "Bodhan", "Bheemgal"],
+      "bankingOutlets": "Regional Rural Bank (Telangana Grameena Bank) widespread."
+    },
+    "default_rural": {
+      "name": "Rural Telangana & Semi-Urban Cluster",
+      "state": "Telangana / Andhra Pradesh",
+      "totalRuralHouseholds": 160000,
+      "averageVillagePopulation": 2200,
+      "majorCrops": ["Paddy", "Cotton", "Millets", "Vegetables"],
+      "dairyCooperativePresence": "Moderate",
+      "averageMonthlyRuralIncome": 16000,
+      "commercialHubs": ["Mandal Headquarters", "Weekly Haat / Santalu"],
+      "bankingOutlets": "Business Correspondents (BCs) and Lead District Bank branches."
+    }
+  }
+}

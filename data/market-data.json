@@ -1,0 +1,175 @@
+{
+  "categories": {
+    "dairy": {
+      "name": "Dairy Farming (పాడి పరిశ్రమ)",
+      "benchmarkProjectCost": { "min": 80000, "typical": 1000000, "max": 2500000 },
+      "marginRange": "18% - 28%",
+      "averageDailyVolume": "25 - 80 Litres/day (for 2-5 animals)",
+      "pricingBenchmarks": {
+        "cowMilkPerLitre": "₹52 - ₹60",
+        "buffaloMilkPerLitre": "₹70 - ₹82",
+        "bulkCooperativeRate": "₹48 - ₹55/L"
+      },
+      "demandSeasonality": "Peak demand during festival seasons (Sankranti, Dussehra, wedding season Oct-Feb); lower yield during peak summer (Apr-May).",
+      "competitorDensity": "Moderate (typically 3 to 6 local milk producers per village cluster; strong absorption by dairy cooperatives like Vijaya, Amul, Mulkanoor).",
+      "typicalCosts": [
+        { "item": "Cattle Feed & Fodder", "percentageOfOpex": 55 },
+        { "item": "Veterinary & Medicine", "percentageOfOpex": 10 },
+        { "item": "Labour / Maintenance", "percentageOfOpex": 20 },
+        { "item": "Electricity & Transport", "percentageOfOpex": 15 }
+      ],
+      "keyRisks": [
+        "Summer green fodder shortage",
+        "Fluctuating cattle feed prices",
+        "Disease outbreaks (e.g. Foot and Mouth Disease)",
+        "Delayed payment cycles from private collection agents"
+      ],
+      "recommendedActions": [
+        "Secure supply contract with local dairy cooperative",
+        "Invest in silage / dry fodder storage before summer",
+        "Ensure cattle insurance coverage under Livestock Insurance Scheme"
+      ]
+    },
+    "poultry": {
+      "name": "Country / Broiler Poultry (నాటు కోళ్ల / బ్రాయిలర్ ఫారమ్)",
+      "benchmarkProjectCost": { "min": 100000, "typical": 500000, "max": 1500000 },
+      "marginRange": "15% - 24%",
+      "averageDailyVolume": "200 - 1000 birds cycle",
+      "pricingBenchmarks": {
+        "broilerLiveBirdPerKg": "₹120 - ₹160",
+        "countryChickenPerKg": "₹320 - ₹420",
+        "eggsPerDozen": "₹60 - ₹75"
+      },
+      "demandSeasonality": "High demand weekends and non-fasting months; sharp dips during Shravana and Karthika masam.",
+      "competitorDensity": "High for broiler contract farming; Low to moderate for free-range country chicken (Natukodi).",
+      "typicalCosts": [
+        { "item": "Feed (Mash/Pellets)", "percentageOfOpex": 65 },
+        { "item": "Chicks (DOC)", "percentageOfOpex": 18 },
+        { "item": "Medicines & Vaccines", "percentageOfOpex": 8 },
+        { "item": "Bedding & Utilities", "percentageOfOpex": 9 }
+      ],
+      "keyRisks": [
+        "High mortality rates in extreme summer heat",
+        "Feed price volatility (maize and soya)",
+        "Sudden retail price drops driven by commercial integrators"
+      ],
+      "recommendedActions": [
+        "Focus on indigenous Natukodi breeds with premium margins",
+        "Install foggers or sprinkler cooling for summer heat mitigation"
+      ]
+    },
+    "kirana": {
+      "name": "Rural Grocery / Kirana Store (కిరాణా & జనరల్ స్టోర్)",
+      "benchmarkProjectCost": { "min": 50000, "typical": 200000, "max": 800000 },
+      "marginRange": "12% - 20%",
+      "averageDailyVolume": "₹4,000 - ₹15,000 gross daily sales",
+      "pricingBenchmarks": {
+        "staplesMargin": "8% - 12%",
+        "packagedFMCGMargin": "12% - 18%",
+        "spicesAndLooseGoodsMargin": "20% - 30%"
+      },
+      "demandSeasonality": "Steady baseline throughout year; surges during post-harvest harvest settlement and festivals.",
+      "competitorDensity": "High (almost 5 to 10 village shops within 1 km radius). Differentiation requires credit management & digital payments.",
+      "typicalCosts": [
+        { "item": "Inventory Restocking", "percentageOfOpex": 80 },
+        { "item": "Shop Rent (if rented)", "percentageOfOpex": 10 },
+        { "item": "Electricity & Transport", "percentageOfOpex": 7 },
+        { "item": "Loss / Expiries", "percentageOfOpex": 3 }
+      ],
+      "keyRisks": [
+        "Uncollected customer credit (Udhaari book defaults)",
+        "Overstocking perishable goods",
+        "Competition from wholesale weekly haats (Santalu)"
+      ],
+      "recommendedActions": [
+        "Strict 15-day limit on customer credit ledger",
+        "Stock fast-moving regional brands and regional snacks",
+        "Adopt UPI QR code payment system for faster settlements"
+      ]
+    },
+    "weaving": {
+      "name": "Handloom / Powerloom Weaving (చేనేత / పవర్లూమ్ వస్త్రాలు)",
+      "benchmarkProjectCost": { "min": 75000, "typical": 300000, "max": 1200000 },
+      "marginRange": "22% - 35%",
+      "averageDailyVolume": "4 - 15 Sarees or yards/week per loom",
+      "pricingBenchmarks": {
+        "cottonHandloomSaree": "₹1,200 - ₹3,500",
+        "silkIkatSaree": "₹4,500 - ₹16,000",
+        "cottonFabricPerMetre": "₹140 - ₹280"
+      },
+      "demandSeasonality": "Strong festive and wedding peaks (August through February); monsoon lull.",
+      "competitorDensity": "Clustered in specific weaving villages (e.g. Pochampally, Gadwal, Mangalagiri, Sircilla). Direct market access beats middlemen.",
+      "typicalCosts": [
+        { "item": "Raw Yarn & Zari / Silk", "percentageOfOpex": 58 },
+        { "item": "Dyes & Chemicals", "percentageOfOpex": 12 },
+        { "item": "Loom Maintenance", "percentageOfOpex": 10 },
+        { "item": "Master Weaver / Dyeing Wages", "percentageOfOpex": 20 }
+      ],
+      "keyRisks": [
+        "Raw silk/cotton yarn price spikes",
+        "Exploitative master weaver commission margins",
+        "Counterfeit powerloom replicas sold as handloom"
+      ],
+      "recommendedActions": [
+        "Register under Handloom Mark and Weaver Credit Card Scheme",
+        "Form direct tie-ups with Dastkar, GoCoop, or regional craft exhibitions"
+      ]
+    },
+    "tailoring": {
+      "name": "Tailoring & Boutique (టైలరింగ్ & రెడీమేడ్)",
+      "benchmarkProjectCost": { "min": 35000, "typical": 140000, "max": 500000 },
+      "marginRange": "35% - 55%",
+      "averageDailyVolume": "3 - 10 garments stitched/day",
+      "pricingBenchmarks": {
+        "blouseStitchingBasic": "₹180 - ₹280",
+        "blouseMaggamWork": "₹800 - ₹2,500",
+        "dressStitching": "₹300 - ₹600",
+        "schoolUniformBatch": "₹150 - ₹220/set"
+      },
+      "demandSeasonality": "Extreme surges during marriage season and school reopening (May-June).",
+      "competitorDensity": "Moderate to high. Artisanship, timeliness, and maggam embroidery create strong moat.",
+      "typicalCosts": [
+        { "item": "Threads, Zips, Linings & Raw Materials", "percentageOfOpex": 25 },
+        { "item": "Machine Maintenance & Oil", "percentageOfOpex": 8 },
+        { "item": "Electricity & Ironing", "percentageOfOpex": 12 },
+        { "item": "Assistant Tailor Wages", "percentageOfOpex": 55 }
+      ],
+      "keyRisks": [
+        "Single-person dependency and delivery delays during rush season",
+        "Frequent power cuts affecting electric sewing/ironing machines"
+      ],
+      "recommendedActions": [
+        "Acquire motorized industrial machine with inverter backup",
+        "Add computer embroidery / maggam work service for higher margins"
+      ]
+    },
+    "agri_processing": {
+      "name": "Agri-Processing & Flour / Spice Mill (పిండి మిల్లు & చిరుధాన్యాల ప్రాసెసింగ్)",
+      "benchmarkProjectCost": { "min": 100000, "typical": 450000, "max": 1800000 },
+      "marginRange": "25% - 40%",
+      "averageDailyVolume": "100kg - 500kg grain/spice processing per day",
+      "pricingBenchmarks": {
+        "flourMillingRatePerKg": "₹5 - ₹8",
+        "chilliSpicePoundingPerKg": "₹15 - ₹25",
+        "milletDehuskingPerKg": "₹10 - ₹18"
+      },
+      "demandSeasonality": "Post-harvest harvest surges (March-April for Rabi, Nov-Dec for Kharif). Consistent weekly household milling.",
+      "competitorDensity": "Low to moderate (usually 1-2 mills per village cluster of 2,000 households).",
+      "typicalCosts": [
+        { "item": "Commercial 3-Phase Power / Diesel", "percentageOfOpex": 45 },
+        { "item": "Blade, Emery Stone & Screen Maintenance", "percentageOfOpex": 20 },
+        { "item": "Packaging Material", "percentageOfOpex": 15 },
+        { "item": "Helper Wages", "percentageOfOpex": 20 }
+      ],
+      "keyRisks": [
+        "Voltage fluctuations damaging 3-phase motor",
+        "Dust hazard and safety risks without proper ventilation",
+        "Seasonal dip during lean agricultural months"
+      ],
+      "recommendedActions": [
+        "Install automated motor starter with phase preventer",
+        "Expand into packaged branded millet flours and turmeric powder"
+      ]
+    }
+  }
+}

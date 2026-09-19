@@ -1,0 +1,78 @@
+{
+  "schemes": [
+    {
+      "id": "micro-finance",
+      "name": "Micro Finance Scheme (సూక్ష్మ రుణ పథకం)",
+      "agency": "National Backward Classes Finance & Development Corporation (NBCFDC) / State Corporations",
+      "maxProjectCost": 140000,
+      "loanPercentage": 90,
+      "interestRate": 6.5,
+      "tenureYears": 3,
+      "moratoriumMonths": 3,
+      "repaymentFrequency": "Quarterly",
+      "eligibility": "Rural target group micro-entrepreneurs with annual family income up to ₹3,00,000.",
+      "security": "Hypothecation of assets created out of loan; self-help group guarantee or personal guarantee.",
+      "description": "Tailored for nano-entrepreneurs, dairy smallholders, and rural shopkeepers requiring capital up to ₹1.40 Lakh with subsidized interest."
+    },
+    {
+      "id": "term-loan",
+      "name": "Term Loan Scheme (టర్మ్ లోన్ పథకం)",
+      "agency": "National Backward Classes Finance & Development Corporation (NBCFDC)",
+      "minProjectCost": 140001,
+      "maxProjectCost": 5000000,
+      "loanPercentage": 90,
+      "interestRate": 8.0,
+      "tenureYears": 7,
+      "moratoriumMonths": 6,
+      "repaymentFrequency": "Quarterly",
+      "eligibility": "Rural micro and small entrepreneurs setting up viable enterprises up to ₹50 Lakh.",
+      "security": "Hypothecation of assets created + suitable third-party guarantee or collateral as per channelising agency guidelines.",
+      "description": "Comprehensive long-term financing for enterprise scaling, commercial dairy units, handloom clusters, and processing mills with 6-month initial moratorium."
+    },
+    {
+      "id": "mudra-shishu",
+      "name": "Pradhan Mantri MUDRA Yojana — Shishu (ముద్రా శిశు)",
+      "agency": "MUDRA / Public Sector Banks & RRBs",
+      "minProjectCost": 10000,
+      "maxProjectCost": 50000,
+      "loanPercentage": 95,
+      "interestRate": 8.5,
+      "tenureYears": 5,
+      "moratoriumMonths": 3,
+      "repaymentFrequency": "Monthly",
+      "eligibility": "Small micro-enterprises at start-up or nano stage.",
+      "security": "Collateral-free (covered under Credit Guarantee Fund for Micro Units - CGFMU).",
+      "description": "Government of India flagship collateral-free micro credit for seed operations and small business tools."
+    },
+    {
+      "id": "stand-up-india",
+      "name": "Stand-Up India Scheme (స్టాండప్ ఇండియా)",
+      "agency": "SIDBI / Scheduled Commercial Banks",
+      "minProjectCost": 1000000,
+      "maxProjectCost": 10000000,
+      "loanPercentage": 85,
+      "interestRate": 8.9,
+      "tenureYears": 7,
+      "moratoriumMonths": 18,
+      "repaymentFrequency": "Quarterly",
+      "eligibility": "SC, ST, and Women entrepreneurs setting up greenfield manufacturing, services, or agri-allied trading enterprises.",
+      "security": "Hypothecation of assets created + CGSSI credit guarantee.",
+      "description": "Facilitates bank loans between ₹10 Lakh and ₹1 Crore to promote enterprise ownership among underserved communities."
+    },
+    {
+      "id": "pmegp",
+      "name": "Prime Minister's Employment Generation Programme (PMEGP)",
+      "agency": "KVIC / State KVI Boards / DIC",
+      "minProjectCost": 100000,
+      "maxProjectCost": 5000000,
+      "loanPercentage": 90,
+      "interestRate": 8.75,
+      "tenureYears": 5,
+      "moratoriumMonths": 6,
+      "repaymentFrequency": "Monthly / Quarterly",
+      "eligibility": "Any individual above 18 years; at least 8th standard pass for projects > ₹10 Lakh in manufacturing.",
+      "security": "Asset hypothecation + CGTMSE coverage.",
+      "description": "Credit-linked subsidy scheme offering 25% - 35% margin money subsidy for rural enterprises."
+    }
+  ]
+}
