@@ -9,7 +9,80 @@ export interface LogbookEntry {
   category: string;
   note: string;
   timestamp: number;
+  tags?: string[];
 }
+
+export interface KhataPayment {
+  id: string;
+  amount: number;
+  date: string;
+  note?: string;
+  timestamp: number;
+}
+
+export interface KhataEntry {
+  id: string;
+  partyName: string;
+  partyPhone?: string;
+  type: 'customer_credit' | 'supplier_credit';
+  amount: number;
+  paidAmount: number;
+  dateGiven: string;
+  dueDate?: string;
+  status: 'unpaid' | 'partially_paid' | 'settled';
+  notes?: string;
+  payments?: KhataPayment[];
+  timestamp: number;
+}
+
+export const INITIAL_KHATA_ENTRIES: KhataEntry[] = [
+  {
+    id: 'khata-1',
+    partyName: 'Sri Laxmi Tea Stall (K. Rao)',
+    partyPhone: '9848012345',
+    type: 'customer_credit',
+    amount: 3200,
+    paidAmount: 1200,
+    dateGiven: '14 Sep 2026',
+    dueDate: '25 Sep 2026',
+    status: 'partially_paid',
+    notes: 'Morning fresh milk supply (daily 4 L credit)',
+    payments: [
+      { id: 'pay-1', amount: 1200, date: '17 Sep 2026', note: 'Cash payment at weekly haat', timestamp: Date.now() - 86400000 * 2 }
+    ],
+    timestamp: Date.now() - 86400000 * 5,
+  },
+  {
+    id: 'khata-2',
+    partyName: 'Goud Sweets & Bakery',
+    partyPhone: '9848023456',
+    type: 'customer_credit',
+    amount: 5400,
+    paidAmount: 0,
+    dateGiven: '12 Sep 2026',
+    dueDate: '22 Sep 2026',
+    status: 'unpaid',
+    notes: 'Curd & paneer bulk order for wedding',
+    payments: [],
+    timestamp: Date.now() - 86400000 * 7,
+  },
+  {
+    id: 'khata-3',
+    partyName: 'Balaji Agro Cattle Feed Depot',
+    partyPhone: '9848034567',
+    type: 'supplier_credit',
+    amount: 7500,
+    paidAmount: 2500,
+    dateGiven: '10 Sep 2026',
+    dueDate: '30 Sep 2026',
+    status: 'partially_paid',
+    notes: '10 bags concentrated cattle feed pellets',
+    payments: [
+      { id: 'pay-2', amount: 2500, date: '15 Sep 2026', note: 'UPI advance payment', timestamp: Date.now() - 86400000 * 4 }
+    ],
+    timestamp: Date.now() - 86400000 * 9,
+  },
+];
 
 export const INITIAL_DEMO_ENTRIES: LogbookEntry[] = [
   {
@@ -261,3 +334,123 @@ export async function deleteLogbookEntry(id: string, userId: string): Promise<vo
     localStorage.setItem(key, JSON.stringify(updated));
   }
 }
+
+export async function updateLogbookEntry(entry: LogbookEntry, userId: string): Promise<LogbookEntry> {
+  if (!userId) return entry;
+
+  if (typeof window !== 'undefined') {
+    const key = getStorageKey(userId);
+    const current = await fetchLogbookEntries(userId);
+    const updated = current.map((e) => (e.id === entry.id ? entry : e));
+    localStorage.setItem(key, JSON.stringify(updated));
+  }
+
+  return entry;
+}
+
+// ----------------- Khata / Udhaar Storage Helpers -----------------
+function getKhataStorageKey(userId: string) {
+  return `ruralcred_khata_${userId || 'demo-user'}`;
+}
+
+export async function fetchKhataEntries(userId: string): Promise<KhataEntry[]> {
+  if (typeof window === 'undefined') return INITIAL_KHATA_ENTRIES;
+
+  const key = getKhataStorageKey(userId);
+  const stored = localStorage.getItem(key);
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch (e) {
+      console.warn('Failed to parse local khata:', e);
+    }
+  }
+
+  localStorage.setItem(key, JSON.stringify(INITIAL_KHATA_ENTRIES));
+  return INITIAL_KHATA_ENTRIES;
+}
+
+export async function saveKhataEntry(
+  entry: Omit<KhataEntry, 'id' | 'paidAmount' | 'status' | 'payments' | 'timestamp'>,
+  userId: string
+): Promise<KhataEntry> {
+  const newKhata: KhataEntry = {
+    ...entry,
+    id: `khata-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+    paidAmount: 0,
+    status: 'unpaid',
+    payments: [],
+    timestamp: Date.now(),
+  };
+
+  if (typeof window !== 'undefined') {
+    const key = getKhataStorageKey(userId);
+    const current = await fetchKhataEntries(userId);
+    const updated = [newKhata, ...current];
+    localStorage.setItem(key, JSON.stringify(updated));
+  }
+
+  return newKhata;
+}
+
+export async function recordKhataPayment(
+  khataId: string,
+  paymentAmount: number,
+  paymentDate: string,
+  note: string | undefined,
+  userId: string
+): Promise<KhataEntry | null> {
+  if (typeof window === 'undefined') return null;
+
+  const key = getKhataStorageKey(userId);
+  const current = await fetchKhataEntries(userId);
+  let updatedEntry: KhataEntry | null = null;
+
+  const updated = current.map((k) => {
+    if (k.id === khataId) {
+      const nextPaid = Math.min(k.amount, k.paidAmount + paymentAmount);
+      const nextStatus: KhataEntry['status'] =
+        nextPaid >= k.amount ? 'settled' : nextPaid > 0 ? 'partially_paid' : 'unpaid';
+
+      const newPayment: KhataPayment = {
+        id: `pay-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        amount: paymentAmount,
+        date: paymentDate,
+        note,
+        timestamp: Date.now(),
+      };
+
+      updatedEntry = {
+        ...k,
+        paidAmount: nextPaid,
+        status: nextStatus,
+        payments: [...(k.payments || []), newPayment],
+      };
+      return updatedEntry;
+    }
+    return k;
+  });
+
+  localStorage.setItem(key, JSON.stringify(updated));
+  return updatedEntry;
+}
+
+export async function updateKhataEntry(entry: KhataEntry, userId: string): Promise<KhataEntry> {
+  if (typeof window !== 'undefined') {
+    const key = getKhataStorageKey(userId);
+    const current = await fetchKhataEntries(userId);
+    const updated = current.map((k) => (k.id === entry.id ? entry : k));
+    localStorage.setItem(key, JSON.stringify(updated));
+  }
+  return entry;
+}
+
+export async function deleteKhataEntry(id: string, userId: string): Promise<void> {
+  if (typeof window !== 'undefined') {
+    const key = getKhataStorageKey(userId);
+    const current = await fetchKhataEntries(userId);
+    const updated = current.filter((k) => k.id !== id);
+    localStorage.setItem(key, JSON.stringify(updated));
+  }
+}
+

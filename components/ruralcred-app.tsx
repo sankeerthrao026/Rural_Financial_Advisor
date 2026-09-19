@@ -262,7 +262,12 @@ function MainContent({ active, setActive }: { active: string; setActive: (value:
 
   const pageCopy: Record<string, { eyebrow: string; title: string; description: string }> = {
     Overview: {
-      eyebrow: isTe ? 'సెప్టెంబర్ 19, 2026' : 'Monday, 19 September 2026',
+      eyebrow: new Date().toLocaleDateString(isTe ? 'te-IN' : 'en-IN', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }),
       title: isTe ? `నమస్కారం, ${profile.name}` : `Good morning, ${profile.name}`,
       description: isTe
         ? 'మీ గ్రామీణ వ్యాపారం యొక్క సమగ్ర ఆర్థిక స్థితి మరియు మార్కెట్ అవకాశాల సమాచారం.'

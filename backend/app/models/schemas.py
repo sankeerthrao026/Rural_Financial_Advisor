@@ -213,6 +213,15 @@ class LogbookCreate(BaseModel):
     type: Literal["income", "expense"]
     category: str
     note: str
+    tags: List[str] = Field(default_factory=list)
+
+class LogbookUpdate(BaseModel):
+    date: Optional[str] = None
+    amount: Optional[float] = Field(None, gt=0)
+    type: Optional[Literal["income", "expense"]] = None
+    category: Optional[str] = None
+    note: Optional[str] = None
+    tags: Optional[List[str]] = None
 
 class LogbookEntry(LogbookCreate):
     id: str

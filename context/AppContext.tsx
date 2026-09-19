@@ -13,10 +13,18 @@ import {
   LogbookEntry,
   fetchLogbookEntries,
   addLogbookEntry,
+  updateLogbookEntry,
   deleteLogbookEntry,
+  KhataEntry,
+  fetchKhataEntries,
+  saveKhataEntry,
+  recordKhataPayment,
+  updateKhataEntry as updateKhataStorage,
+  deleteKhataEntry as deleteKhataStorage,
   INITIAL_DEMO_ENTRIES,
   INITIAL_KIRANA_ENTRIES,
   INITIAL_WEAVING_ENTRIES,
+  INITIAL_KHATA_ENTRIES,
 } from '@/lib/firebase/logbook';
 
 import { useAuth } from './AuthContext';
@@ -54,9 +62,19 @@ export interface AppContextType {
   // Logbook
   entries: LogbookEntry[];
   addNewEntry: (entry: Omit<LogbookEntry, 'id' | 'timestamp'>) => Promise<void>;
+  updateEntry: (entry: LogbookEntry) => Promise<void>;
   removeEntry: (id: string) => Promise<void>;
   resetEntriesToDefault: () => void;
   syncStatus: 'synced' | 'local_cache' | 'syncing';
+
+  // Khata / Customer Credit Ledger
+  khataEntries: KhataEntry[];
+  addKhataEntry: (entry: Omit<KhataEntry, 'id' | 'paidAmount' | 'status' | 'payments' | 'timestamp'>) => Promise<void>;
+  updateKhataEntry: (entry: KhataEntry) => Promise<void>;
+  recordKhataPayment: (id: string, paymentAmount: number, paymentDate: string, note?: string) => Promise<void>;
+  removeKhataEntry: (id: string) => Promise<void>;
+  totalCustomerCredit: number;
+  totalSupplierCredit: number;
 
   // Deterministic Analytics
   finance: FinanceAnalysisResult;
@@ -99,6 +117,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [entries, setEntries] = useState<LogbookEntry[]>(INITIAL_DEMO_ENTRIES);
+  const [khataEntries, setKhataEntries] = useState<KhataEntry[]>(INITIAL_KHATA_ENTRIES);
 
   // Initialize and load saved state whenever user or userId changes
   useEffect(() => {
@@ -186,10 +205,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Fetch isolated user entries
+      // Fetch isolated user entries and khata
       if (userId) {
         const loadedEntries = await fetchLogbookEntries(userId);
         if (active) setEntries(loadedEntries);
+
+        const loadedKhata = await fetchKhataEntries(userId);
+        if (active && loadedKhata) setKhataEntries(loadedKhata);
       }
     }
 
@@ -256,6 +278,55 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await deleteLogbookEntry(id, userId);
     setEntries((prev) => prev.filter((e) => e.id !== id));
   };
+
+  const updateEntry = async (entry: LogbookEntry) => {
+    setSyncStatus('syncing');
+    await updateLogbookEntry(entry, userId);
+    setEntries((prev) => prev.map((e) => (e.id === entry.id ? entry : e)));
+    setTimeout(() => {
+      setSyncStatus('synced');
+    }, 400);
+  };
+
+  const addKhataEntry = async (
+    entry: Omit<KhataEntry, 'id' | 'paidAmount' | 'status' | 'payments' | 'timestamp'>
+  ) => {
+    const created = await saveKhataEntry(entry, userId);
+    setKhataEntries((prev) => [created, ...prev]);
+  };
+
+  const updateKhataEntry = async (entry: KhataEntry) => {
+    await updateKhataStorage(entry, userId);
+    setKhataEntries((prev) => prev.map((k) => (k.id === entry.id ? entry : k)));
+  };
+
+  const recordKhataPaymentHandler = async (
+    id: string,
+    paymentAmount: number,
+    paymentDate: string,
+    note?: string
+  ) => {
+    const updated = await recordKhataPayment(id, paymentAmount, paymentDate, note, userId);
+    if (updated) {
+      setKhataEntries((prev) => prev.map((k) => (k.id === id ? updated : k)));
+    }
+  };
+
+  const removeKhataEntry = async (id: string) => {
+    await deleteKhataStorage(id, userId);
+    setKhataEntries((prev) => prev.filter((k) => k.id !== id));
+  };
+
+  const { totalCustomerCredit, totalSupplierCredit } = useMemo(() => {
+    let cust = 0;
+    let supp = 0;
+    for (const k of khataEntries) {
+      const remaining = Math.max(0, k.amount - k.paidAmount);
+      if (k.type === 'customer_credit') cust += remaining;
+      if (k.type === 'supplier_credit') supp += remaining;
+    }
+    return { totalCustomerCredit: cust, totalSupplierCredit: supp };
+  }, [khataEntries]);
 
   const resetEntriesToDefault = () => {
     setEntries(INITIAL_DEMO_ENTRIES);
@@ -527,9 +598,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         hasCompletedOnboarding: Boolean(profile.location && profile.onboardingCompleted !== false),
         entries,
         addNewEntry,
+        updateEntry,
         removeEntry,
         resetEntriesToDefault,
         syncStatus,
+        khataEntries,
+        addKhataEntry,
+        updateKhataEntry,
+        recordKhataPayment: recordKhataPaymentHandler,
+        removeKhataEntry,
+        totalCustomerCredit,
+        totalSupplierCredit,
         finance,
         totalIncome,
         totalExpenses,

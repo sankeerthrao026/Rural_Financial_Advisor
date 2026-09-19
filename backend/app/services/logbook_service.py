@@ -1,7 +1,7 @@
 import time
 import uuid
 from typing import List, Dict, Any
-from app.models.schemas import LogbookEntry, LogbookCreate
+from app.models.schemas import LogbookEntry, LogbookCreate, LogbookUpdate
 from app.services.firestore_service import firestore_service
 
 INITIAL_DEMO_ENTRIES = [
@@ -81,9 +81,38 @@ class LogbookService:
             "type": entry_data.type,
             "category": entry_data.category,
             "note": entry_data.note,
+            "tags": entry_data.tags or [],
             "timestamp": int(time.time() * 1000),
         }
         saved = firestore_service.save_user_logbook_entry(user_id, entry_dict)
+        return LogbookEntry(**saved)
+
+    def update_entry(self, user_id: str, entry_id: str, updates: LogbookUpdate) -> LogbookEntry:
+        existing = self.get_entries(user_id)
+        target = None
+        for e in existing:
+            if e.id == entry_id:
+                target = e
+                break
+
+        if target:
+            target_dict = target.model_dump()
+            for k, v in updates.model_dump(exclude_unset=True).items():
+                if v is not None:
+                    target_dict[k] = v
+        else:
+            target_dict = {
+                "id": entry_id,
+                "date": updates.date or "2026-09-20",
+                "amount": float(updates.amount or 1000.0),
+                "type": updates.type or "income",
+                "category": updates.category or "Sales",
+                "note": updates.note or "",
+                "tags": updates.tags or [],
+                "timestamp": int(time.time() * 1000),
+            }
+
+        saved = firestore_service.save_user_logbook_entry(user_id, target_dict)
         return LogbookEntry(**saved)
 
     def delete_entry(self, user_id: str, entry_id: str):

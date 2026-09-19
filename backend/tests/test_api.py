@@ -99,3 +99,20 @@ def test_logbook_api():
     res_b = client.get("/api/logbook", headers={"x-user-id": "test-user-isolation-b"})
     user_b_ids = [e["id"] for e in res_b.json()]
     assert entry_id not in user_b_ids
+
+    # 5. Test Update entry for User A
+    update_res = client.put(
+        f"/api/logbook/{entry_id}",
+        headers={"x-user-id": "test-user-isolation-a"},
+        json={
+            "amount": 7500,
+            "category": "Wholesale Off-take",
+            "tags": ["#bulk_deal", "#mandi"],
+            "note": "Updated bulk sale at wholesale mandi",
+        },
+    )
+    assert update_res.status_code == 200
+    updated_data = update_res.json()
+    assert updated_data["amount"] == 7500.0
+    assert updated_data["category"] == "Wholesale Off-take"
+    assert updated_data["tags"] == ["#bulk_deal", "#mandi"]
