@@ -152,14 +152,38 @@ function synthesizeGroundedLocalAdvisor(
   const cData = grounded.categoryData;
   const dData = grounded.districtData;
 
+  const mandiTrends = cData.mandiPriceTrends || {};
+  let seasonalDetails = cData.demandSeasonality;
+  const qLower = (input.userQuery || '').toLowerCase();
+  if (qLower.includes('festiv') || qLower.includes('diwali') || qLower.includes('sankranti') || qLower.includes('dussehra')) {
+    if (mandiTrends.festiveSurge) {
+      seasonalDetails = `${cData.demandSeasonality} • Festive Surge: ${mandiTrends.festiveSurge}`;
+    }
+  } else if (qLower.includes('harvest') || qLower.includes('post-harvest')) {
+    if (mandiTrends.postHarvest) {
+      seasonalDetails = `${cData.demandSeasonality} • Harvest Trend: ${mandiTrends.postHarvest}`;
+    }
+  } else if (qLower.includes('lean') || qLower.includes('summer') || qLower.includes('monsoon')) {
+    if (mandiTrends.summerLean || mandiTrends.monsoon) {
+      seasonalDetails = `${cData.demandSeasonality} • Lean/Monsoon Dynamic: ${mandiTrends.summerLean || mandiTrends.monsoon}`;
+    }
+  } else if (mandiTrends.festiveSurge) {
+    seasonalDetails = `${cData.demandSeasonality} • Mandi Trend: ${mandiTrends.festiveSurge}`;
+  }
+
+  let basePrice = Object.values(cData.pricingBenchmarks || {})[0] as string || '₹55 - ₹70 per unit';
+  if ((qLower.includes('festiv') || qLower.includes('surge')) && mandiTrends.festiveSurge) {
+    basePrice = `${basePrice} (Festive peak price)`;
+  }
+
   return {
     marketReach: {
       headline: isTe
         ? `${dData.name} పరిధిలో ${cData.name} కు స్థానిక గిరాకీ బలంగా ఉంది`
-        : `Strong local market reach across ${dData.name} rural hub`,
+        : `Strong local market reach across ${dData.name} (${dData.state})`,
       details: isTe
         ? `గ్రామీణ నివాసాల సగటు జనాభా ${dData.averageVillagePopulation}. సమీపంలోని సంతలు మరియు సహకార కేంద్రాలు స్థిరమైన మార్కెట్‌ను అందిస్తాయి.`
-        : `Average village cluster population of ${dData.averageVillagePopulation}. Direct off-take available via mandal headquarters and cooperative collection points.`,
+        : `Average village cluster population of ${dData.averageVillagePopulation}. Commercial hubs: ${dData.commercialHubs?.join(', ') || 'Local taluk/mandal mandi'}. Direct off-take via cooperative collection points.`,
       targetSegment: isTe
         ? 'గ్రామీణ కుటుంబాలు, స్థానిక చిరు దుకాణాలు & మండల వ్యాపారులు'
         : 'Rural households, mandal retail outlets & local cooperative unions',
@@ -168,13 +192,13 @@ function synthesizeGroundedLocalAdvisor(
     opportunityAnalysis: {
       overview: isTe
         ? `స్థానిక వనరుల లభ్యత మరియు ప్రభుత్వ పథకాల సహకారంతో ${cData.name} లాభదాయకమైనది.`
-        : `Favorable rural micro-climate and existing value chain networks provide a sustainable foundation.`,
+        : `Favorable rural micro-climate and existing value chain networks in ${dData.name} provide a sustainable foundation.`,
       primaryDrivers: [
-        isTe ? 'రైతు సహకార సంఘాల మరియు పాల శీతలీకరణ కేంద్రాల మద్దతు' : 'Cooperative aggregation points reducing transport friction',
+        isTe ? 'రైతు సహకార సంఘాల మరియు స్థానిక కేంద్రాల మద్దతు' : 'Cooperative aggregation points reducing transport friction',
         isTe ? 'వారపు సంతలు మరియు స్థానిక మార్కెట్లలో అధిక డిమాండ్' : 'Consistent village household consumption demand',
         isTe ? 'ప్రభుత్వ సబ్సిడీ మరియు తక్కువ వడ్డీ రుణ సౌకర్యం' : 'Priority sector subsidized institutional loan routing',
       ],
-      seasonalOpportunity: cData.demandSeasonality,
+      seasonalOpportunity: seasonalDetails,
     },
     swot: {
       strengths: [
@@ -199,21 +223,21 @@ function synthesizeGroundedLocalAdvisor(
       ],
     },
     competitorDensity: {
-      densityLevel: cData.competitorDensity.toLowerCase().includes('high') ? 'High' : 'Moderate',
+      densityLevel: cData.competitorDensity?.toLowerCase().includes('high') ? 'High' : 'Moderate',
       description: cData.competitorDensity,
       mitigationStrategy: isTe
         ? 'నాణ్యత, సమయపాలన మరియు పారదర్శక తూకాల ద్వారా నమ్మకాన్ని పొందండి.'
         : 'Focus on punctual delivery, quality consistency, and transparent weights to secure loyal customer retention.',
     },
     pricingSuggestion: {
-      recommendedBand: Object.values(cData.pricingBenchmarks || {})[0] as string || '₹55 - ₹70 per unit',
+      recommendedBand: basePrice,
       benchmarkComparison: isTe ? 'స్థానిక సగటు ధరలకు అనుగుణంగా ఉంది' : 'Aligned with prevailing district mandi benchmarks',
       marginTarget: cData.marginRange,
     },
     risks: cData.keyRisks || [],
     assumptions: [
       'Margin capital represents exactly 10% of total project outlay.',
-      'Operational figures derived from district benchmark samples (data.gov.in / NBCFDC).',
+      `Operational figures grounded in ${dData.name} demographic benchmarks and APMC/NBCFDC records.`,
       'AI estimates intended for advisory orientation and not lender guarantees.',
     ],
     groundedFacts: {
@@ -221,7 +245,11 @@ function synthesizeGroundedLocalAdvisor(
       category: cData.name,
       benchmarkOpex: (cData.typicalCosts || []).map((c: any) => ({ item: c.item, percentage: c.percentageOfOpex })),
     },
-    sourcesUsed: ['Bundled Mandi & Demographic Knowledge Base'],
+    sourcesUsed: [
+      `ChromaDB Vector Store: ${dData.name}, ${dData.state}`,
+      `APMC Mandi Benchmarks: ${cData.name}`,
+      'NBCFDC Micro-Enterprise Standards',
+    ],
     providerUsed: 'grounded-local-fallback',
   };
 }
@@ -255,7 +283,7 @@ export async function generateBusinessAnalysis(input: BusinessAnalysisInput): Pr
   const system = `You are the RuralCred Advisor AI Engine.
 Your task is to provide realistic, grounded, and cautious business advisory for rural Indian micro-entrepreneurs.
 STRICT SAFETY & FACT RULES:
-1. Ground all recommendations strictly on the provided district profile and category benchmarks.
+1. Ground all recommendations strictly on the provided district profile, mandi price trends, and category benchmarks.
 2. NEVER calculate critical loan amounts, interest rates, or loan approval odds (these are deterministic).
 3. NEVER invent fake government schemes or fictitious competitors.
 4. If local data is insufficient, state "Insufficient local data for a reliable estimate."
@@ -266,8 +294,9 @@ STRICT SAFETY & FACT RULES:
 Location: ${input.location}
 Category: ${input.category}
 Margin Capital: ₹${input.marginCapital.toLocaleString('en-IN')}
+${input.userQuery ? `Specific Seasonal / Ingestion Focus: ${input.userQuery}\n` : ''}
 
-GROUNDING CONTEXT (Local Market Data & District Benchmarks):
+GROUNDING CONTEXT (Local Market Data, Mandi Price Trends & District Demographics):
 ${grounded.summaryContext}
 
 Return pure JSON with keys:

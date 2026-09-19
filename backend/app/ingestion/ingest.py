@@ -34,6 +34,8 @@ def ingest_all_datasets():
             costs_str = ", ".join([f"{c['item']}: {c['percentageOfOpex']}%" for c in cat_val.get("typicalCosts", [])])
             risks_str = "; ".join(cat_val.get("keyRisks", []))
             actions_str = "; ".join(cat_val.get("recommendedActions", []))
+            mandi_trends = cat_val.get("mandiPriceTrends", {})
+            mandi_str = "; ".join([f"{k}: {v}" for k, v in mandi_trends.items()]) if mandi_trends else "Standard rural seasonal cycles"
 
             content = f"""
 Category: {cat_val.get('name')} (Key: {cat_key})
@@ -41,7 +43,8 @@ Benchmark Project Cost: Typical ₹{cat_val.get('benchmarkProjectCost', {}).get(
 Expected Profit Margin: {cat_val.get('marginRange')}
 Average Daily Production/Volume: {cat_val.get('averageDailyVolume')}
 Pricing Benchmarks: {json.dumps(cat_val.get('pricingBenchmarks', {}), ensure_ascii=False)}
-Seasonality: {cat_val.get('demandSeasonality')}
+Demand Seasonality: {cat_val.get('demandSeasonality')}
+Hyper-Local Mandi Price Trends & Seasonality: {mandi_str}
 Local Competitor Density: {cat_val.get('competitorDensity')}
 Typical Operational Costs (OPEX): {costs_str}
 Locality Operating Risks: {risks_str}

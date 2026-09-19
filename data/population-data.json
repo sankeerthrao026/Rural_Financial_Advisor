@@ -44,16 +44,214 @@
       "commercialHubs": ["Nizamabad", "Armoor", "Bodhan", "Bheemgal"],
       "bankingOutlets": "Regional Rural Bank (Telangana Grameena Bank) widespread."
     },
-    "default_rural": {
-      "name": "Rural Telangana & Semi-Urban Cluster",
-      "state": "Telangana / Andhra Pradesh",
-      "totalRuralHouseholds": 160000,
+    "khammam": {
+      "name": "Khammam (ఖమ్మం)",
+      "state": "Telangana",
+      "totalRuralHouseholds": 192000,
+      "averageVillagePopulation": 2300,
+      "majorCrops": ["Chilli", "Cotton", "Paddy", "Mango", "Corn"],
+      "dairyCooperativePresence": "High (Khammam Cooperative & Vijaya)",
+      "averageMonthlyRuralIncome": 17800,
+      "commercialHubs": ["Khammam Mandi", "Madhira", "Sathupalli", "Wyra"],
+      "bankingOutlets": "Lead District Bank network, SBI Agri branches, and extensive PACs."
+    },
+    "mahabubnagar": {
+      "name": "Mahabubnagar / Palamoor (మహబూబ్‌నగర్)",
+      "state": "Telangana",
+      "totalRuralHouseholds": 225000,
+      "averageVillagePopulation": 1950,
+      "majorCrops": ["Castor", "Groundnut", "Paddy", "Jowar / Millets", "Redgram"],
+      "dairyCooperativePresence": "Moderate (Palamoor Milk Producers Union)",
+      "averageMonthlyRuralIncome": 14900,
+      "commercialHubs": ["Mahabubnagar", "Jadcherla Mandi", "Badepalli", "Devarkadra"],
+      "bankingOutlets": "Telangana Grameena Bank branches and Rythu Vedika financial kiosks."
+    },
+    "rangareddy": {
+      "name": "Ranga Reddy (రంగారెడ్డి)",
+      "state": "Telangana",
+      "totalRuralHouseholds": 140000,
+      "averageVillagePopulation": 3200,
+      "majorCrops": ["Vegetables", "Floriculture", "Paddy", "Poultry Feed Crops"],
+      "dairyCooperativePresence": "High (Direct linkages to Greater Hyderabad markets)",
+      "averageMonthlyRuralIncome": 21500,
+      "commercialHubs": ["Chevella", "Ibrahimpatnam", "Shadnagar Mandi", "Maheshwaram"],
+      "bankingOutlets": "Semi-urban commercial bank branches, cooperative banks, and FINO agents."
+    },
+    "guntur": {
+      "name": "Guntur (గుంటూరు)",
+      "state": "Andhra Pradesh",
+      "totalRuralHouseholds": 265000,
+      "averageVillagePopulation": 3100,
+      "majorCrops": ["Mirchi / Chilli (Asia's largest yard)", "Cotton", "Tobacco", "Paddy"],
+      "dairyCooperativePresence": "Very High (Sangam Dairy, Amul Milk collection)",
+      "averageMonthlyRuralIncome": 19800,
+      "commercialHubs": ["Guntur Mirchi Yard", "Tenali", "Sattenapalle", "Narasaraopet"],
+      "bankingOutlets": "Chaitanya Godavari Grameena Bank and Andhra Bank / Union Bank network."
+    },
+    "chittoor": {
+      "name": "Chittoor (చిత్తూరు)",
+      "state": "Andhra Pradesh",
+      "totalRuralHouseholds": 240000,
       "averageVillagePopulation": 2200,
-      "majorCrops": ["Paddy", "Cotton", "Millets", "Vegetables"],
+      "majorCrops": ["Tomato", "Mango (Totapuri Pulp)", "Groundnut", "Sugarcane"],
+      "dairyCooperativePresence": "Extremely High (Heritage, Thirumala, Dodla, Vijaya)",
+      "averageMonthlyRuralIncome": 18900,
+      "commercialHubs": ["Chittoor", "Madanapalle Tomato Mandi", "Palamaner", "Srikalahasti"],
+      "bankingOutlets": "Saptagiri Grameena Bank, DCCB societies, and cooperative milk societies."
+    },
+    "west_godavari": {
+      "name": "West Godavari (పశ్చిమ గోదావరి)",
+      "state": "Andhra Pradesh",
+      "totalRuralHouseholds": 215000,
+      "averageVillagePopulation": 3400,
+      "majorCrops": ["Paddy (Rice bowl)", "Aquaculture (Shrimp / Prawn)", "Coconut", "Oil Palm"],
+      "dairyCooperativePresence": "High (Godavari Milk Union)",
+      "averageMonthlyRuralIncome": 22400,
+      "commercialHubs": ["Bhimavaram Aqua Hub", "Tadepalligudem Mandi", "Eluru", "Tanuku"],
+      "bankingOutlets": "Extensive fisheries credit delivery points, commercial banks, and PACS."
+    },
+    "kolhapur": {
+      "name": "Kolhapur (कोल्हापूर)",
+      "state": "Maharashtra",
+      "totalRuralHouseholds": 235000,
+      "averageVillagePopulation": 2900,
+      "majorCrops": ["Sugarcane", "Jaggery (Gur)", "Soybean", "Rice", "Vegetables"],
+      "dairyCooperativePresence": "World-Class (Gokul - Kolhapur Zilla Sahakari Dudh Utpadak)",
+      "averageMonthlyRuralIncome": 21000,
+      "commercialHubs": ["Kolhapur Market Yard", "Jaysingpur", "Ichalkaranji", "Gadhinglaj"],
+      "bankingOutlets": "Kolhapur District Central Co-op Bank (KDCC) and Bank of Maharashtra."
+    },
+    "solapur": {
+      "name": "Solapur (सोलापूर)",
+      "state": "Maharashtra",
+      "totalRuralHouseholds": 280000,
+      "averageVillagePopulation": 2100,
+      "majorCrops": ["Pomegranate (Anar)", "Sugarcane", "Jowar", "Grapes", "Pulses"],
+      "dairyCooperativePresence": "High",
+      "averageMonthlyRuralIncome": 16800,
+      "commercialHubs": ["Solapur Textile Yard", "Pandharpur", "Barshi Pulses Mandi", "Akkalkot"],
+      "bankingOutlets": "Solapur DCCB, Maharashtra Gramin Bank, and Weaver credit societies."
+    },
+    "nashik": {
+      "name": "Nashik (नाशिक)",
+      "state": "Maharashtra",
+      "totalRuralHouseholds": 255000,
+      "averageVillagePopulation": 2700,
+      "majorCrops": ["Onion (Lasalgaon APMC)", "Grapes", "Tomato", "Paddy", "Maize"],
+      "dairyCooperativePresence": "Moderate to High",
+      "averageMonthlyRuralIncome": 19500,
+      "commercialHubs": ["Lasalgaon Onion Mandi", "Pimpalgaon", "Sinnar", "Yeola"],
+      "bankingOutlets": "Nashik DCCB, Bank of Maharashtra, and FPO banking credit linkages."
+    },
+    "belagavi": {
+      "name": "Belagavi / Belgaum (ಬೆಳಗಾವಿ)",
+      "state": "Karnataka",
+      "totalRuralHouseholds": 290000,
+      "averageVillagePopulation": 2800,
+      "majorCrops": ["Sugarcane", "Paddy", "Maize", "Cotton", "Vegetables"],
+      "dairyCooperativePresence": "Very High (KMF Nandini Belagavi Union)",
+      "averageMonthlyRuralIncome": 18600,
+      "commercialHubs": ["Belagavi APMC", "Gokak", "Chikkodi", "Bailhongal"],
+      "bankingOutlets": "Karnataka Vikas Grameena Bank (KVGB) and BDCC Bank network."
+    },
+    "mandya": {
+      "name": "Mandya (ಮಂಡ್ಯ)",
+      "state": "Karnataka",
+      "totalRuralHouseholds": 185000,
+      "averageVillagePopulation": 2200,
+      "majorCrops": ["Sugarcane (Sugar City)", "Paddy", "Ragi", "Silk / Sericulture", "Coconut"],
+      "dairyCooperativePresence": "High (KMF Mandya Milk Union - Manmul)",
+      "averageMonthlyRuralIncome": 17900,
+      "commercialHubs": ["Mandya Mandi", "Maddur", "Pandavapura", "Nagamangala"],
+      "bankingOutlets": "Canara Bank lead bank, Mandya DCCB, and Milk Producer SHGs."
+    },
+    "dharwad": {
+      "name": "Dharwad (ಧಾರವಾಡ)",
+      "state": "Karnataka",
+      "totalRuralHouseholds": 160000,
+      "averageVillagePopulation": 2400,
+      "majorCrops": ["Soybean", "Cotton", "Chilli", "Groundnut", "Sorghum"],
+      "dairyCooperativePresence": "High (KMF Nandini Dharwad Milk Union)",
+      "averageMonthlyRuralIncome": 18200,
+      "commercialHubs": ["Hubballi Cotton APMC", "Dharwad", "Kundgol", "Navalgund"],
+      "bankingOutlets": "Karnataka Vikas Grameena Bank headquarters and Lead Bank offices."
+    },
+    "varanasi": {
+      "name": "Varanasi (वाराणसी)",
+      "state": "Uttar Pradesh",
+      "totalRuralHouseholds": 220000,
+      "averageVillagePopulation": 2600,
+      "majorCrops": ["Paddy", "Wheat", "Vegetables", "Mustard", "Betel Leaf (Paan)"],
+      "dairyCooperativePresence": "High (Parag Dairy and Banas Dairy Varanasi plant)",
+      "averageMonthlyRuralIncome": 16200,
+      "commercialHubs": ["Varanasi Rural Mandi", "Ramnagar", "Pindra", "Sewapuri"],
+      "bankingOutlets": "Baroda UP Bank, Union Bank of India, and Handloom weaver credit hubs."
+    },
+    "gorakhpur": {
+      "name": "Gorakhpur (गोरखपुर)",
+      "state": "Uttar Pradesh",
+      "totalRuralHouseholds": 275000,
+      "averageVillagePopulation": 2300,
+      "majorCrops": ["Sugarcane", "Wheat", "Paddy", "Mustard", "Vegetables"],
+      "dairyCooperativePresence": "Moderate (Parag Dairy)",
+      "averageMonthlyRuralIncome": 15400,
+      "commercialHubs": ["Gorakhpur Mandi", "Sahjanwa", "Campierganj", "Pipraich"],
+      "bankingOutlets": "Baroda UP Bank branches and primary agricultural credit societies."
+    },
+    "lucknow": {
+      "name": "Lucknow Rural (लखनऊ ग्रामीण)",
+      "state": "Uttar Pradesh",
+      "totalRuralHouseholds": 180000,
+      "averageVillagePopulation": 2900,
+      "majorCrops": ["Mango (Malihabad Dasheri)", "Vegetables", "Wheat", "Paddy", "Mentha"],
+      "dairyCooperativePresence": "High (Parag, Amul Lucknow Dairy)",
+      "averageMonthlyRuralIncome": 18000,
+      "commercialHubs": ["Malihabad Mango Mandi", "Bakshi Ka Talab", "Mohanlalganj", "Gosainganj"],
+      "bankingOutlets": "Aryavart Bank, Indian Bank, and peri-urban banking correspondents."
+    },
+    "muzaffarpur": {
+      "name": "Muzaffarpur (मुज़फ़्फ़रपुर)",
+      "state": "Bihar",
+      "totalRuralHouseholds": 310000,
+      "averageVillagePopulation": 2500,
+      "majorCrops": ["Shahi Litchi", "Maize", "Paddy", "Wheat", "Vegetables"],
+      "dairyCooperativePresence": "High (Sudha Dairy - TIMUL)",
+      "averageMonthlyRuralIncome": 14200,
+      "commercialHubs": ["Muzaffarpur Bazar Samiti", "Motipur", "Kanti", "Sahebganj"],
+      "bankingOutlets": "Uttar Bihar Gramin Bank (UBGB) and Jeevika SHG micro-credit networks."
+    },
+    "patna_rural": {
+      "name": "Patna Rural (पटना ग्रामीण)",
+      "state": "Bihar",
+      "totalRuralHouseholds": 245000,
+      "averageVillagePopulation": 3100,
+      "majorCrops": ["Paddy", "Wheat", "Lentils / Pulses", "Vegetables", "Mustard"],
+      "dairyCooperativePresence": "Extremely High (Sudha Dairy / COMFED headquarters)",
+      "averageMonthlyRuralIncome": 16900,
+      "commercialHubs": ["Bakhtiyarpur", "Danapur Cantt Mandi", "Fatuha", "Bihta"],
+      "bankingOutlets": "Dakshin Bihar Gramin Bank (DBGB) and Jeevika community finance institutions."
+    },
+    "madhubani": {
+      "name": "Madhubani (मधुबनी)",
+      "state": "Bihar",
+      "totalRuralHouseholds": 290000,
+      "averageVillagePopulation": 2100,
+      "majorCrops": ["Paddy", "Makhana (Foxnut)", "Wheat", "Fish / Pond Aquaculture"],
+      "dairyCooperativePresence": "Moderate (Mithila Milk Union - Sudha)",
+      "averageMonthlyRuralIncome": 13800,
+      "commercialHubs": ["Madhubani Bazar", "Jhanjharpur", "Benipatti", "Sakri"],
+      "bankingOutlets": "Uttar Bihar Gramin Bank, PACS, and Jeevika village organizations."
+    },
+    "default_rural": {
+      "name": "Rural India Cluster Benchmark",
+      "state": "Pan-India Priority Sector",
+      "totalRuralHouseholds": 180000,
+      "averageVillagePopulation": 2300,
+      "majorCrops": ["Paddy", "Wheat / Millets", "Pulses", "Oilseeds", "Vegetables"],
       "dairyCooperativePresence": "Moderate",
       "averageMonthlyRuralIncome": 16000,
-      "commercialHubs": ["Mandal Headquarters", "Weekly Haat / Santalu"],
-      "bankingOutlets": "Business Correspondents (BCs) and Lead District Bank branches."
+      "commercialHubs": ["Mandal / Tehsil Headquarters", "Weekly Haat / Santalu"],
+      "bankingOutlets": "Regional Rural Bank (RRB) branches and Business Correspondents (BCs)."
     }
   }
 }
