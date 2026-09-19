@@ -30,9 +30,11 @@ class GeminiService:
         user_query: str,
         retrieved_context: str,
         language: str = "en",
+        history: Optional[list] = None,
     ) -> Optional[Dict[str, Any]]:
         """
         Calls Gemini API with strict grounding on the retrieved ChromaDB context.
+        Incorporates conversational history for multi-turn dialogue.
         Enforces structured JSON response with automatic fallback across Flash models.
         """
         if not self.is_available():
@@ -48,10 +50,21 @@ STRICT SAFETY & GROUNDING RULES:
 2. NEVER calculate critical loan amounts, EMI, interest rates, or financial health scores (handled deterministically by the Python engine).
 3. NEVER invent fictitious competitors, fake government schemes, or arbitrary prices.
 4. If context is insufficient for a reliable estimate, state "Insufficient local data for a reliable estimate."
-5. Output valid JSON matching the exact schema requested.
-6. Language: {"Telugu (తెలుగు) with standard business loan terms" if is_te else "English with clear Indian rural business terminology"}."""
+5. Address follow-up questions directly by maintaining continuity with earlier turns in the conversation.
+6. Output valid JSON matching the exact schema requested.
+7. Language: {"Telugu (తెలుగు) with standard business loan terms" if is_te else "English with clear Indian rural business terminology"}."""
 
-        prompt = f"""USER BUSINESS QUERY:
+        history_text = ""
+        if history and len(history) > 0:
+            formatted_turns = []
+            for item in history[-8:]:
+                role_val = item.get("role") if isinstance(item, dict) else getattr(item, "role", "user")
+                content_val = item.get("content") if isinstance(item, dict) else getattr(item, "content", "")
+                speaker = "Entrepreneur" if role_val == "user" else "Advisor"
+                formatted_turns.append(f"{speaker}: {content_val}")
+            history_text = "CONVERSATION HISTORY (RECENT TURNS):\n" + "\n".join(formatted_turns) + "\n\n"
+
+        prompt = f"""{history_text}CURRENT USER QUESTION / INQUIRY:
 {user_query}
 
 RETRIEVED LOCAL CONTEXT (ChromaDB Vector Store):
@@ -59,6 +72,7 @@ RETRIEVED LOCAL CONTEXT (ChromaDB Vector Store):
 
 Return a valid JSON object with the following structure:
 {{
+  "reply": "Clear, direct, and conversational 2-4 sentence explanation addressing the user's specific inquiry or follow-up question directly.",
   "marketReach": {{
     "headline": "string",
     "details": "string",

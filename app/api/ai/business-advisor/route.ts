@@ -4,7 +4,7 @@ import { generateBusinessAnalysis } from '@/lib/ai/provider';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { location, category, marginCapital, language, userQuery } = body;
+    const { location, category, marginCapital, language, userQuery, history } = body;
 
     if (!location || !category) {
       return NextResponse.json(
@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
       marginCapital: Number(marginCapital) || 100000,
       language: language === 'te' ? 'te' : 'en',
       userQuery: typeof userQuery === 'string' ? userQuery : undefined,
+      history: Array.isArray(history) ? history : undefined,
     });
 
     return NextResponse.json(result);

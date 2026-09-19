@@ -276,6 +276,7 @@ export const apiClient = {
     marginCapital: number;
     language: string;
     userQuery?: string;
+    history?: { role: 'user' | 'assistant'; content: string }[];
   }): Promise<ApiResult<any>> => {
     return requestJson<any>('/advisor/analyze', {
       method: 'POST',

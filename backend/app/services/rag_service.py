@@ -26,9 +26,15 @@ class RAGService:
         is_te = req.language == "te"
         loc_str = req.location or "Telangana Rural Hub"
         cat_str = req.category or "Micro Enterprise"
-        query_text = f"{loc_str} {cat_str} micro business demand pricing competition {req.userQuery or ''}"
 
-        # 1. ChromaDB Semantic Retrieval
+        # Build query incorporating user follow-up and recent conversation turns for ChromaDB RAG
+        history_keywords = ""
+        if req.history:
+            recent_contents = [h.content for h in req.history[-3:] if h.content]
+            history_keywords = " ".join(recent_contents)
+        query_text = f"{loc_str} {cat_str} micro business demand pricing competition {req.userQuery or ''} {history_keywords}".strip()
+
+        # 1. ChromaDB Semantic Retrieval (Runs for EVERY question and follow-up)
         retrieved_items = chroma_service.query_similar(query_text=query_text, n_results=6)
 
         context_blocks = []
@@ -44,6 +50,9 @@ class RAGService:
         best_cat_item = None
         best_dist_item = None
 
+        clean_cat = cat_str.split("/")[0].split("(")[0].strip().lower()
+        clean_loc = loc_str.split(",")[0].split("/")[0].split("(")[0].strip().lower()
+
         for item in retrieved_items:
             doc = item["document"]
             context_blocks.append(doc)
@@ -52,12 +61,36 @@ class RAGService:
             sources_used.append(f"ChromaDB [{meta.get('type', 'local_dataset')}]: {source_label}")
             
             if meta.get("type") == "market_benchmark":
-                # Prioritize explicit keyword match or take highest-ranked
-                if best_cat_item is None or (cat_str.lower() in meta.get("name", "").lower() or cat_str.lower() in meta.get("category", "").lower()):
+                meta_name = (meta.get("name", "") + " " + meta.get("category", "")).lower()
+                if clean_cat and clean_cat in meta_name:
+                    best_cat_item = item
+                elif best_cat_item is None:
                     best_cat_item = item
             elif meta.get("type") == "district_demographics":
-                if best_dist_item is None or (loc_str.lower() in meta.get("name", "").lower() or loc_str.lower() in meta.get("district", "").lower()):
+                meta_dist = (meta.get("name", "") + " " + meta.get("district", "")).lower()
+                if clean_loc and clean_loc in meta_dist:
                     best_dist_item = item
+                elif best_dist_item is None:
+                    best_dist_item = item
+
+        # If clean_dist wasn't matched in top results, query ChromaDB specifically
+        if clean_loc and (not best_dist_item or clean_loc not in (best_dist_item.get("metadata", {}).get("name", "") + " " + best_dist_item.get("metadata", {}).get("district", "")).lower()):
+            specific_dist = chroma_service.query_similar(query_text=f"District: {clean_loc}", n_results=3)
+            for d in specific_dist:
+                d_name = (d.get("metadata", {}).get("name", "") + " " + d.get("metadata", {}).get("district", "")).lower()
+                if clean_loc in d_name:
+                    best_dist_item = d
+                    context_blocks.append(d["document"])
+                    break
+
+        if clean_cat and (not best_cat_item or clean_cat not in (best_cat_item.get("metadata", {}).get("name", "") + " " + best_cat_item.get("metadata", {}).get("category", "")).lower()):
+            specific_cat = chroma_service.query_similar(query_text=f"Category: {clean_cat}", n_results=3)
+            for c in specific_cat:
+                c_name = (c.get("metadata", {}).get("name", "") + " " + c.get("metadata", {}).get("category", "")).lower()
+                if clean_cat in c_name:
+                    best_cat_item = c
+                    context_blocks.append(c["document"])
+                    break
 
         if best_cat_item:
             c_meta = best_cat_item.get("metadata", {})
@@ -81,19 +114,20 @@ class RAGService:
 
         combined_context = "\n---\n".join(context_blocks) if context_blocks else "Local district baseline data available."
 
-        # 2. Call Gemini API if available
+        # 2. Call Gemini API if available with multi-turn conversation history
         ai_data = None
         provider_used = "chromadb-grounded-local"
 
         if gemini_service.is_available():
-            prompt_query = f"Evaluate starting a {cat_str} enterprise in {loc_str} with promoter margin capital of ₹{req.marginCapital:,.0f}."
+            prompt_query = f"Evaluate starting or scaling a {cat_str} enterprise in {loc_str} with promoter margin capital of ₹{req.marginCapital:,.0f}."
             if req.userQuery:
-                prompt_query += f"\nSpecific Local & Seasonal Focus: {req.userQuery}"
+                prompt_query += f"\nEntrepreneur's Question / Follow-up: {req.userQuery}"
 
             ai_data = gemini_service.generate_grounded_advice(
                 user_query=prompt_query,
                 retrieved_context=combined_context,
                 language=req.language,
+                history=[{"role": m.role, "content": m.content} for m in req.history] if req.history else None,
             )
             if ai_data:
                 provider_used = f"{gemini_service.last_model_used} (ChromaDB RAG)" if gemini_service.last_model_used else "gemini-flash (ChromaDB RAG)"
@@ -115,6 +149,7 @@ class RAGService:
             )
 
         return AdvisorAnalyzeResponse(
+            reply=ai_data.get("reply"),
             marketReach=MarketReach(**ai_data.get("marketReach", {})),
             opportunityAnalysis=OpportunityAnalysis(**ai_data.get("opportunityAnalysis", {})),
             swot=SWOTAnalysis(**ai_data.get("swot", {})),
@@ -159,7 +194,46 @@ class RAGService:
         if mandi_trends:
             seasonal_opp = f"{seasonal_opp} • Mandi Trend: {mandi_trends}"
 
+        # Generate intelligent follow-up answer
+        if "expand" in q_lower or "next village" in q_lower or "మరో గ్రామం" in q_lower or "విస్తరణ" in q_lower:
+            reply_text = (
+                f"సమీప గ్రామాలకు విస్తరించడం ద్వారా {district_name} లో మీ కస్టమర్ల సంఖ్య 25% నుండి 35% పెరుగుతుంది. అయితే రవాణా ఖర్చులు నెలకు ₹1,500 - ₹3,000 వరకు పెరగవచ్చు కాబట్టి సరఫరా షెడ్యూల్ పక్కాగా ఉండాలి."
+                if is_te
+                else f"Expanding to neighboring villages in {district_name} can increase your customer base by 25% to 35%. Ensure reliable two-wheeler or local transport, as distribution logistics typically adds ₹1,500 - ₹3,000/month to operating expenses."
+            )
+        elif "feed" in q_lower or "supplier" in q_lower or "cheap" in q_lower or "ధర" in q_lower or "ముడిసరుకు" in q_lower:
+            reply_text = (
+                f"స్థానిక APMC మండి లేదా ప్రాథమిక వ్యవసాయ సహకార సంఘాల (PACS) ద్వారా పెద్ద మొత్తంలో ముడిసరుకు కొనుగోలు చేయడం ద్వారా 8% - 15% వరకు వ్యయం ఆదా అవుతుంది."
+                if is_te
+                else f"Procuring inputs directly from {district_name} APMC mandis or Primary Agricultural Cooperative Societies (PACS) in bulk reduces raw material expenses by 8% to 15% compared to local retail intermediaries."
+            )
+        elif "scheme" in q_lower or "loan" in q_lower or "రుణం" in q_lower or "పథకం" in q_lower:
+            reply_text = (
+                f"మీరు PMEGP లేదా MUDRA కింద 15% నుండి 35% సబ్సిడీతో విస్తరణ రుణాన్ని పొందవచ్చు. ఇప్పటికే చెల్లింపుల రికార్డు బాగుంటే బ్యాంకులు సులభంగా ఆమోదిస్తాయి."
+                if is_te
+                else f"For expanding your {category_name} unit in {district_name}, you can access MUDRA (Kishor category up to ₹5L) or PMEGP with 15-35% capital subsidy, supported by regional rural bank priority-sector lending."
+            )
+        elif "season" in q_lower or "summer" in q_lower or "weather" in q_lower:
+            reply_text = (
+                f"కాలానుగుణ మార్పుల దృష్ట్యా, పండుగల సమయంలో అధిక నిల్వలు ఉంచండి మరియు వేసవి కాలంలో ముందస్తు రక్షణ చర్యలు చేపట్టండి."
+                if is_te
+                else f"During seasonal transitions in {district_name}, maintain dynamic working capital buffers: boost inventory ahead of festival surges and reduce perishable holding periods during peak heat months."
+            )
+        elif user_query:
+            reply_text = (
+                f"{district_name} లోని స్థానిక మార్కెట్ విశ్లేషణ ప్రకారం, మీ {category_name} వ్యాపారానికి గిరాకీ స్థిరంగా ఉంది. అధిక లాభాల కోసం ప్రత్యక్ష కస్టమర్ సంబంధాలు మరియు నాణ్యతపై దృష్టి పెట్టండి."
+                if is_te
+                else f"Grounded in {district_name} local mandi records: your {category_name} enterprise maintains a stable market position. Focus on prompt service and transparent pricing to defend your {margin_target} margin."
+            )
+        else:
+            reply_text = (
+                f"{district_name} పరిధిలో {category_name} వ్యాపారానికి సంబంధించిన సమగ్ర హైపర్-లోకల్ విశ్లేషణ సిద్ధంగా ఉంది."
+                if is_te
+                else f"Comprehensive hyper-local viability analysis generated for {category_name} in {district_name}."
+            )
+
         return {
+            "reply": reply_text,
             "marketReach": {
                 "headline": (
                     f"{district_name} పరిధిలో {category_name} కు స్థానిక గిరాకీ బలంగా ఉంది"

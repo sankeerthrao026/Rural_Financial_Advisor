@@ -167,14 +167,20 @@ class GroundedFacts(BaseModel):
     category: str
     benchmarkOpex: List[Dict[str, Any]] = []
 
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str
+
 class AdvisorAnalyzeRequest(BaseModel):
     location: str
     category: str
     marginCapital: float = 100000.0
     language: str = "en"
     userQuery: Optional[str] = None
+    history: Optional[List[ChatMessage]] = Field(default_factory=list)
 
 class AdvisorAnalyzeResponse(BaseModel):
+    reply: Optional[str] = None
     marketReach: MarketReach
     opportunityAnalysis: OpportunityAnalysis
     swot: SWOTAnalysis

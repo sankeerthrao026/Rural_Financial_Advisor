@@ -21,9 +21,11 @@ export interface BusinessAnalysisInput {
   marginCapital: number;
   language: 'en' | 'te';
   userQuery?: string;
+  history?: { role: 'user' | 'assistant'; content: string }[];
 }
 
 export interface BusinessAdvisorOutput {
+  reply?: string;
   marketReach: {
     headline: string;
     details: string;
@@ -176,7 +178,37 @@ function synthesizeGroundedLocalAdvisor(
     basePrice = `${basePrice} (Festive peak price)`;
   }
 
+  let replyText = '';
+  if (qLower) {
+    if (qLower.includes('expand') || qLower.includes('next village') || qLower.includes('మరో గ్రామం') || qLower.includes('విస్తరణ')) {
+      replyText = isTe
+        ? `సమీప గ్రామాలకు విస్తరించడం ద్వారా ${dData.name} లో మీ కస్టమర్ల సంఖ్య 25% నుండి 35% పెరుగుతుంది. అయితే రవాణా ఖర్చులు నెలకు ₹1,500 - ₹3,000 వరకు పెరగవచ్చు కాబట్టి సరఫరా షెడ్యూల్ పక్కాగా ఉండాలి.`
+        : `Expanding to neighboring villages in ${dData.name} can expand your addressable customer base by 25% to 35%. Plan your distribution routes carefully, as two-wheeler/transport logistics typically adds ₹1,500 - ₹3,000/month in operating overhead.`;
+    } else if (qLower.includes('feed') || qLower.includes('supplier') || qLower.includes('cheap') || qLower.includes('ధర') || qLower.includes('ముడిసరుకు')) {
+      replyText = isTe
+        ? `స్థానిక APMC మండి లేదా ప్రాథమిక వ్యవసాయ సహకార సంఘాల (PACS) ద్వారా పెద్ద మొత్తంలో ముడిసరుకు కొనుగోలు చేయడం ద్వారా 8% - 15% వరకు వ్యయం ఆదా అవుతుంది.`
+        : `Procuring feed and raw materials in bulk directly through ${dData.name} APMC mandis or Primary Agricultural Cooperative Societies (PACS) can reduce input costs by 8% to 15% compared to local retail middlemen.`;
+    } else if (qLower.includes('scheme') || qLower.includes('loan') || qLower.includes('రుణం') || qLower.includes('పథకం')) {
+      replyText = isTe
+        ? `మీరు PMEGP లేదా MUDRA కింద 15% నుండి 35% సబ్సిడీతో విస్తరణ రుణాన్ని పొందవచ్చు. ఇప్పటికే చెల్లింపుల రికార్డు బాగుంటే బ్యాంకులు సులభంగా ఆమోదిస్తాయి.`
+        : `For expanding your ${cData.name} unit in ${dData.name}, you can access MUDRA (Kishor category up to ₹5L) or PMEGP with 15-35% capital subsidy, supported by regional rural bank priority-sector lending.`;
+    } else if (qLower.includes('season') || qLower.includes('summer') || qLower.includes('weather')) {
+      replyText = isTe
+        ? `కాలానుగుణ మార్పుల దృష్ట్యా, పండుగల సమయంలో అధిక నిల్వలు ఉంచండి మరియు వేసవి కాలంలో ముందస్తు రక్షణ చర్యలు చేపట్టండి.`
+        : `During seasonal transitions in ${dData.name}, maintain dynamic working capital buffers: boost inventory ahead of festival surges and reduce perishable holding periods during peak heat months.`;
+    } else {
+      replyText = isTe
+        ? `${dData.name} లోని స్థానిక మార్కెట్ విశ్లేషణ ప్రకారం, మీ ${cData.name} వ్యాపారానికి గిరాకీ స్థిరంగా ఉంది. అధిక లాభాల కోసం ప్రత్యక్ష కస్టమర్ సంబంధాలు మరియు నాణ్యతపై దృష్టి పెట్టండి.`
+        : `Grounded in ${dData.name} local mandi records: your ${cData.name} enterprise maintains a stable market position. Focus on prompt service and transparent pricing to defend your ${cData.marginRange || 'target'} margin.`;
+    }
+  } else {
+    replyText = isTe
+      ? `${dData.name} పరిధిలో ${cData.name} వ్యాపారానికి సంబంధించిన సమగ్ర హైపర్-లోకల్ విశ్లేషణ సిద్ధంగా ఉంది.`
+      : `Comprehensive hyper-local viability analysis generated for ${dData.name} in ${dData.name}.`;
+  }
+
   return {
+    reply: replyText,
     marketReach: {
       headline: isTe
         ? `${dData.name} పరిధిలో ${cData.name} కు స్థానిక గిరాకీ బలంగా ఉంది`
@@ -187,16 +219,18 @@ function synthesizeGroundedLocalAdvisor(
       targetSegment: isTe
         ? 'గ్రామీణ కుటుంబాలు, స్థానిక చిరు దుకాణాలు & మండల వ్యాపారులు'
         : 'Rural households, mandal retail outlets & local cooperative unions',
-      estimatedLocalDemand: isTe ? 'స్థిరమైన రోజువారీ గిరాకీ' : 'High daily recurring consumption',
+      estimatedLocalDemand: isTe
+        ? 'స్థిరమైన రోజువారీ గిరాకీ (Daily Active Demand)'
+        : 'High daily recurring consumption',
     },
     opportunityAnalysis: {
       overview: isTe
-        ? `స్థానిక వనరుల లభ్యత మరియు ప్రభుత్వ పథకాల సహకారంతో ${cData.name} లాభదాయకమైనది.`
-        : `Favorable rural micro-climate and existing value chain networks in ${dData.name} provide a sustainable foundation.`,
+        ? `స్థానిక వనరుల లభ్యత మరియు ప్రభుత్వ ప్రాధాన్యతా రుణాల సహకారంతో ${cData.name} లాభదాయకమైనది.`
+        : `Favorable rural micro-climate, localized value chain aggregation, and statutory priority-sector credit support in ${dData.name}.`,
       primaryDrivers: [
-        isTe ? 'రైతు సహకార సంఘాల మరియు స్థానిక కేంద్రాల మద్దతు' : 'Cooperative aggregation points reducing transport friction',
-        isTe ? 'వారపు సంతలు మరియు స్థానిక మార్కెట్లలో అధిక డిమాండ్' : 'Consistent village household consumption demand',
-        isTe ? 'ప్రభుత్వ సబ్సిడీ మరియు తక్కువ వడ్డీ రుణ సౌకర్యం' : 'Priority sector subsidized institutional loan routing',
+        isTe ? 'రైతు సహకార సంఘాలు & స్థానిక మార్కెట్ మద్దతు' : 'Local cooperative collection points reducing logistics overhead',
+        isTe ? 'నిరంతర రోజువారీ వినియోగ గిరాకీ' : 'Stable village household consumption cycle',
+        isTe ? 'ప్రభుత్వ సబ్సిడీ మరియు తక్కువ వడ్డీ రుణాలు' : 'Subsidized institutional credit routing under NBCFDC / MUDRA',
       ],
       seasonalOpportunity: seasonalDetails,
     },
@@ -267,6 +301,7 @@ export async function generateBusinessAnalysis(input: BusinessAnalysisInput): Pr
       marginCapital: input.marginCapital,
       language: input.language,
       userQuery: input.userQuery,
+      history: input.history,
     });
 
     if (backendRes.success && backendRes.data) {
@@ -290,17 +325,22 @@ STRICT SAFETY & FACT RULES:
 5. Output ONLY valid JSON matching the exact schema requested.
 6. Language requested: ${isTe ? 'Telugu (తెలుగు) with standard business loan terms' : 'English with clear Indian terminology'}.`;
 
-  const userPrompt = `Analyze the following rural micro-enterprise opportunity:
+  const historyBlock = input.history && input.history.length > 0
+    ? `RECENT CONVERSATION HISTORY:\n${input.history.slice(-6).map(m => `${m.role === 'user' ? 'Entrepreneur' : 'Advisor'}: ${m.content}`).join('\n')}\n\n`
+    : '';
+
+  const userPrompt = `${historyBlock}Analyze the following rural micro-enterprise opportunity or follow-up question:
 Location: ${input.location}
 Category: ${input.category}
 Margin Capital: ₹${input.marginCapital.toLocaleString('en-IN')}
-${input.userQuery ? `Specific Seasonal / Ingestion Focus: ${input.userQuery}\n` : ''}
+${input.userQuery ? `Entrepreneur's Question / Follow-up: ${input.userQuery}\n` : ''}
 
 GROUNDING CONTEXT (Local Market Data, Mandi Price Trends & District Demographics):
 ${grounded.summaryContext}
 
 Return pure JSON with keys:
 {
+  "reply": "Clear, direct, and conversational 2-4 sentence explanation addressing the user's specific inquiry or follow-up question directly.",
   "marketReach": { "headline": "string", "details": "string", "targetSegment": "string", "estimatedLocalDemand": "string" },
   "opportunityAnalysis": { "overview": "string", "primaryDrivers": ["string"], "seasonalOpportunity": "string" },
   "swot": { "strengths": ["string"], "weaknesses": ["string"], "opportunities": ["string"], "threats": ["string"] },
