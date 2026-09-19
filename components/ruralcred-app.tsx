@@ -37,6 +37,7 @@ import { BusinessAdvisorScreen } from './screens/BusinessAdvisorScreen';
 import { RiskAlertsScreen } from './screens/RiskAlertsScreen';
 import { BusinessPlanScreen } from './screens/BusinessPlanScreen';
 import { SchemeMatchingScreen } from './screens/SchemeMatchingScreen';
+import { OnboardingScreen } from './onboarding/OnboardingScreen';
 
 const navigation = [
   { label: 'Overview', icon: LayoutDashboard },
@@ -352,7 +353,7 @@ function MainContent({ active, setActive }: { active: string; setActive: (value:
       {active === 'Digital Logbook' && <DigitalLogbookScreen />}
       {active === 'Business Plan' && <BusinessPlanScreen />}
       {active === 'Financial Analytics' && <FinanceAdvisorScreen setActive={setActive} />}
-      {active === 'Cash Flow' && <CashFlowScreen />}
+      {active === 'Cash Flow' && <CashFlowScreen setActive={setActive} />}
       {active === 'Business Advisor' && <BusinessAdvisorScreen />}
       {active === 'Finance Advisor' && <FinanceAdvisorScreen setActive={setActive} />}
       {active === 'Scheme Matching' && <SchemeMatchingScreen setActive={setActive} />}
@@ -493,6 +494,10 @@ function RuralCredAppGate() {
 
   if (!user) {
     return <AuthScreen />;
+  }
+
+  if (!hasCompletedOnboarding) {
+    return <OnboardingScreen />;
   }
 
   return <RuralCredAppInner />;

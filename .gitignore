@@ -10,9 +10,20 @@ __v0_jsx-dev-runtime.ts
 .env
 .env*.local
 
-# Common ignores
+# Node & Next.js
 node_modules
 .next/
 .DS_Store
 AGENTS.md
 CLAUDE.md
+*.tsbuildinfo
+
+# Python & Backend
+backend/venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+backend/chroma_db/
+backend/local_store/

@@ -402,46 +402,70 @@ export function DigitalLogbookScreen() {
           </span>
         </div>
 
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="border-b bg-muted/30 text-muted-foreground">
-              <tr>
-                <th className="py-2.5 px-3 font-semibold">{t.date}</th>
-                <th className="py-2.5 px-3 font-semibold">{t.note}</th>
-                <th className="py-2.5 px-3 font-semibold">{t.category}</th>
-                <th className="py-2.5 px-3 font-semibold text-right">{t.amount}</th>
-                <th className="py-2.5 px-3 font-semibold text-center">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {entries.map((entry) => (
-                <tr key={entry.id} className="transition-colors hover:bg-muted/40">
-                  <td className="py-3 px-3 text-muted-foreground whitespace-nowrap">{entry.date}</td>
-                  <td className="py-3 px-3 font-medium text-foreground">{entry.note}</td>
-                  <td className="py-3 px-3">
-                    <span className="rounded bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                      {entry.category}
-                    </span>
-                  </td>
-                  <td className={`py-3 px-3 text-right font-bold tabular-nums ${
-                    entry.type === 'income' ? 'text-emerald-700' : 'text-rose-700'
-                  }`}>
-                    {entry.type === 'income' ? `+${formatINR(entry.amount)}` : `-${formatINR(entry.amount)}`}
-                  </td>
-                  <td className="py-3 px-3 text-center">
-                    <button
-                      onClick={() => removeEntry(entry.id)}
-                      className="text-muted-foreground hover:text-rose-600 transition-colors p-1"
-                      aria-label="Delete entry"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
-                  </td>
+        {entries.length === 0 ? (
+          <div className="py-12 text-center flex flex-col items-center">
+            <div className="grid size-12 place-items-center rounded-xl bg-muted text-muted-foreground mb-3">
+              <FileText className="size-6 opacity-70" />
+            </div>
+            <p className="text-sm font-semibold font-sora text-foreground">
+              {isTe ? 'లాగ్‌బుక్ రికార్డులు ఏవీ లేవు' : 'No Transactions Recorded Yet'}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+              {isTe
+                ? 'మీ మొదటి లావాదేవీని నమోదు చేయడానికి పైన ఉన్న "రికార్డ్ న్యూ ట్రాన్సాక్షన్" లేదా "వాయిస్ ఎంట్రీ" పై నొక్కండి.'
+                : 'Tap "Record New Transaction", use "Voice Entry", or "Scan Slip (OCR)" to log your daily business receipts and expenses.'}
+            </p>
+            <Button
+              size="sm"
+              onClick={() => setShowAddForm(true)}
+              className="mt-4 text-xs font-semibold"
+            >
+              <PlusCircle className="size-3.5 mr-1.5" />
+              {t.addEntryBtn}
+            </Button>
+          </div>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="border-b bg-muted/30 text-muted-foreground">
+                <tr>
+                  <th className="py-2.5 px-3 font-semibold">{t.date}</th>
+                  <th className="py-2.5 px-3 font-semibold">{t.note}</th>
+                  <th className="py-2.5 px-3 font-semibold">{t.category}</th>
+                  <th className="py-2.5 px-3 font-semibold text-right">{t.amount}</th>
+                  <th className="py-2.5 px-3 font-semibold text-center">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {entries.map((entry) => (
+                  <tr key={entry.id} className="transition-colors hover:bg-muted/40">
+                    <td className="py-3 px-3 text-muted-foreground whitespace-nowrap">{entry.date}</td>
+                    <td className="py-3 px-3 font-medium text-foreground">{entry.note}</td>
+                    <td className="py-3 px-3">
+                      <span className="rounded bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        {entry.category}
+                      </span>
+                    </td>
+                    <td className={`py-3 px-3 text-right font-bold tabular-nums ${
+                      entry.type === 'income' ? 'text-emerald-700' : 'text-rose-700'
+                    }`}>
+                      {entry.type === 'income' ? `+${formatINR(entry.amount)}` : `-${formatINR(entry.amount)}`}
+                    </td>
+                    <td className="py-3 px-3 text-center">
+                      <button
+                        onClick={() => removeEntry(entry.id)}
+                        className="text-muted-foreground hover:text-rose-600 transition-colors p-1"
+                        aria-label="Delete entry"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     </div>
   );

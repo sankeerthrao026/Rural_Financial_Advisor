@@ -228,30 +228,49 @@ export function OverviewScreen({ setActive }: { setActive: (value: string) => vo
             </button>
           </div>
 
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="text-muted-foreground border-b">
-                <tr>
-                  <th className="pb-2 font-medium">Description</th>
-                  <th className="pb-2 font-medium">Date</th>
-                  <th className="pb-2 text-right font-medium">Amount</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {entries.slice(0, 4).map((row) => (
-                  <tr key={row.id}>
-                    <td className="py-2.5 font-medium text-foreground truncate max-w-44">{row.note}</td>
-                    <td className="py-2.5 text-muted-foreground whitespace-nowrap">{row.date}</td>
-                    <td className={`py-2.5 text-right font-bold tabular-nums ${
-                      row.type === 'income' ? 'text-emerald-700' : 'text-rose-700'
-                    }`}>
-                      {row.type === 'income' ? `+${formatINR(row.amount)}` : `-${formatINR(row.amount)}`}
-                    </td>
+          {entries.length === 0 ? (
+            <div className="py-8 text-center flex flex-col items-center">
+              <p className="text-xs font-semibold text-foreground">
+                {isTe ? 'ఇటీవలి లావాదేవీలు ఏవీ లేవు' : 'No Recent Transactions'}
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-1 max-w-xs">
+                {isTe
+                  ? 'మీ రోజువారీ అమ్మకాలు లేదా ఖర్చులను రికార్డ్ చేయడానికి లాగ్‌బుక్‌ను తెరవండి.'
+                  : 'Start by logging your first transaction in the Digital Logbook.'}
+              </p>
+              <button
+                onClick={() => setActive('Digital Logbook')}
+                className="mt-3 text-xs font-semibold text-primary hover:underline"
+              >
+                + {isTe ? 'లావాదేవీ నమోదు చేయండి' : 'Record Transaction'}
+              </button>
+            </div>
+          ) : (
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="text-muted-foreground border-b">
+                  <tr>
+                    <th className="pb-2 font-medium">Description</th>
+                    <th className="pb-2 font-medium">Date</th>
+                    <th className="pb-2 text-right font-medium">Amount</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {entries.slice(0, 4).map((row) => (
+                    <tr key={row.id}>
+                      <td className="py-2.5 font-medium text-foreground truncate max-w-44">{row.note}</td>
+                      <td className="py-2.5 text-muted-foreground whitespace-nowrap">{row.date}</td>
+                      <td className={`py-2.5 text-right font-bold tabular-nums ${
+                        row.type === 'income' ? 'text-emerald-700' : 'text-rose-700'
+                      }`}>
+                        {row.type === 'income' ? `+${formatINR(row.amount)}` : `-${formatINR(row.amount)}`}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
 
         {/* Financial Health Banner */}
