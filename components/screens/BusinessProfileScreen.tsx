@@ -5,10 +5,11 @@ import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { Mic, MicOff, Check, Sparkles, Building2, MapPin, IndianRupee, ShieldCheck } from 'lucide-react';
 import { formatINR } from '@/lib/utils/currency';
-import { startSpeechListening, isSpeechRecognitionSupported } from '@/lib/voice/speech';
+import { useVoiceInput } from '@/hooks/useVoiceInput';
+import { VoiceButton } from '@/components/ui/voice-button';
 
 export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
-  const { language, setLanguage, inputMode, setInputMode, profile, updateProfile, loadPreset, dictionary } = useApp();
+  const { profile, updateProfile, language, setLanguage, inputMode, setInputMode, loadPreset, dictionary } = useApp();
   const t = dictionary.onboarding;
   const isTe = language === 'te';
 
@@ -16,7 +17,6 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
   const [category, setCategory] = useState(profile.category);
   const [marginCapital, setMarginCapital] = useState(profile.marginCapital.toString());
   const [hasActiveLoan, setHasActiveLoan] = useState(profile.hasActiveLoan);
-  const [isListening, setIsListening] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   const categories = [
@@ -28,42 +28,56 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
     { key: 'Agri-Processing & Flour Mill', label: isTe ? dictionary.categories.flourMill : 'Agri-Processing & Flour Mill' },
   ];
 
-  const handleVoiceInput = () => {
-    if (!isSpeechRecognitionSupported()) {
-      alert(dictionary.speechUnsupported);
-      return;
-    }
-
-    if (isListening) {
-      setIsListening(false);
-      return;
-    }
-
-    setIsListening(true);
-    startSpeechListening({
-      language,
-      onResult: (transcript) => {
-        setIsListening(false);
-        const numbers = transcript.match(/\d+/g);
-        if (numbers && numbers.length > 0) {
-          const detectedCapital = parseInt(numbers.join(''), 10);
-          if (detectedCapital > 1000) {
-            setMarginCapital(detectedCapital.toString());
-          }
+  const voiceInput = useVoiceInput({
+    targetLanguage: language,
+    onResult: (transcript, isFinal) => {
+      const cleanStr = transcript.replace(/₹/g, '').replace(/,/g, '');
+      const numbers = cleanStr.match(/\d+/g);
+      if (numbers && numbers.length > 0) {
+        const detectedCapital = parseInt(numbers.join(''), 10);
+        if (detectedCapital >= 1000) {
+          setMarginCapital(detectedCapital.toString());
         }
-        if (
-          transcript.toLowerCase().includes('warangal') ||
-          transcript.toLowerCase().includes('karimnagar') ||
-          transcript.toLowerCase().includes('nalgonda') ||
-          transcript.toLowerCase().includes('వరంగల్') ||
-          transcript.toLowerCase().includes('గ్రామం')
-        ) {
-          setLocation(transcript);
-        }
-      },
-      onError: () => setIsListening(false),
-      onEnd: () => setIsListening(false),
-    });
+      }
+
+      const lower = transcript.toLowerCase();
+      if (
+        lower.includes('warangal') || lower.includes('వరంగల్') ||
+        lower.includes('karimnagar') || lower.includes('కరీంనగర్') ||
+        lower.includes('nalgonda') || lower.includes('నల్గొండ') ||
+        lower.includes('nizamabad') || lower.includes('నిజామాబాద్') ||
+        lower.includes('khammam') || lower.includes('ఖమ్మం') ||
+        lower.includes('telangana') || lower.includes('తెలంగాణ') ||
+        lower.includes('village') || lower.includes('గ్రామం')
+      ) {
+        setLocation(transcript);
+      } else if (transcript.length > 3 && (!numbers || numbers.length === 0)) {
+        setLocation(transcript);
+      }
+
+      // Category detection
+      if (lower.includes('dairy') || lower.includes('milk') || lower.includes('పాల') || lower.includes('పాడి')) {
+        setCategory('Dairy Farming');
+      } else if (lower.includes('poultry') || lower.includes('chicken') || lower.includes('కోళ్ల') || lower.includes('కోడి')) {
+        setCategory('Country / Broiler Poultry');
+      } else if (lower.includes('kirana') || lower.includes('grocery') || lower.includes('కిరాణా') || lower.includes('షాపు')) {
+        setCategory('Rural Grocery / Kirana');
+      } else if (lower.includes('handloom') || lower.includes('weaving') || lower.includes('చేనేత') || lower.includes('మగ్గం')) {
+        setCategory('Handloom / Weaving');
+      } else if (lower.includes('tailor') || lower.includes('boutique') || lower.includes('కుట్టు') || lower.includes('టైలరింగ్')) {
+        setCategory('Tailoring & Boutique');
+      } else if (lower.includes('mill') || lower.includes('flour') || lower.includes('మిల్లు') || lower.includes('పిండి')) {
+        setCategory('Agri-Processing & Flour Mill');
+      }
+    },
+  });
+
+  const handleToggleVoice = () => {
+    if (voiceInput.isListening) {
+      voiceInput.stopListening();
+    } else {
+      voiceInput.startListening();
+    }
   };
 
   const handleSave = (e: React.FormEvent) => {
@@ -197,26 +211,38 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
 
         {/* Voice Assistant Trigger Banner */}
         {inputMode === 'voice' && (
-          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 flex items-center justify-between">
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className={`grid size-10 place-items-center rounded-full ${isListening ? 'bg-destructive text-white animate-pulse' : 'bg-primary text-primary-foreground'}`}>
+              <div
+                className={`grid size-10 place-items-center rounded-xl transition-all ${
+                  voiceInput.isListening
+                    ? 'bg-rose-600 text-white animate-pulse'
+                    : 'bg-primary/10 text-primary'
+                }`}
+              >
                 <Mic className="size-5" />
               </div>
               <div>
-                <p className="text-xs font-semibold">{isListening ? dictionary.listening : dictionary.voicePrompt}</p>
+                <p className="text-xs font-semibold">{voiceInput.isListening ? dictionary.listening : dictionary.voicePrompt}</p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                  {language === 'te' ? 'మాట్లాడితే లొకేషన్ మరియు పెట్టుబడి వివరాలు నమోదు అవుతాయి' : 'Spoken location and numbers will auto-populate the form'}
+                  {voiceInput.transcript ? (
+                    <span className="text-primary font-medium">"{voiceInput.transcript}"</span>
+                  ) : language === 'te' ? (
+                    'మాట్లాడితే లొకేషన్ మరియు పెట్టుబడి వివరాలు నమోదు అవుతాయి'
+                  ) : (
+                    'Spoken location and numbers will auto-populate the form'
+                  )}
                 </p>
               </div>
             </div>
-            <Button
-              type="button"
-              variant={isListening ? 'destructive' : 'default'}
-              size="sm"
-              onClick={handleVoiceInput}
-            >
-              {isListening ? (isTe ? 'ఆపండి' : 'Stop') : (isTe ? 'మాట్లాడండి' : 'Speak Now')}
-            </Button>
+            <VoiceButton
+              status={voiceInput.status}
+              onToggle={handleToggleVoice}
+              errorMessage={voiceInput.error}
+              onRetry={voiceInput.startListening}
+              label={isTe ? 'మాట్లాడండి' : 'Speak Now'}
+              listeningLabel={isTe ? 'ఆపండి' : 'Stop'}
+            />
           </div>
         )}
 

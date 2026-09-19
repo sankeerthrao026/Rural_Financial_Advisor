@@ -40,11 +40,12 @@ import {
   Legend,
 } from 'recharts';
 import {
-  startSpeechListening,
   isSpeechRecognitionSupported,
   parseSpokenTransaction,
   SpokenTransactionResult,
 } from '@/lib/voice/speech';
+import { useVoiceInput } from '@/hooks/useVoiceInput';
+import { VoiceButton } from '@/components/ui/voice-button';
 import { VoiceInputModal } from '@/components/voice/VoiceInputModal';
 import { OcrReviewModal } from '@/components/ocr/OcrReviewModal';
 
@@ -75,8 +76,8 @@ export function DigitalLogbookScreen() {
   const [category, setCategory] = useState('Sales');
   const [note, setNote] = useState('');
   const [selectedDateIso, setSelectedDateIso] = useState(getTodayIso());
-  const [isListening, setIsListening] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [showOcrModal, setShowOcrModal] = useState(false);
 
   // Compute Today's Activity metrics dynamically
@@ -85,6 +86,11 @@ export function DigitalLogbookScreen() {
   const todayIncome = todayEntries.filter((e) => e.type === 'income').reduce((acc, curr) => acc + curr.amount, 0);
   const todayExpense = todayEntries.filter((e) => e.type === 'expense').reduce((acc, curr) => acc + curr.amount, 0);
   const todayNet = todayIncome - todayExpense;
+
+  const categories = {
+    income: ['Sales', 'Cooperative Payout', 'Subsidy', 'Other Income'],
+    expense: ['Feed / Supplies', 'Raw Material', 'Veterinary', 'Wages', 'Transport', 'Rent & Power'],
+  };
 
   const handleOpenForm = (entryType: 'income' | 'expense') => {
     setType(entryType);
@@ -127,16 +133,21 @@ export function DigitalLogbookScreen() {
     }
   };
 
-  const categories = {
-    income: ['Sales', 'Cooperative Payout', 'Subsidy', 'Other Income'],
-    expense: ['Feed / Supplies', 'Raw Material', 'Veterinary', 'Wages', 'Transport', 'Rent & Power'],
-  };
-
-  const [showVoiceModal, setShowVoiceModal] = useState(false);
-
-  const handleVoiceQuickAdd = () => {
-    setShowVoiceModal(true);
-  };
+  const voiceInput = useVoiceInput({
+    targetLanguage: language as 'en' | 'te',
+    onResult: (transcript, isFinal) => {
+      const parsed = parseSpokenTransaction(transcript);
+      if (parsed.amount) {
+        setAmount(parsed.amount.toString());
+      }
+      setType(parsed.type);
+      if (parsed.category) {
+        setCategory(parsed.category);
+      }
+      setNote(parsed.note);
+      setShowAddForm(true);
+    },
+  });
 
   const handleVoiceExtracted = (result: SpokenTransactionResult) => {
     if (result.amount) {
@@ -150,6 +161,14 @@ export function DigitalLogbookScreen() {
       setNote(result.note);
     }
     setShowAddForm(true);
+  };
+
+  const handleToggleVoice = () => {
+    if (voiceInput.isListening) {
+      voiceInput.stopListening();
+    } else {
+      voiceInput.startListening();
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -285,16 +304,15 @@ export function DigitalLogbookScreen() {
             <span>{isTe ? '− ఖర్చు నమోదు' : '− Add Expense'}</span>
           </button>
 
-          {/* Voice Button with interactive recording & visualizer */}
-          <button
-            type="button"
-            onClick={handleVoiceQuickAdd}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer shadow-xs bg-card hover:bg-muted text-foreground hover:border-primary/50"
-            title="Open smart voice assistant with visualizer and multi-language support"
-          >
-            <Mic className="size-3.5 text-primary" />
-            <span>{language === 'te' ? 'వాయిస్' : language === 'hi' ? 'वॉइस' : 'Voice'}</span>
-          </button>
+          {/* Quick Inline Voice Button */}
+          <VoiceButton
+            status={voiceInput.status}
+            onToggle={handleToggleVoice}
+            errorMessage={voiceInput.error}
+            onRetry={voiceInput.startListening}
+            label={isTe ? 'వాయిస్' : isHi ? 'वॉइस' : 'Voice'}
+            listeningLabel={isTe ? 'వింటున్నాము...' : isHi ? 'सुन रहे हैं...' : 'Listening...'}
+          />
 
           {/* Smart OCR Slip & Ledger Scan Button */}
           <button
@@ -304,10 +322,40 @@ export function DigitalLogbookScreen() {
             title="Scan printed slips, mandi receipts, or handwritten ledger pages"
           >
             <Camera className="size-3.5 text-primary" />
-            <span>{isTe ? 'స్లిప్ / లెడ్జర్ OCR' : isHi ? 'रसीद / खाता OCR' : 'Receipt / Ledger OCR'}</span>
+            <span>{isTe ? 'స్లిప్ / లెడ్జర్ OCR' : isHi ? 'రసీద / ఖాతి OCR' : 'Receipt / Ledger OCR'}</span>
           </button>
         </div>
       </section>
+
+      {/* Real-time Voice Live Transcript Feedback Bar */}
+      {voiceInput.isListening && (
+        <div className="rounded-2xl border border-rose-300 bg-rose-50/70 dark:bg-rose-950/20 p-4 flex items-center justify-between animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="size-3 rounded-full bg-rose-600 animate-ping" />
+            <div>
+              <p className="text-xs font-bold text-rose-900 dark:text-rose-200">
+                {isTe ? 'వాయిస్ వింటున్నాము... మాట్లాడండి' : 'Listening for transaction speech...'}
+              </p>
+              <p className="text-xs text-rose-700 dark:text-rose-300 mt-0.5 font-medium">
+                {voiceInput.transcript ? (
+                  <span>"{voiceInput.transcript}"</span>
+                ) : isTe ? (
+                  'ఉదాహరణకు "పాల అమ్మకం ద్వారా 1200 రూపాయలు ఆదాయం" అని చెప్పండి'
+                ) : (
+                  'e.g. "Sold 20 litres milk for 1200 rupees"'
+                )}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={voiceInput.stopListening}
+            className="px-3 py-1.5 rounded-lg bg-rose-600 text-white font-semibold text-xs hover:bg-rose-700 transition-colors shadow-xs cursor-pointer"
+          >
+            {isTe ? 'ఆపండి' : 'Stop'}
+          </button>
+        </div>
+      )}
 
       {/* 3. Add Transaction Form Modal/Card */}
       {showAddForm && (
@@ -431,15 +479,25 @@ export function DigitalLogbookScreen() {
             </div>
           </div>
 
-          {/* Note */}
+          {/* Note with Voice Dictate Option */}
           <div>
-            <label className="text-xs font-medium text-muted-foreground">{t.note}</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-medium text-muted-foreground">{t.note}</label>
+              <button
+                type="button"
+                onClick={handleToggleVoice}
+                className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline font-medium cursor-pointer"
+              >
+                <Mic className="size-3" />
+                <span>{voiceInput.isListening ? (isTe ? 'వింటున్నాము...' : 'Listening...') : (isTe ? 'వాయిస్ ద్వారా చెప్పండి' : 'Dictate note')}</span>
+              </button>
+            </div>
             <input
               type="text"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="e.g. Sold 35 litres milk at morning counter"
-              className="mt-1.5 w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+              className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
             />
           </div>
 
