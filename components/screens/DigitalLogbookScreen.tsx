@@ -3,6 +3,13 @@
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { formatINR } from '@/lib/utils/currency';
+import {
+  getTodayIso,
+  getTodayDisplayDate,
+  formatIsoToDisplayDate,
+  formatDisplayDateToIso,
+  isSameDay,
+} from '@/lib/utils/date';
 import { Button } from '@/components/ui/button';
 import { AnimatedNumber } from '@/components/ui/animated-number';
 import {
@@ -62,15 +69,15 @@ export function DigitalLogbookScreen() {
   const [type, setType] = useState<'income' | 'expense'>('income');
   const [category, setCategory] = useState('Sales');
   const [note, setNote] = useState('');
-  const [date, setDate] = useState('20 Sep 2026');
+  const [selectedDateIso, setSelectedDateIso] = useState(getTodayIso());
   const [isListening, setIsListening] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [ocrScanning, setOcrScanning] = useState(false);
   const [ocrError, setOcrError] = useState<string | null>(null);
 
-  // Compute Today's Activity metrics
-  const todayDateStr = '20 Sep 2026';
-  const todayEntries = entries.filter((e) => e.date === todayDateStr || e.date.includes('Sep 2026'));
+  // Compute Today's Activity metrics dynamically
+  const todayDisplay = getTodayDisplayDate();
+  const todayEntries = entries.filter((e) => isSameDay(e.date, todayDisplay));
   const todayIncome = todayEntries.filter((e) => e.type === 'income').reduce((acc, curr) => acc + curr.amount, 0);
   const todayExpense = todayEntries.filter((e) => e.type === 'expense').reduce((acc, curr) => acc + curr.amount, 0);
   const todayNet = todayIncome - todayExpense;
@@ -78,6 +85,7 @@ export function DigitalLogbookScreen() {
   const handleOpenForm = (entryType: 'income' | 'expense') => {
     setType(entryType);
     setCategory(entryType === 'income' ? 'Sales' : 'Feed / Supplies');
+    setSelectedDateIso(getTodayIso());
     setShowAddForm(true);
   };
 
@@ -152,7 +160,7 @@ export function DigitalLogbookScreen() {
 
     setSubmitting(true);
     await addNewEntry({
-      date,
+      date: formatIsoToDisplayDate(selectedDateIso),
       amount: cleanAmount,
       type,
       category,
@@ -161,6 +169,7 @@ export function DigitalLogbookScreen() {
 
     setAmount('');
     setNote('');
+    setSelectedDateIso(getTodayIso());
     setSubmitting(false);
     setShowAddForm(false);
   };
@@ -239,16 +248,21 @@ export function DigitalLogbookScreen() {
             <h3 className="font-semibold font-sora text-sm text-foreground">
               {isTe ? 'నేటి వ్యాపార కార్యాచరణ' : "Today's Ledger Activity"}
             </h3>
-            <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded">
-              {todayDateStr}
+            <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded font-medium">
+              {todayDisplay}
             </span>
           </div>
           <div className="mt-2 flex items-center gap-4 text-xs">
-            <span>{isTe ? 'ఆదాయం: ' : 'Inflow: '}<strong className="text-emerald-700 font-semibold">{formatINR(todayIncome || 18400)}</strong></span>
+            <span>{isTe ? 'ఆదాయం: ' : 'Inflow: '}<strong className="text-emerald-700 font-semibold">{formatINR(todayIncome)}</strong></span>
             <span>•</span>
-            <span>{isTe ? 'ఖర్చులు: ' : 'Outflow: '}<strong className="text-rose-700 font-semibold">{formatINR(todayExpense || 6250)}</strong></span>
+            <span>{isTe ? 'ఖర్చులు: ' : 'Outflow: '}<strong className="text-rose-700 font-semibold">{formatINR(todayExpense)}</strong></span>
             <span>•</span>
-            <span>{isTe ? 'నేటి నికర మొత్తం: ' : 'Net Today: '}<strong className="text-primary font-bold">{formatINR(todayNet || 12150)}</strong></span>
+            <span>{isTe ? 'నేటి నికర మొత్తం: ' : 'Net Today: '}<strong className={`font-bold ${todayNet >= 0 ? 'text-primary' : 'text-rose-700'}`}>{formatINR(todayNet)}</strong></span>
+            {todayEntries.length === 0 && (
+              <span className="text-[11px] text-muted-foreground hidden sm:inline">
+                ({isTe ? 'నేడు కొత్త నమోదులు లేవు' : 'No entries recorded today'})
+              </span>
+            )}
           </div>
         </div>
 
@@ -380,15 +394,48 @@ export function DigitalLogbookScreen() {
               </select>
             </div>
 
-            {/* Date */}
+            {/* Date Picker defaulting to today */}
             <div>
-              <label className="text-xs font-medium text-muted-foreground">{t.date}</label>
-              <input
-                type="text"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="mt-1.5 w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-              />
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-muted-foreground">{t.date}</label>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDateIso(getTodayIso())}
+                    className="text-[10px] text-primary hover:underline font-semibold cursor-pointer"
+                  >
+                    {isTe ? 'నేడు' : 'Today'}
+                  </button>
+                  <span className="text-[10px] text-muted-foreground">•</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const y = new Date();
+                      y.setDate(y.getDate() - 1);
+                      const yr = y.getFullYear();
+                      const mo = String(y.getMonth() + 1).padStart(2, '0');
+                      const da = String(y.getDate()).padStart(2, '0');
+                      setSelectedDateIso(`${yr}-${mo}-${da}`);
+                    }}
+                    className="text-[10px] text-muted-foreground hover:text-foreground font-medium cursor-pointer"
+                  >
+                    {isTe ? 'నిన్న' : 'Yesterday'}
+                  </button>
+                </div>
+              </div>
+              <div className="relative mt-1.5">
+                <input
+                  type="date"
+                  value={selectedDateIso}
+                  onChange={(e) => setSelectedDateIso(e.target.value || getTodayIso())}
+                  className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary cursor-pointer text-foreground"
+                  required
+                />
+              </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                {isTe ? 'ఎంచుకున్న తేదీ:' : 'Selected:'}{' '}
+                <span className="font-semibold text-foreground">{formatIsoToDisplayDate(selectedDateIso)}</span>
+              </p>
             </div>
           </div>
 
@@ -470,7 +517,9 @@ export function DigitalLogbookScreen() {
               <tbody className="divide-y divide-border">
                 {entries.map((entry) => (
                   <tr key={entry.id} className="transition-colors hover:bg-muted/40">
-                    <td className="py-3 px-3 text-muted-foreground whitespace-nowrap">{entry.date}</td>
+                    <td className="py-3 px-3 text-muted-foreground whitespace-nowrap">
+                      {formatIsoToDisplayDate(entry.date)}
+                    </td>
                     <td className="py-3 px-3 font-medium text-foreground">{entry.note}</td>
                     <td className="py-3 px-3">
                       <span className="rounded bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">

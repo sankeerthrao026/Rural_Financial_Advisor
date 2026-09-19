@@ -21,6 +21,7 @@ import { useAuth } from './AuthContext';
 import { firestoreInstance, isFirebaseConfigured } from '@/lib/firebase/config';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { PRESET_PROFILES, ACTIVE_PROFILE_KEY } from '@/lib/demo-session';
+import { getTodayDisplayDate } from '@/lib/utils/date';
 
 export interface UserProfile {
   name: string;
@@ -274,7 +275,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
       // Add high expense entry to trigger Rule 2
       addNewEntry({
-        date: '19 Sep 2026',
+        date: getTodayDisplayDate(),
         amount: 85000,
         type: 'expense',
         category: 'Asset Repairs',

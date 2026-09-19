@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { BusinessPlanOutput } from '@/lib/ai/provider';
 import { formatINR } from '@/lib/utils/currency';
+import { getTodayDisplayDate } from '@/lib/utils/date';
 import { Button } from '@/components/ui/button';
 import {
   FileText,
@@ -120,7 +121,7 @@ export function BusinessPlanScreen() {
                 {finance.scheme.name}
               </span>
               <p className="mt-1 text-xs text-muted-foreground">
-                {isTe ? 'తేదీ: 19 సెప్టెంబర్ 2026' : 'Date: 19 Sep 2026'}
+                {isTe ? 'తేదీ: ' : 'Date: '}{getTodayDisplayDate()}
               </p>
             </div>
           </div>
