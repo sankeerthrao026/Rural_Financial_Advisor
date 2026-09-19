@@ -16,6 +16,8 @@ import {
   Calendar,
   IndianRupee,
   Sparkles,
+  Camera,
+  FileUp,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -60,6 +62,44 @@ export function DigitalLogbookScreen() {
   const [date, setDate] = useState('19 Sep 2026');
   const [isListening, setIsListening] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [ocrScanning, setOcrScanning] = useState(false);
+  const [ocrError, setOcrError] = useState<string | null>(null);
+
+  const handleOcrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setOcrScanning(true);
+    setOcrError(null);
+    try {
+      const Tesseract = await import('tesseract.js');
+      const result = await Tesseract.recognize(file, 'eng');
+      const text = result.data.text || '';
+
+      // Find amounts
+      const matches = text.match(/\d+([,\.]\d+)?/g);
+      if (matches && matches.length > 0) {
+        const numbers = matches
+          .map((n) => parseFloat(n.replace(/,/g, '')))
+          .filter((n) => n >= 50 && n < 1000000);
+        if (numbers.length > 0) {
+          setAmount(Math.max(...numbers).toString());
+        }
+      }
+
+      setNote(`Scanned Slip: ${text.slice(0, 35).replace(/[\r\n]+/g, ' ')}`);
+      setShowAddForm(true);
+    } catch (err: any) {
+      setOcrError(
+        isTe
+          ? 'రశీదు స్కాన్ విఫలమైంది. దయచేసి వివరాలను మాన్యువల్‌గా నమోదు చేయండి.'
+          : 'OCR scan failed. Please enter transaction details manually.'
+      );
+      setShowAddForm(true);
+    } finally {
+      setOcrScanning(false);
+    }
+  };
 
   const categories = {
     income: ['Sales', 'Cooperative Payout', 'Subsidy', 'Other Income'],
@@ -195,6 +235,21 @@ export function DigitalLogbookScreen() {
             <Mic className="size-4" />
             <span>{isListening ? (isTe ? 'వింటున్నాము...' : 'Listening...') : (isTe ? 'వాయిస్ ద్వారా నమోదు' : 'Voice Entry')}</span>
           </Button>
+
+          {/* OCR Slip Scan Button */}
+          <label className={`flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs font-semibold cursor-pointer hover:bg-muted transition-colors shadow-xs ${
+            ocrScanning ? 'opacity-70 pointer-events-none' : ''
+          }`}>
+            <Camera className="size-3.5 text-primary" />
+            <span>{ocrScanning ? (isTe ? 'స్కాన్ చేస్తోంది...' : 'Scanning...') : (isTe ? 'రశీదు OCR స్కాన్' : 'Scan Slip (OCR)')}</span>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleOcrUpload}
+              disabled={ocrScanning}
+            />
+          </label>
         </div>
 
         <div className="flex items-center gap-2">
