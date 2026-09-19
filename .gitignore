@@ -31,3 +31,7 @@ __pycache__/
 .pytest_cache/
 backend/chroma_db/
 backend/local_store/
+
+# Documents & PRD
+*.docx
+RuralCred_Advisor_PRD*
