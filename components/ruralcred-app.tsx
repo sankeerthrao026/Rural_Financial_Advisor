@@ -368,6 +368,7 @@ function RuralCredAppInner() {
   const [open, setOpen] = useState(false);
   const { language, setLanguage, profile, detectedRisks, dictionary } = useApp();
   const { signOut } = useAuth();
+  const isTe = language === 'te';
 
   const toggleLanguage = () => {
     setLanguage(language === 'en' ? 'te' : 'en');
