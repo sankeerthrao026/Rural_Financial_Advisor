@@ -39,6 +39,9 @@ import { BusinessAdvisorScreen } from './screens/BusinessAdvisorScreen';
 import { RiskAlertsScreen } from './screens/RiskAlertsScreen';
 import { BusinessPlanScreen } from './screens/BusinessPlanScreen';
 import { SchemeMatchingScreen } from './screens/SchemeMatchingScreen';
+import { FinancialAnalyticsScreen } from './screens/FinancialAnalyticsScreen';
+import { CreditScoreScreen } from './screens/CreditScoreScreen';
+import { SettingsScreen } from './screens/SettingsScreen';
 import { OnboardingScreen } from './onboarding/OnboardingScreen';
 
 const navigation = [
@@ -113,6 +116,7 @@ function Sidebar({
       'Scheme Matching': 'ప్రభుత్వ పథకాలు',
       'Credit Score': 'క్రెడిట్ స్కోరు',
       'Risk Alerts': 'రిస్క్ హెచ్చరికలు',
+      Settings: 'సెట్టింగ్‌లు',
     };
     return map[label] || label;
   };
@@ -214,6 +218,21 @@ function Sidebar({
 
         {/* User Card & Sign Out at Bottom */}
         <div className="border-t border-border pt-4 flex flex-col gap-2">
+          <button
+            onClick={() => {
+              setActive('Settings');
+              setOpen(false);
+            }}
+            className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium transition-colors ${
+              active === 'Settings'
+                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            }`}
+          >
+            <Settings className="size-4 shrink-0" />
+            <span className="flex-1 text-left">{isTe ? 'సెట్టింగ్‌లు' : 'Settings'}</span>
+          </button>
+
           <button
             onClick={() => {
               setActive('Business Profile');
@@ -370,14 +389,14 @@ function MainContent({ active, setActive }: { active: string; setActive: (value:
       )}
       {active === 'Digital Logbook' && <DigitalLogbookScreen />}
       {active === 'Business Plan' && <BusinessPlanScreen />}
-      {active === 'Financial Analytics' && <FinanceAdvisorScreen setActive={setActive} />}
+      {active === 'Financial Analytics' && <FinancialAnalyticsScreen setActive={setActive} />}
       {active === 'Cash Flow' && <CashFlowScreen setActive={setActive} />}
       {active === 'Business Advisor' && <BusinessAdvisorScreen />}
       {active === 'Finance Advisor' && <FinanceAdvisorScreen setActive={setActive} />}
       {active === 'Scheme Matching' && <SchemeMatchingScreen setActive={setActive} />}
-      {active === 'Credit Score' && <FinanceAdvisorScreen setActive={setActive} />}
+      {active === 'Credit Score' && <CreditScoreScreen setActive={setActive} />}
       {active === 'Risk Alerts' && <RiskAlertsScreen />}
-      {active === 'Settings' && <BusinessProfileScreen onSaved={() => setActive('Overview')} />}
+      {active === 'Settings' && <SettingsScreen setActive={setActive} />}
     </div>
   );
 }
@@ -519,6 +538,20 @@ function RuralCredAppInner() {
                   <span className="relative inline-flex rounded-full size-2 bg-rose-600"></span>
                 </span>
               )}
+            </button>
+
+            {/* Settings Quick Access Icon */}
+            <button
+              onClick={() => setActive('Settings')}
+              className={`p-2 rounded-lg transition-colors ${
+                active === 'Settings'
+                  ? 'text-primary bg-primary/10'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              }`}
+              aria-label="Settings"
+              title={isTe ? 'సెట్టింగ్‌లు' : 'Settings'}
+            >
+              <Settings className="size-4" />
             </button>
 
             <div className="ml-1 hidden h-6 w-px bg-border sm:block" />
