@@ -3,6 +3,14 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured, supabaseConfigError } from '@/lib/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
+import {
+  createDemoSession,
+  createPresetSession,
+  getDemoSession,
+  clearDemoSession,
+  DEMO_USER_ID_KEY,
+  LOCAL_AUTH_KEY,
+} from '@/lib/demo-session';
 
 export interface AuthUser {
   id: string;
@@ -30,26 +38,13 @@ export interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const LOCAL_AUTH_KEY = 'ruralcred_auth_user';
-const DEMO_USER_ID_KEY = 'ruralcred_demo_user_id';
-
 function getInitialUser(): AuthUser | null {
   if (typeof window === 'undefined') return null;
   try {
     // 1. Check active demo session first
-    const demoId = localStorage.getItem(DEMO_USER_ID_KEY);
-    if (demoId) {
-      const stored = localStorage.getItem(LOCAL_AUTH_KEY);
-      if (stored) {
-        return JSON.parse(stored);
-      }
-      return {
-        id: demoId,
-        email: `${demoId}@demo.ruralcred.in`,
-        name: 'Demo Entrepreneur',
-        isDemo: true,
-        authMode: 'demo',
-      };
+    const demo = getDemoSession();
+    if (demo) {
+      return demo.user;
     }
 
     // 2. Check stored authenticated/mock user
@@ -119,7 +114,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             persistUser(u);
           }
         } catch (e) {
-          // Never block or show error if background check fails
           console.debug('[Auth] Optional Supabase background check:', e);
         }
       }
@@ -158,18 +152,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // 1. Primary Action: Continue as Demo User (instantaneous, random ID)
   const continueAsDemo = useCallback((): AuthUser => {
-    const randomHex = Math.random().toString(16).substring(2, 10);
-    const demoId = `demo_${randomHex}`;
-    const demoUser: AuthUser = {
-      id: demoId,
-      email: `${demoId}@demo.ruralcred.in`,
-      name: 'Demo Entrepreneur',
-      isDemo: true,
-      authMode: 'demo',
-    };
-
+    const { user: demoUser } = createDemoSession();
     setUser(demoUser);
-    persistUser(demoUser);
     setError(null);
     setLoading(false);
     return demoUser;
@@ -177,64 +161,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // 2. Exit Demo: Clears demo session and returns to Welcome / Entry Screen
   const exitDemo = useCallback(() => {
+    clearDemoSession();
     setUser(null);
     setSession(null);
-    persistUser(null);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('ruralcred_demo_profile');
-    }
+    setError(null);
+    setLoading(false);
   }, []);
 
   // 3. Pre-configured Evaluator Demo Personas
   const loginAsDemoUser = async (persona: 'dairy' | 'kirana' | 'weaving' = 'dairy') => {
-    const randomSuffix = Math.random().toString(16).substring(2, 6);
-    const personas: Record<string, AuthUser> = {
-      dairy: {
-        id: `demo_anita_${randomSuffix}`,
-        email: 'anita.dairy@ruralcred.in',
-        name: 'Anita Sharma',
-        isDemo: true,
-        authMode: 'demo',
-      },
-      kirana: {
-        id: `demo_ramesh_${randomSuffix}`,
-        email: 'ramesh.kirana@ruralcred.in',
-        name: 'Ramesh Kumar',
-        isDemo: true,
-        authMode: 'demo',
-      },
-      weaving: {
-        id: `demo_lakshmi_${randomSuffix}`,
-        email: 'lakshmi.handloom@ruralcred.in',
-        name: 'Lakshmi Devi',
-        isDemo: true,
-        authMode: 'demo',
-      },
-    };
-
-    const chosen = personas[persona] || personas.dairy;
+    const { user: chosen } = createPresetSession(persona);
     setUser(chosen);
-    persistUser(chosen);
     setError(null);
     setLoading(false);
   };
 
-  // 4. Optional Supabase Sign In
+  // 4. Supabase Sign In (with fallback and timeout)
   const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
     setLoading(true);
     setError(null);
     const cleanEmail = email.trim();
 
+    if (!cleanEmail || !password) {
+      setLoading(false);
+      return { error: 'Please enter your email and password.' };
+    }
+
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data, error: signInErr } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password,
-        });
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Authentication service timeout. Please try again.')), 6000)
+        );
+
+        const { data, error: signInErr } = (await Promise.race([
+          supabase.auth.signInWithPassword({
+            email: cleanEmail,
+            password,
+          }),
+          timeoutPromise,
+        ])) as any;
 
         if (signInErr) {
           setLoading(false);
-          return { error: signInErr.message };
+          const msg = signInErr.message?.toLowerCase().includes('invalid login credentials')
+            ? 'Invalid email or password.'
+            : (signInErr.message || 'Authentication failed.');
+          return { error: msg };
         }
 
         if (data.user) {
@@ -248,11 +220,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: null };
       } catch (err: any) {
         setLoading(false);
-        return { error: err?.message || 'Login failed' };
+        return { error: err?.message || 'Authentication service unavailable.' };
       }
     }
 
-    // Local fallback for testing
+    // Local fallback for testing when Supabase credentials are empty
     const mockId = `usr_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
     const newUser: AuthUser = {
       id: mockId,
@@ -267,7 +239,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: null };
   };
 
-  // 5. Optional Supabase Sign Up
+  // 5. Supabase Sign Up (with fallback and timeout)
   const signUp = async (
     email: string,
     password: string,
@@ -277,19 +249,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     const cleanEmail = email.trim();
 
+    if (!cleanEmail || !password) {
+      setLoading(false);
+      return { error: 'Please fill in all required fields.' };
+    }
+
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data, error: signUpErr } = await supabase.auth.signUp({
-          email: cleanEmail,
-          password,
-          options: {
-            data: { name: name || cleanEmail.split('@')[0] },
-          },
-        });
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Registration service timeout. Please try again.')), 6000)
+        );
+
+        const { data, error: signUpErr } = (await Promise.race([
+          supabase.auth.signUp({
+            email: cleanEmail,
+            password,
+            options: {
+              data: { name: name || cleanEmail.split('@')[0] },
+            },
+          }),
+          timeoutPromise,
+        ])) as any;
 
         if (signUpErr) {
           setLoading(false);
-          return { error: signUpErr.message };
+          return { error: signUpErr.message || 'Registration failed.' };
         }
 
         if (data.user) {
@@ -303,7 +287,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: null };
       } catch (err: any) {
         setLoading(false);
-        return { error: err?.message || 'Registration failed' };
+        return { error: err?.message || 'Registration service unavailable.' };
       }
     }
 
@@ -332,6 +316,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.warn('[Auth] Signout error:', e);
       }
     }
+    clearDemoSession();
     setUser(null);
     setSession(null);
     persistUser(null);
@@ -369,3 +354,5 @@ export function useAuth() {
   }
   return context;
 }
+
+export default AuthContext;

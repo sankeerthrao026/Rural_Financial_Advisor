@@ -17,7 +17,7 @@ import {
 
 export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }) {
   const { signIn, signUp, continueAsDemo, loginAsDemoUser, isConfigured } = useAuth();
-  const { language, setLanguage, updateProfile } = useApp();
+  const { language, setLanguage, updateProfile, loadPreset } = useApp();
   const isTe = language === 'te';
 
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -32,29 +32,54 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setLoading(true);
 
-    const res = await signIn(email, password);
-    if (res.error) {
-      if (
-        res.error.toLowerCase().includes('invalid login credentials') ||
-        res.error.toLowerCase().includes('invalid')
-      ) {
-        setError(isTe ? 'చెల్లని ఈమెయిల్ లేదా పాస్‌వర్డ్.' : 'Invalid email or password.');
-      } else {
-        setError(res.error);
-      }
-      setLoading(false);
+    const cleanEmail = email.trim();
+    if (!cleanEmail || !password) {
+      setError(
+        isTe
+          ? 'దయచేసి మీ ఈమెయిల్ మరియు పాస్‌వర్డ్ నమోదు చేయండి.'
+          : 'Please enter your email and password.'
+      );
       return;
     }
 
-    setLoading(false);
-    onAuthenticated?.();
+    setLoading(true);
+    try {
+      const res = await signIn(cleanEmail, password);
+      if (res.error) {
+        if (
+          res.error.toLowerCase().includes('invalid login credentials') ||
+          res.error.toLowerCase().includes('invalid')
+        ) {
+          setError(isTe ? 'చెల్లని ఈమెయిల్ లేదా పాస్‌వర్డ్.' : 'Invalid email or password.');
+        } else {
+          setError(res.error);
+        }
+        setLoading(false);
+        return;
+      }
+
+      setLoading(false);
+      onAuthenticated?.();
+    } catch (err: any) {
+      setError(err?.message || (isTe ? 'లాగిన్ విఫలమైంది.' : 'Login failed. Please try again.'));
+      setLoading(false);
+    }
   };
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail || !password) {
+      setError(
+        isTe
+          ? 'దయచేసి అన్ని అవసరమైన వివరాలను నమోదు చేయండి.'
+          : 'Please fill in all required fields.'
+      );
+      return;
+    }
 
     if (password.length < 6) {
       setError(isTe ? 'పాస్‌వర్డ్ కనీసం 6 అక్షరాలు ఉండాలి.' : 'Password must be at least 6 characters.');
@@ -67,36 +92,63 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
     }
 
     setLoading(true);
-    const res = await signUp(email, password, name);
-    if (res.error) {
-      setError(res.error);
+    try {
+      const res = await signUp(cleanEmail, password, name);
+      if (res.error) {
+        setError(res.error);
+        setLoading(false);
+        return;
+      }
+
       setLoading(false);
-      return;
+      onAuthenticated?.();
+    } catch (err: any) {
+      setError(err?.message || (isTe ? 'ఖాతా నమోదు విఫలమైంది.' : 'Registration failed.'));
+      setLoading(false);
     }
-
-    setLoading(false);
-    onAuthenticated?.();
   };
 
-  const handleContinueAsDemo = () => {
-    continueAsDemo();
-    // Setup clean demo profile so user proceeds to onboarding
-    updateProfile({
-      name: 'Demo Entrepreneur',
-      businessName: '',
-      location: '',
-      category: 'Dairy Farming',
-      marginCapital: 100000,
-      hasActiveLoan: false,
-      simulatingSecondLoan: false,
-      onboardingCompleted: false,
-    });
-    onAuthenticated?.();
+  const handleContinueAsDemo = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    setError(null);
+    try {
+      continueAsDemo();
+      updateProfile({
+        name: 'Demo Entrepreneur',
+        businessName: '',
+        location: '',
+        category: 'Dairy Farming',
+        marginCapital: 100000,
+        hasActiveLoan: false,
+        simulatingSecondLoan: false,
+        onboardingCompleted: false,
+      });
+      onAuthenticated?.();
+    } catch (err) {
+      console.error('[AuthScreen] Demo session start error:', err);
+      setError(
+        isTe
+          ? 'డెమో సెషన్ ప్రారంభించడం విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.'
+          : 'Unable to start demo session. Please try again.'
+      );
+    }
   };
 
-  const handlePersonaDemo = async (persona: 'dairy' | 'kirana' | 'weaving') => {
-    await loginAsDemoUser(persona);
-    onAuthenticated?.();
+  const handlePersonaDemo = async (persona: 'dairy' | 'kirana' | 'weaving', e?: React.MouseEvent) => {
+    e?.preventDefault();
+    setError(null);
+    try {
+      await loginAsDemoUser(persona);
+      loadPreset(persona);
+      onAuthenticated?.();
+    } catch (err) {
+      console.error('[AuthScreen] Preset load error:', err);
+      setError(
+        isTe
+          ? 'డెమో ప్రొఫైల్ లోడ్ చేయడం విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.'
+          : 'Unable to load demo preset. Please try again.'
+      );
+    }
   };
 
   return (
@@ -104,6 +156,7 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
       {/* Top Language Toggle */}
       <div className="absolute top-6 right-6 flex items-center gap-2">
         <button
+          type="button"
           onClick={() => setLanguage(language === 'en' ? 'te' : 'en')}
           className="flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-xs cursor-pointer"
         >
@@ -148,13 +201,12 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
                   {isTe ? 'ఈమెయిల్' : 'Email'}
                 </label>
                 <div className="relative mt-1">
-                  <Mail className="size-4 text-muted-foreground absolute left-3 top-3" />
+                  <Mail className="size-4 text-muted-foreground absolute left-3 top-3 pointer-events-none" />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="entrepreneur@ruralcred.in"
-                    required
                     className="w-full rounded-lg border bg-background pl-9 pr-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
@@ -165,13 +217,12 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
                   {isTe ? 'పాస్‌వర్డ్' : 'Password'}
                 </label>
                 <div className="relative mt-1">
-                  <Lock className="size-4 text-muted-foreground absolute left-3 top-3" />
+                  <Lock className="size-4 text-muted-foreground absolute left-3 top-3 pointer-events-none" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    required
                     className="w-full rounded-lg border bg-background pl-9 pr-10 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                   />
                   <button
@@ -186,7 +237,13 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
 
               {/* [ Login ] Button */}
               <Button type="submit" disabled={loading} className="w-full mt-1 font-semibold cursor-pointer" size="lg">
-                {loading ? (isTe ? 'లాగిన్ అవుతోంది...' : 'Logging in...') : isTe ? 'లాగిన్' : 'Login'}
+                {loading
+                  ? isTe
+                    ? 'సైన్ ఇన్ అవుతోంది...'
+                    : 'Signing in...'
+                  : isTe
+                  ? 'లాగిన్'
+                  : 'Login'}
               </Button>
 
               {/* OR Divider */}
@@ -208,8 +265,8 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
                 onClick={handleContinueAsDemo}
                 className="w-full h-11 font-semibold gap-2 border-primary/30 hover:bg-primary/5 hover:border-primary text-primary cursor-pointer shadow-xs"
               >
-                <Sparkles className="size-4 text-primary" />
-                <span>{isTe ? 'డెమో వినియోగదారుగా కొనసాగండి' : 'Continue as Demo User'}</span>
+                <Sparkles className="size-4 text-primary pointer-events-none" />
+                <span className="pointer-events-none">{isTe ? 'డెమో వినియోగదారుగా కొనసాగండి' : 'Continue as Demo User'}</span>
               </Button>
 
               {/* Switch to Register */}
@@ -217,7 +274,8 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
                 <span>{isTe ? 'ఖాతా లేదా? ' : "Don't have an account? "}</span>
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault();
                     setMode('register');
                     setError(null);
                   }}
@@ -235,7 +293,7 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
                   {isTe ? 'పూర్తి పేరు (ఐచ్ఛికం)' : 'Full Name (Optional)'}
                 </label>
                 <div className="relative mt-1">
-                  <User className="size-4 text-muted-foreground absolute left-3 top-3" />
+                  <User className="size-4 text-muted-foreground absolute left-3 top-3 pointer-events-none" />
                   <input
                     type="text"
                     value={name}
@@ -251,13 +309,12 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
                   {isTe ? 'ఈమెయిల్' : 'Email'}
                 </label>
                 <div className="relative mt-1">
-                  <Mail className="size-4 text-muted-foreground absolute left-3 top-3" />
+                  <Mail className="size-4 text-muted-foreground absolute left-3 top-3 pointer-events-none" />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="entrepreneur@ruralcred.in"
-                    required
                     className="w-full rounded-lg border bg-background pl-9 pr-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
@@ -268,13 +325,12 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
                   {isTe ? 'పాస్‌వర్డ్' : 'Password'}
                 </label>
                 <div className="relative mt-1">
-                  <Lock className="size-4 text-muted-foreground absolute left-3 top-3" />
+                  <Lock className="size-4 text-muted-foreground absolute left-3 top-3 pointer-events-none" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    required
                     className="w-full rounded-lg border bg-background pl-9 pr-10 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                   />
                   <button
@@ -292,13 +348,12 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
                   {isTe ? 'పాస్‌వర్డ్ నిర్ధారించండి' : 'Confirm Password'}
                 </label>
                 <div className="relative mt-1">
-                  <Lock className="size-4 text-muted-foreground absolute left-3 top-3" />
+                  <Lock className="size-4 text-muted-foreground absolute left-3 top-3 pointer-events-none" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="••••••••"
-                    required
                     className="w-full rounded-lg border bg-background pl-9 pr-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
@@ -334,8 +389,8 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
                 onClick={handleContinueAsDemo}
                 className="w-full h-11 font-semibold gap-2 border-primary/30 hover:bg-primary/5 hover:border-primary text-primary cursor-pointer shadow-xs"
               >
-                <Sparkles className="size-4 text-primary" />
-                <span>{isTe ? 'డెమో వినియోగదారుగా కొనసాగండి' : 'Continue as Demo User'}</span>
+                <Sparkles className="size-4 text-primary pointer-events-none" />
+                <span className="pointer-events-none">{isTe ? 'డెమో వినియోగదారుగా కొనసాగండి' : 'Continue as Demo User'}</span>
               </Button>
 
               {/* Switch to Login */}
@@ -343,7 +398,8 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
                 <span>{isTe ? 'ఇప్పటికే ఖాతా ఉందా? ' : 'Already have an account? '}</span>
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault();
                     setMode('login');
                     setError(null);
                   }}
@@ -368,34 +424,34 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
-                onClick={() => handlePersonaDemo('dairy')}
-                className="p-2 rounded-lg border bg-background/60 hover:bg-primary/5 hover:border-primary/40 text-center transition-all cursor-pointer"
+                onClick={(e) => handlePersonaDemo('dairy', e)}
+                className="p-2 rounded-lg border bg-background/60 hover:bg-primary/5 hover:border-primary/40 text-center transition-all cursor-pointer select-none"
               >
-                <p className="text-[11px] font-semibold text-foreground">Anita S.</p>
-                <p className="text-[9px] text-muted-foreground">Dairy (₹1.5L)</p>
+                <p className="text-[11px] font-semibold text-foreground pointer-events-none">Anita S.</p>
+                <p className="text-[9px] text-muted-foreground pointer-events-none">Dairy (₹1.5L)</p>
               </button>
               <button
                 type="button"
-                onClick={() => handlePersonaDemo('kirana')}
-                className="p-2 rounded-lg border bg-background/60 hover:bg-primary/5 hover:border-primary/40 text-center transition-all cursor-pointer"
+                onClick={(e) => handlePersonaDemo('kirana', e)}
+                className="p-2 rounded-lg border bg-background/60 hover:bg-primary/5 hover:border-primary/40 text-center transition-all cursor-pointer select-none"
               >
-                <p className="text-[11px] font-semibold text-foreground">Ramesh K.</p>
-                <p className="text-[9px] text-muted-foreground">Kirana (₹50k)</p>
+                <p className="text-[11px] font-semibold text-foreground pointer-events-none">Ramesh K.</p>
+                <p className="text-[9px] text-muted-foreground pointer-events-none">Kirana (₹50k)</p>
               </button>
               <button
                 type="button"
-                onClick={() => handlePersonaDemo('weaving')}
-                className="p-2 rounded-lg border bg-background/60 hover:bg-primary/5 hover:border-primary/40 text-center transition-all cursor-pointer"
+                onClick={(e) => handlePersonaDemo('weaving', e)}
+                className="p-2 rounded-lg border bg-background/60 hover:bg-primary/5 hover:border-primary/40 text-center transition-all cursor-pointer select-none"
               >
-                <p className="text-[11px] font-semibold text-foreground">Lakshmi D.</p>
-                <p className="text-[9px] text-muted-foreground">Weaver (₹30k)</p>
+                <p className="text-[11px] font-semibold text-foreground pointer-events-none">Lakshmi D.</p>
+                <p className="text-[9px] text-muted-foreground pointer-events-none">Weaver (₹30k)</p>
               </button>
             </div>
           </div>
 
           <div className="mt-4 pt-3 border-t text-center flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-            <ShieldCheck className="size-3.5 text-emerald-600" />
-            <span>
+            <ShieldCheck className="size-3.5 text-emerald-600 pointer-events-none" />
+            <span className="pointer-events-none">
               {isConfigured ? 'Secured by Supabase Auth' : 'Local Demo Auth Ready'}
             </span>
           </div>

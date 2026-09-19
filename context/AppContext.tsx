@@ -20,6 +20,7 @@ import {
 import { useAuth } from './AuthContext';
 import { firestoreInstance, isFirebaseConfigured } from '@/lib/firebase/config';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { PRESET_PROFILES, ACTIVE_PROFILE_KEY } from '@/lib/demo-session';
 
 export interface UserProfile {
   name: string;
@@ -111,22 +112,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       } else if (typeof window !== 'undefined' && userId) {
         const profileKey = `ruralcred_profile_${userId}`;
-        const savedProfile = localStorage.getItem(profileKey);
+        const savedProfile = localStorage.getItem(ACTIVE_PROFILE_KEY) || localStorage.getItem(profileKey);
         if (savedProfile && active) {
           try {
             setProfile(JSON.parse(savedProfile));
           } catch (e) {}
         } else if (user?.isDemo && active) {
-          // If fresh random demo user without saved profile, initialize for onboarding
-          if (
-            user.id.startsWith('demo_') &&
-            !user.id.includes('anita') &&
-            !user.id.includes('ramesh') &&
-            !user.id.includes('lakshmi')
-          ) {
+          if (user.id.includes('anita')) {
+            setProfile(PRESET_PROFILES.dairy.profile);
+          } else if (user.id.includes('ramesh')) {
+            setProfile(PRESET_PROFILES.kirana.profile);
+          } else if (user.id.includes('lakshmi')) {
+            setProfile(PRESET_PROFILES.weaving.profile);
+          } else {
             setProfile({
               name: user.name || 'Demo Entrepreneur',
-              businessName: 'My Enterprise',
+              businessName: '',
               location: '',
               category: 'Dairy Farming',
               marginCapital: 100000,
@@ -165,11 +166,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [userId, user]);
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
-    const next = { ...profile, ...updates, onboardingCompleted: true };
+    const next = {
+      ...profile,
+      ...updates,
+      onboardingCompleted: updates.onboardingCompleted !== undefined ? updates.onboardingCompleted : (updates.location ? true : profile.onboardingCompleted),
+    };
     setProfile(next);
 
     if (typeof window !== 'undefined') {
       localStorage.setItem(`ruralcred_profile_${userId}`, JSON.stringify(next));
+      localStorage.setItem(ACTIVE_PROFILE_KEY, JSON.stringify(next));
     }
 
     if (isFirebaseConfigured && firestoreInstance && userId) {
@@ -230,31 +236,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         businessName: 'Sharma Dairy Farm',
         location: 'Warangal, Telangana',
         category: 'Dairy Farming',
-        marginCapital: 100000,
+        marginCapital: 150000,
         hasActiveLoan: false,
         simulatingSecondLoan: false,
+        onboardingCompleted: true,
       });
       resetEntriesToDefault();
     } else if (presetKey === 'weaving') {
       updateProfile({
         name: 'Lakshmi Devi',
-        businessName: 'Pochampally Handlooms',
+        businessName: 'Lakshmi Handlooms & Textiles',
         location: 'Nalgonda, Telangana',
         category: 'Handloom / Weaving',
         marginCapital: 30000,
         hasActiveLoan: false,
         simulatingSecondLoan: false,
+        onboardingCompleted: true,
       });
+      resetEntriesToDefault();
     } else if (presetKey === 'kirana') {
       updateProfile({
         name: 'Ramesh Kumar',
-        businessName: 'Sri Balaji Kirana Store',
-        location: 'Karimnagar, Telangana',
+        businessName: 'Ramesh General & Kirana Store',
+        location: 'Khammam, Telangana',
         category: 'Rural Grocery / Kirana',
-        marginCapital: 12000, // Project Cost = ₹1,20,000 <= ₹1.40L (Triggers Micro Finance!)
+        marginCapital: 50000,
         hasActiveLoan: false,
         simulatingSecondLoan: false,
+        onboardingCompleted: true,
       });
+      resetEntriesToDefault();
     } else if (presetKey === 'risk_case') {
       // Over-leverage and negative cash flow risk simulation
       updateProfile({
