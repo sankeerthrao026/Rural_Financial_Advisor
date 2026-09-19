@@ -142,4 +142,82 @@ Return a valid JSON object with the following structure:
         print("[WARN] All Gemini candidate models failed. Reverting to grounded local fallback.")
         return None
 
+    def generate_conversational_finance_reply(
+        self,
+        user_query: str,
+        loan_context: Dict[str, Any],
+        language: str = "en",
+        history: Optional[list] = None,
+    ) -> Optional[str]:
+        """
+        Calls Gemini API with full awareness of deterministic loan figures,
+        demographics (gender, social category), working capital split, and seasonal moratorium.
+        Returns a plain-language conversational advisor reply.
+        """
+        if not self.is_available():
+            return None
+
+        from google.genai import types
+
+        is_te = language == "te"
+        system_prompt = f"""You are the RuralCred AI Loan & Finance Advisor.
+You converse with rural Indian micro-entrepreneurs in simple, supportive, and practical language.
+STRICT RULES:
+1. NEVER alter, hallucinate, or recalculate the verified loan numbers provided in the LOAN SUMMARY below (these are calculated deterministically by our banking engine).
+2. Directly answer the entrepreneur's question or follow-up, referencing their exact loan amount, EMI, working capital split, or seasonal moratorium where appropriate.
+3. Tailor your explanation to their demographic profile (e.g. woman entrepreneur, SC/ST/OBC category, rural location).
+4. Explain why recommended schemes (like Stand-Up India, PMEGP 35% subsidy, Stree Nidhi, MUDRA, or NBCFDC) benefit them specifically.
+5. Language: {"Telugu (తెలుగు) using accessible rural terminology" if is_te else "Simple Indian English with clear financial terminology"}."""
+
+        history_text = ""
+        if history and len(history) > 0:
+            formatted_turns = []
+            for item in history[-8:]:
+                role_val = item.get("role") if isinstance(item, dict) else getattr(item, "role", "user")
+                content_val = item.get("content") if isinstance(item, dict) else getattr(item, "content", "")
+                speaker = "Entrepreneur" if role_val == "user" else "Loan Advisor"
+                formatted_turns.append(f"{speaker}: {content_val}")
+            history_text = "PREVIOUS CONVERSATION:\n" + "\n".join(formatted_turns) + "\n\n"
+
+        prompt = f"""{history_text}VERIFIED LOAN & ENTREPRENEUR SUMMARY:
+- Margin Capital (Equity): ₹{loan_context.get('marginCapital', 0):,.0f}
+- Bank Loan Amount: ₹{loan_context.get('loanAmount', 0):,.0f}
+- Total Project Outlay: ₹{loan_context.get('projectCost', 0):,.0f}
+- Quarterly EMI: ₹{loan_context.get('quarterlyEmi', 0):,.0f}
+- Working Capital Split: ₹{loan_context.get('workingCapitalAmount', 0):,.0f} ({loan_context.get('workingCapitalPercent', 0)}%)
+- Capital Expenditure (Capex) Split: ₹{loan_context.get('capexAmount', 0):,.0f} ({loan_context.get('capexPercent', 0)}%)
+- Entrepreneur Demographics: Gender: {loan_context.get('gender')}, Category: {loan_context.get('socialCategory')}, Business: {loan_context.get('category')}, Location: {loan_context.get('location')}
+- Seasonal Moratorium Guidance: {loan_context.get('moratoriumGuidance')}
+- Recommended Schemes: {loan_context.get('topSchemes')}
+
+CURRENT ENTREPRENEUR INQUIRY:
+{user_query}
+
+Provide a helpful, warm, and professional conversational response (2 to 4 paragraphs) addressing the entrepreneur's question with specific references to their profile and numbers."""
+
+        candidate_models = [
+            "gemini-2.5-flash",
+            "gemini-1.5-flash",
+            "gemini-2.0-flash",
+            "gemini-flash-latest",
+        ]
+        for model in candidate_models:
+            try:
+                response = self.client.models.generate_content(
+                    model=model,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_prompt,
+                        temperature=0.3,
+                    ),
+                )
+                text = response.text or ""
+                if text.strip():
+                    self.last_model_used = model
+                    return text.strip()
+            except Exception as e:
+                print(f"[WARN] Gemini finance reply with {model} failed: {e}")
+
+        return None
+
 gemini_service = GeminiService()

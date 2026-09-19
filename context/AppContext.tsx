@@ -37,6 +37,8 @@ export interface UserProfile {
   hasActiveLoan: boolean;
   simulatingSecondLoan: boolean;
   onboardingCompleted?: boolean;
+  gender?: string;
+  socialCategory?: string;
 }
 
 export interface AppContextType {
@@ -92,6 +94,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     hasActiveLoan: false,
     simulatingSecondLoan: false,
     onboardingCompleted: true,
+    gender: 'female',
+    socialCategory: 'OBC',
   });
 
   const [entries, setEntries] = useState<LogbookEntry[]>(INITIAL_DEMO_ENTRIES);
@@ -170,6 +174,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               hasActiveLoan: false,
               simulatingSecondLoan: false,
               onboardingCompleted: true,
+              gender: 'female',
+              socialCategory: 'OBC',
             };
             setProfile(fallbackProfile);
             try {

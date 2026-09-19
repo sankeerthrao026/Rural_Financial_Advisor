@@ -13,6 +13,8 @@ class UserProfile(BaseModel):
     hasActiveLoan: bool = False
     simulatingSecondLoan: bool = False
     onboardingCompleted: bool = True
+    gender: Optional[str] = "female"
+    socialCategory: Optional[str] = "General"
     language: str = "en"
     inputMode: str = "text"
 
@@ -25,6 +27,8 @@ class ProfileUpdate(BaseModel):
     hasActiveLoan: Optional[bool] = None
     simulatingSecondLoan: Optional[bool] = None
     onboardingCompleted: Optional[bool] = None
+    gender: Optional[str] = None
+    socialCategory: Optional[str] = None
     language: Optional[str] = None
     inputMode: Optional[str] = None
 
@@ -79,6 +83,64 @@ class FinancialHealthResponse(BaseModel):
     summary: str
     summaryTe: str
     breakdown: List[MetricBreakdown]
+
+# ----------------- Conversational AI Finance Advisor -----------------
+class TailoredSchemeRecommendation(BaseModel):
+    id: str
+    name: str
+    nameTe: str
+    agency: str
+    maxAmount: float
+    subsidyOrConcession: str
+    subsidyOrConcessionTe: str
+    whyRecommended: str
+    whyRecommendedTe: str
+    isTopMatch: bool = False
+
+class WorkingCapitalBreakdown(BaseModel):
+    workingCapitalPercent: float
+    capexPercent: float
+    workingCapitalAmount: float
+    capexAmount: float
+    workingCapitalUses: List[str]
+    capexUses: List[str]
+
+class SeasonalMoratoriumAdvice(BaseModel):
+    isSeasonal: bool
+    businessType: str
+    leanSeasonMonths: str
+    peakSeasonMonths: str
+    moratoriumQuartersRecommended: int
+    guidance: str
+    guidanceTe: str
+
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str
+
+class FinanceAdviceRequest(BaseModel):
+    marginCapital: float
+    loanAmount: float
+    projectCost: float
+    quarterlyEmi: float
+    category: str = "Dairy Farming"
+    gender: str = "female"
+    socialCategory: str = "General"
+    location: str = "Warangal, Telangana"
+    workingCapitalRatio: Optional[float] = None
+    userQuery: Optional[str] = None
+    history: Optional[List[ChatMessage]] = Field(default_factory=list)
+    language: str = "en"
+
+class FinanceAdviceResponse(BaseModel):
+    reply: str
+    replyTe: Optional[str] = None
+    loanExplanation: str
+    loanExplanationTe: Optional[str] = None
+    recommendedSchemes: List[TailoredSchemeRecommendation]
+    workingCapitalBreakdown: WorkingCapitalBreakdown
+    seasonalMoratoriumAdvice: SeasonalMoratoriumAdvice
+    providerUsed: str
 
 # ----------------- Deterministic Risk Engine -----------------
 class DetectedRisk(BaseModel):
@@ -166,10 +228,6 @@ class GroundedFacts(BaseModel):
     district: str
     category: str
     benchmarkOpex: List[Dict[str, Any]] = []
-
-class ChatMessage(BaseModel):
-    role: Literal["user", "assistant"]
-    content: str
 
 class AdvisorAnalyzeRequest(BaseModel):
     location: str

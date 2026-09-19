@@ -21,6 +21,29 @@ def test_calculate_finance_api():
     assert data["loanAmount"] == 90000
     assert data["scheme"]["id"] == "micro-finance"
 
+def test_advisor_chat_api():
+    response = client.post(
+        "/api/finance/advisor-chat",
+        json={
+            "marginCapital": 100000.0,
+            "loanAmount": 900000.0,
+            "projectCost": 1000000.0,
+            "quarterlyEmi": 42000.0,
+            "category": "Dairy Farming",
+            "gender": "female",
+            "socialCategory": "OBC",
+            "location": "Warangal, Telangana",
+            "userQuery": "Why should I pick Stand-Up India?",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "reply" in data
+    assert len(data["recommendedSchemes"]) >= 3
+    assert data["workingCapitalBreakdown"]["workingCapitalAmount"] + data["workingCapitalBreakdown"]["capexAmount"] == 900000.0
+    assert data["seasonalMoratoriumAdvice"]["isSeasonal"] is True
+
+
 def test_risk_analyze_api():
     response = client.post(
         "/api/risk/analyze",

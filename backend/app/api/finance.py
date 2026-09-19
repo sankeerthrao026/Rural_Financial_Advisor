@@ -1,8 +1,18 @@
 from typing import Optional
 from fastapi import APIRouter, Depends
 from app.auth import get_auth_context, AuthContext
-from app.models.schemas import FinanceCalculateRequest, FinancePlanResponse, FinancialHealthResponse
-from app.services.finance_service import calculate_finance_plan, calculate_financial_health
+from app.models.schemas import (
+    FinanceCalculateRequest,
+    FinancePlanResponse,
+    FinancialHealthResponse,
+    FinanceAdviceRequest,
+    FinanceAdviceResponse,
+)
+from app.services.finance_service import (
+    calculate_finance_plan,
+    calculate_financial_health,
+    generate_finance_advice,
+)
 from app.services.firestore_service import firestore_service
 from app.services.logbook_service import logbook_service
 
@@ -49,3 +59,13 @@ def get_health_score(
         entry_count=count,
         has_downward_trend=downward,
     )
+
+@router.post("/advisor-chat", response_model=FinanceAdviceResponse)
+def advisor_chat(req: FinanceAdviceRequest):
+    """
+    Interactive AI Finance Advisor:
+    Combines verified deterministic loan mathematics with demographic-biased scheme ranking,
+    working capital vs. capex split, seasonal moratorium guidance, and multi-turn conversational AI.
+    """
+    return generate_finance_advice(req)
+

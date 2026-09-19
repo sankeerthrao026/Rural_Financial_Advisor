@@ -12,6 +12,8 @@ export interface DemoUserProfile {
   hasActiveLoan: boolean;
   simulatingSecondLoan: boolean;
   onboardingCompleted: boolean;
+  gender?: string;
+  socialCategory?: string;
 }
 
 export interface DemoUser {
@@ -48,6 +50,8 @@ export const PRESET_PROFILES: Record<'dairy' | 'kirana' | 'weaving', { user: Omi
       hasActiveLoan: false,
       simulatingSecondLoan: false,
       onboardingCompleted: true,
+      gender: 'female',
+      socialCategory: 'OBC',
     },
   },
   kirana: {
@@ -66,6 +70,8 @@ export const PRESET_PROFILES: Record<'dairy' | 'kirana' | 'weaving', { user: Omi
       hasActiveLoan: false,
       simulatingSecondLoan: false,
       onboardingCompleted: true,
+      gender: 'male',
+      socialCategory: 'General',
     },
   },
   weaving: {
@@ -84,6 +90,8 @@ export const PRESET_PROFILES: Record<'dairy' | 'kirana' | 'weaving', { user: Omi
       hasActiveLoan: false,
       simulatingSecondLoan: false,
       onboardingCompleted: true,
+      gender: 'female',
+      socialCategory: 'OBC',
     },
   },
 };

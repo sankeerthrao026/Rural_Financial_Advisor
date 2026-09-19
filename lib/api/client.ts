@@ -86,6 +86,64 @@ export interface HealthResponse {
   gemini_configured: boolean;
 }
 
+export interface TailoredSchemeRecommendation {
+  id: string;
+  name: string;
+  nameTe: string;
+  agency: string;
+  maxAmount: number;
+  subsidyOrConcession: string;
+  subsidyOrConcessionTe: string;
+  whyRecommended: string;
+  whyRecommendedTe: string;
+  isTopMatch: boolean;
+}
+
+export interface WorkingCapitalBreakdown {
+  workingCapitalPercent: number;
+  capexPercent: number;
+  workingCapitalAmount: number;
+  capexAmount: number;
+  workingCapitalUses: string[];
+  capexUses: string[];
+}
+
+export interface SeasonalMoratoriumAdvice {
+  isSeasonal: boolean;
+  businessType: string;
+  leanSeasonMonths: string;
+  peakSeasonMonths: string;
+  moratoriumQuartersRecommended: number;
+  guidance: string;
+  guidanceTe: string;
+}
+
+export interface FinanceAdviceRequest {
+  marginCapital: number;
+  loanAmount: number;
+  projectCost: number;
+  quarterlyEmi: number;
+  category?: string;
+  gender?: string;
+  socialCategory?: string;
+  location?: string;
+  workingCapitalRatio?: number;
+  userQuery?: string;
+  history?: { role: 'user' | 'assistant'; content: string }[];
+  language?: string;
+}
+
+export interface FinanceAdviceResponse {
+  reply: string;
+  replyTe?: string;
+  loanExplanation: string;
+  loanExplanationTe?: string;
+  recommendedSchemes: TailoredSchemeRecommendation[];
+  workingCapitalBreakdown: WorkingCapitalBreakdown;
+  seasonalMoratoriumAdvice: SeasonalMoratoriumAdvice;
+  providerUsed: string;
+}
+
 export interface ApiResult<T> {
   success: boolean;
   data: T | null;
@@ -282,5 +340,21 @@ export const apiClient = {
       method: 'POST',
       body: JSON.stringify(req),
     });
+  },
+
+  // 8. Interactive AI Finance Advisor
+  consultFinanceAdvisor: async (
+    req: FinanceAdviceRequest,
+    timeoutMs: number = 8000
+  ): Promise<ApiResult<FinanceAdviceResponse>> => {
+    return requestJson<FinanceAdviceResponse>(
+      '/finance/advisor-chat',
+      {
+        method: 'POST',
+        body: JSON.stringify(req),
+      },
+      undefined,
+      timeoutMs
+    );
   },
 };

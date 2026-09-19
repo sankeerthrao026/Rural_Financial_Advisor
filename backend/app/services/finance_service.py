@@ -1,12 +1,18 @@
 import math
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from app.models.schemas import (
     SchemeDetails,
     AmortizationRow,
     FinancePlanResponse,
     MetricBreakdown,
     FinancialHealthResponse,
+    TailoredSchemeRecommendation,
+    WorkingCapitalBreakdown,
+    SeasonalMoratoriumAdvice,
+    FinanceAdviceRequest,
+    FinanceAdviceResponse,
 )
+from app.services.gemini_service import gemini_service
 
 def calculate_finance_plan(margin_capital: float) -> FinancePlanResponse:
     """
@@ -231,3 +237,485 @@ def calculate_financial_health(
         summaryTe=summary_te,
         breakdown=breakdown,
     )
+
+
+# ----------------- Conversational AI Finance Advisor Engine -----------------
+
+def get_working_capital_breakdown(
+    loan_amount: float,
+    category: str,
+    custom_ratio: Optional[float] = None,
+) -> WorkingCapitalBreakdown:
+    """
+    Computes Working Capital (operating liquidity) vs. Capital Expenditure (capex).
+    Infers optimal industrial baseline by business category unless custom ratio is provided.
+    Guarantees workingCapitalAmount + capexAmount == loanAmount.
+    """
+    clean_loan = max(1000.0, float(loan_amount))
+    cat_lower = (category or "").lower()
+
+    if "dairy" in cat_lower or "cattle" in cat_lower or "milk" in cat_lower:
+        default_ratio = 0.35
+        wc_uses = [
+            "High-protein cattle feed & dry fodder buffer reserves",
+            "Veterinary care, mandatory vaccinations & mineral supplements",
+            "Seasonal dairy labor wages and hygienic milk transport cans",
+        ]
+        capex_uses = [
+            "Purchase of high-yield Murrah buffaloes or HF dairy cows",
+            "Construction of pucca ventilated cattle shed & mist fans",
+            "Bulk milk chilling unit, automatic milking machine & cans",
+        ]
+    elif "kirana" in cat_lower or "grocery" in cat_lower or "retail" in cat_lower or "store" in cat_lower:
+        default_ratio = 0.75
+        wc_uses = [
+            "Fast-moving consumer goods (FMCG) wholesale bulk inventory",
+            "Wholesale procurement of rice, lentils, edible oils & spices",
+            "Short-term customer trade credit buffer for harvest settlement",
+        ]
+        capex_uses = [
+            "Commercial deep freezer & dairy product refrigeration unit",
+            "Modular heavy-duty steel display shelving and counter desk",
+            "Digital weighing scale & POS barcode billing machine",
+        ]
+    elif "weave" in cat_lower or "handloom" in cat_lower or "textile" in cat_lower:
+        default_ratio = 0.60
+        wc_uses = [
+            "Pure mulberry silk yarn, combed cotton yarn & metallic zari",
+            "Eco-friendly vat dyes, sizing chemicals & warp materials",
+            "Weaver artisan piece-rate wages across 30-day production cycles",
+        ]
+        capex_uses = [
+            "Fly-shuttle pit looms or modernized frame loom installations",
+            "Electronic Jacquard shedding machine & pattern punch card sets",
+            "Motorized warping drum, creel stand & pirn winding equipment",
+        ]
+    elif "tailor" in cat_lower or "garment" in cat_lower:
+        default_ratio = 0.30
+        wc_uses = [
+            "Running yardage fabric rolls, cotton linings, buttons & zippers",
+            "High-tensile sewing threads, packaging boxes & hangers",
+            "Assistant tailor piece-rate payment reserves",
+        ]
+        capex_uses = [
+            "High-speed direct-drive industrial lockstitch sewing machines",
+            "Multi-thread overlock/edging machine & buttonholing apparatus",
+            "Master fabric cutting table and vacuum electric steam press",
+        ]
+    elif "poultry" in cat_lower or "chicken" in cat_lower:
+        default_ratio = 0.45
+        wc_uses = [
+            "Commercial pre-starter and finisher poultry mash feed",
+            "Procurement of day-old broiler/layer chicks and vaccines",
+            "Litter management, disinfectant bio-security & electricity",
+        ]
+        capex_uses = [
+            "Automated environment-controlled poultry shed construction",
+            "Automatic nipple drinking lines and ceiling-suspended feeders",
+            "Gas brooding heaters and generator backup power unit",
+        ]
+    else:
+        default_ratio = 0.50
+        wc_uses = [
+            "Initial raw material inventory and consumable supplies",
+            "Operational liquidity for utility bills, logistics & staff dues",
+            "Upfront trade security deposits with regional distributors",
+        ]
+        capex_uses = [
+            "Core machinery, specialized production equipment, and tools",
+            "Commercial premise fixtures, storage racks, and secure partition",
+            "Three-wheeler cargo transport vehicle or loading equipment",
+        ]
+
+    if custom_ratio is not None:
+        ratio = max(0.05, min(0.95, float(custom_ratio)))
+    else:
+        ratio = default_ratio
+
+    wc_percent = round(ratio * 100.0, 1)
+    capex_percent = round(100.0 - wc_percent, 1)
+    wc_amount = round(clean_loan * (wc_percent / 100.0))
+    capex_amount = round(clean_loan - wc_amount)
+
+    return WorkingCapitalBreakdown(
+        workingCapitalPercent=wc_percent,
+        capexPercent=capex_percent,
+        workingCapitalAmount=float(wc_amount),
+        capexAmount=float(capex_amount),
+        workingCapitalUses=wc_uses,
+        capexUses=capex_uses,
+    )
+
+
+def get_seasonal_moratorium_advice(category: str, language: str = "en") -> SeasonalMoratoriumAdvice:
+    """
+    Generates tailored seasonal moratorium recommendations based on business cycles.
+    """
+    cat_lower = (category or "").lower()
+
+    if "dairy" in cat_lower or "cattle" in cat_lower or "milk" in cat_lower:
+        return SeasonalMoratoriumAdvice(
+            isSeasonal=True,
+            businessType="Dairy Farming",
+            leanSeasonMonths="April – June (Peak Summer Heat)",
+            peakSeasonMonths="August – January (Monsoon & Winter Flush)",
+            moratoriumQuartersRecommended=1,
+            guidance=(
+                "In dairy farming, extreme summer heat stress (April to June) depresses milk yield by 20%–30% "
+                "while green fodder availability plummets, causing severe cash flow compression. We advise requesting "
+                "a 1-quarter summer moratorium or interest-only payment period, structuring accelerated principal recovery "
+                "during the high-lactation monsoon and winter flush season."
+            ),
+            guidanceTe=(
+                "పాడి పరిశ్రమలో వేసవి కాలంలో (ఏప్రిల్-జూన్) అధిక ఎండల వల్ల పాల దిగుబడి 20-30% వరకు తగ్గుతుంది, పచ్చి మేత ఖర్చులు పెరుగుతాయి. "
+                "ఈ సమయంలో నగదు ఇబ్బందులు రాకుండా 1 త్రైమాసికం (3 నెలలు) మారటోరియం లేదా కేవలం వడ్డీ మాత్రమే చెల్లించే సదుపాయాన్ని కోరండి. "
+                "వర్షాకాలం మరియు శీతాకాలంలో పాల దిగుబడి పెరిగినప్పుడు అసలు చెల్లింపులను వేగవంతం చేయవచ్చు."
+            ),
+        )
+    elif "kirana" in cat_lower or "grocery" in cat_lower or "retail" in cat_lower or "store" in cat_lower:
+        return SeasonalMoratoriumAdvice(
+            isSeasonal=True,
+            businessType="Rural Grocery / Kirana",
+            leanSeasonMonths="July – August (Kharif Sowing Season)",
+            peakSeasonMonths="October – January (Harvest & Festive Surge)",
+            moratoriumQuartersRecommended=1,
+            guidance=(
+                "Rural grocery stores face seasonal cash crunches in July–August as farming households direct all liquidity "
+                "into seeds and fertilizers, often purchasing daily provisions on credit. Conversely, cash flow surges dramatically "
+                "during post-harvest festive months (Dussehra, Diwali, Sankranti). Request a seasonal interest-only quarter during sowing, "
+                "with a working capital liquidity renewal before the festive shopping surge."
+            ),
+            guidanceTe=(
+                "గ్రామీణ కిరాణా దుకాణాల్లో ఖరీఫ్ విత్తనాల కాలంలో (జూలై-ఆగస్టు) రైతుల వద్ద నగదు కొరత ఉండటం వల్ల వ్యాపారంలో అరువులు పెరుగుతాయి. "
+                "కానీ అక్టోబర్ నుండి జనవరి వరకు పంట చేతికి వచ్చి పండుగల సమయంలో అమ్మకాలు భారీగా పెరుగుతాయి. కాబట్టి జూలై-ఆగస్టు కాలంలో "
+                "సాధారణ EMI వెసులుబాటు పొంది, పండుగల ముందు వర్కింగ్ క్యాపిటల్ పెంచుకోవడం ఉత్తమం."
+            ),
+        )
+    elif "weave" in cat_lower or "handloom" in cat_lower or "textile" in cat_lower:
+        return SeasonalMoratoriumAdvice(
+            isSeasonal=True,
+            businessType="Handloom / Weaving",
+            leanSeasonMonths="June – August (Monsoon Humidity & Sluggish Footfall)",
+            peakSeasonMonths="September – February (Wedding & Festival Season)",
+            moratoriumQuartersRecommended=1,
+            guidance=(
+                "Handloom weaving experiences humidity bottlenecks in yarn sizing/drying and lower footfall during peak monsoon (June–August). "
+                "Peak cash realization occurs during the autumn/winter wedding and festive season. We recommend structuring a 1-quarter moratorium "
+                "during monsoon, amortizing repayments primarily across the festive wedding quarter."
+            ),
+            guidanceTe=(
+                "చేనేత రంగంలో వర్షాకాలం (జూన్-ఆగస్టు) అధిక తేమ వల్ల రంగులు ఆరడం ఆలస్యమవుతుంది మరియు అమ్మకాలు మందగిస్తాయి. "
+                "పెళ్లిళ్ల సీజన్ మరియు పండుగలలో (సెప్టెంబర్-ఫిబ్రవరి) భారీ డిమాండ్ ఉంటుంది. వర్షాకాలంలో 1 త్రైమాసిక మారటోరియం తీసుకుని, "
+                "పండుగల కాలంలో అసలు తిరిగి చెల్లించడం అత్యంత లాభదాయకం."
+            ),
+        )
+    else:
+        return SeasonalMoratoriumAdvice(
+            isSeasonal=False,
+            businessType=category or "Rural Micro Enterprise",
+            leanSeasonMonths="Varies with regional procurement cycles",
+            peakSeasonMonths="Post-harvest rural market liquidation",
+            moratoriumQuartersRecommended=1,
+            guidance=(
+                "Your enterprise benefits from the standard statutory moratorium (3 to 6 months) allowing you to stabilize commercial "
+                "operations and build cash reserves before commencing full principal amortization."
+            ),
+            guidanceTe=(
+                "మీ వ్యాపారం స్థిరపడేందుకు ప్రారంభంలో 3 నుండి 6 నెలల చట్టబద్ధమైన మారటోరియం లభిస్తుంది. దీని ద్వారా వ్యాపార నగదు నిల్వలను "
+                "సమకూర్చుకున్న తర్వాత పూర్తి రుణ చెల్లింపులు ప్రారంభించవచ్చు."
+            ),
+        )
+
+
+def get_tailored_scheme_recommendations(
+    loan_amount: float,
+    gender: str,
+    social_category: str,
+    category: str,
+    language: str = "en",
+) -> List[TailoredSchemeRecommendation]:
+    """
+    Ranks government credit schemes tailored directly to the entrepreneur's demographic profile:
+    - Gender (e.g., Woman entrepreneurs receive Stand-Up India mandate and Stree Nidhi priority)
+    - Social Category (SC/ST receive Stand-Up India + 35% PMEGP subsidy; OBC receives NBCFDC concessional rates)
+    - Explains WHY the scheme fits them specifically.
+    """
+    is_woman = (gender or "").strip().lower() in ("female", "woman", "f")
+    soc_cat = (social_category or "").strip().upper()
+    is_sc_st = soc_cat in ("SC", "ST")
+    is_obc = soc_cat == "OBC"
+    clean_loan = float(loan_amount)
+
+    schemes: List[TailoredSchemeRecommendation] = []
+
+    # 1. Stand-Up India Scheme (Statutory mandate for Women & SC/ST)
+    stand_up_why = (
+        "As a woman entrepreneur, you are legally prioritized under Stand-Up India's statutory mandate requiring every bank branch to extend ₹10L–₹1Cr loans to women borrowers with concessional interest and lower margin money."
+        if is_woman
+        else (
+            "As an SC/ST entrepreneur, every commercial bank branch has a mandatory credit target to sanction Stand-Up India loans up to ₹1 Crore with concessional margins and sovereign credit guarantee."
+            if is_sc_st
+            else "Available for greenfield enterprise expansion when co-promoted with qualifying women or SC/ST partners."
+        )
+    )
+    stand_up_why_te = (
+        "మహిళా వ్యవస్థాపకురాలిగా, ప్రతి బ్యాంక్ శాఖ తప్పనిసరిగా మహిళలకు ₹10 లక్షల నుండి ₹1 కోటి వరకు రుణాలు ఇవ్వాలనే ప్రభుత్వ నిబంధన ప్రకారం మీకు అత్యధిక ప్రాధాన్యత లభిస్తుంది."
+        if is_woman
+        else (
+            "SC/ST వ్యవస్థాపకులుగా, ప్రతి బ్యాంక్ బ్రాంచ్‌లో మీకు స్టాండ్-అప్ ఇండియా కింద ₹1 కోటి వరకు తక్కువ మార్జిన్ మరియు రాయితీ వడ్డీతో రుణం పొందే హక్కు ఉంది."
+            if is_sc_st
+            else "భాగస్వామ్య సంస్థలలో అర్హత కలిగిన ప్రమోటర్లతో కలిసి ఈ పథకం కింద విస్తరణ రుణం పొందవచ్చు."
+        )
+    )
+    schemes.append(
+        TailoredSchemeRecommendation(
+            id="stand-up-india",
+            name="Stand-Up India Scheme for Women & SC/ST",
+            nameTe="స్టాండ్-అప్ ఇండియా పథకం (మహిళలు & SC/ST)",
+            agency="SIDBI & Scheduled Commercial Banks",
+            maxAmount=10000000.0,
+            subsidyOrConcession="Lowest commercial rate (Base rate/MCLR + 3%), only 15% promoter margin, NCGTC sovereign credit guarantee",
+            subsidyOrConcessionTe="తక్కువ వడ్డీ రేటు, కేవలం 15% స్వంత వాటా, ప్రభుత్వ క్రెడిట్ గ్యారెంటీ కవరేజ్",
+            whyRecommended=stand_up_why,
+            whyRecommendedTe=stand_up_why_te,
+            isTopMatch=(is_woman or is_sc_st) and clean_loan >= 500000,
+        )
+    )
+
+    # 2. PMEGP (Prime Minister's Employment Generation Programme)
+    has_special_subsidy = is_woman or is_sc_st or is_obc
+    pmegp_subsidy = (
+        "35% Rural Capital Subsidy (Special Category) — promoter equity contribution only 5%!"
+        if has_special_subsidy
+        else "25% Rural Capital Subsidy (General Category) — promoter equity contribution 10%"
+    )
+    pmegp_subsidy_te = (
+        "గ్రామీణ ప్రాంతాల్లో 35% భారీ మూలధన సబ్సిడీ — ప్రమోటర్ స్వంత వాటా కేవలం 5% మాత్రమే!"
+        if has_special_subsidy
+        else "గ్రామీణ ప్రాంతాల్లో 25% మూలధన సబ్సిడీ — ప్రమోటర్ స్వంత వాటా 10%"
+    )
+    pmegp_why = (
+        f"Under PMEGP Special Category guidelines, {'women' if is_woman else 'socially backward'} rural entrepreneurs receive an elevated 35% non-refundable capital subsidy, saving up to 35% of your total project outlay!"
+        if has_special_subsidy
+        else "PMEGP provides a generous 25% non-refundable government capital subsidy for viable rural micro-enterprises."
+    )
+    pmegp_why_te = (
+        "ప్రత్యేక కేటగిరీ కింద గ్రామీణ మహిళలు, SC, ST, OBC వ్యవస్థాపకులకు అదనంగా 10% సబ్సిడీ (మొత్తం 35%) లభిస్తుంది, దీనివల్ల రుణ భారం గణనీయంగా తగ్గుతుంది."
+        if has_special_subsidy
+        else "గ్రామీణ ప్రాంతాల్లో కొత్త వ్యాపారాలకు ప్రభుత్వం 25% మూలధన సబ్సిడీని నేరుగా బ్యాంక్ లోన్‌కు జమ చేస్తుంది."
+    )
+    schemes.append(
+        TailoredSchemeRecommendation(
+            id="pmegp",
+            name="PMEGP Credit Linked Subsidy Scheme",
+            nameTe="పీఎంఈజీపీ (PMEGP) సబ్సిడీ పథకం",
+            agency="KVIC, KVIB & District Industries Centre (DIC)",
+            maxAmount=5000000.0,
+            subsidyOrConcession=pmegp_subsidy,
+            subsidyOrConcessionTe=pmegp_subsidy_te,
+            whyRecommended=pmegp_why,
+            whyRecommendedTe=pmegp_why_te,
+            isTopMatch=has_special_subsidy and clean_loan < 500000 and clean_loan > 140000,
+        )
+    )
+
+    # 3. Stree Nidhi Credit Cooperative (Exclusively Women SHG members)
+    if is_woman:
+        schemes.append(
+            TailoredSchemeRecommendation(
+                id="stree-nidhi",
+                name="Stree Nidhi Credit Cooperative (SHG Window)",
+                nameTe="స్త్రీ నిధి క్రెడిట్ కోఆపరేటివ్ (మహిళా సంఘాల రుణం)",
+                agency="Stree Nidhi & Society for Elimination of Rural Poverty (SERP)",
+                maxAmount=300000.0,
+                subsidyOrConcession="9.0% - 11.0% p.a., 100% zero physical collateral, fast 48-hour Village Organization (VO) appraisal",
+                subsidyOrConcessionTe="కేవలం 9% - 11% వార్షిక వడ్డీ, ఎటువంటి తనఖా అవసరం లేదు, 48 గంటల్లో గ్రామ సమాఖ్య ద్వారా మంజూరు",
+                whyRecommended="Tailored specifically for rural women micro-entrepreneurs. Enables prompt collateral-free capital deployment through your village SHG federation without tedious banking paperwork.",
+                whyRecommendedTe="గ్రామీణ మహిళలకు ఇది అత్యంత సులువైన రుణం. గ్రామ మహిళా సంఘం ద్వారా ఎటువంటి ఆస్తుల తనఖా లేకుండా వేగంగా రుణం అందుతుంది.",
+                isTopMatch=clean_loan <= 140000,
+            )
+        )
+
+    # 4. NBCFDC (Concessional for OBC)
+    if is_obc or not is_woman:
+        schemes.append(
+            TailoredSchemeRecommendation(
+                id="nbcfdc",
+                name="NBCFDC Micro & Term Loan Scheme",
+                nameTe="ఎన్‌బీసీఎఫ్‌డీసీ వెనుకబడిన తరగతుల రుణ పథకం",
+                agency="National Backward Classes Finance & Development Corporation",
+                maxAmount=5000000.0,
+                subsidyOrConcession="Subsidized 6.5% - 8.0% p.a. annual interest with 3 to 6 months initial principal moratorium",
+                subsidyOrConcessionTe="కేవలం 6.5% - 8.0% వార్షిక రాయితీ వడ్డీ, 3 నుండి 6 నెలల మారటోరియం గ్రేస్ పీరియడ్",
+                whyRecommended="As an OBC entrepreneur, NBCFDC delivers direct statutory interest subvention, giving you rates as low as 6.5% p.a. and flexible quarterly repayments.",
+                whyRecommendedTe="ఓబీసీ వర్గాలకు ప్రభుత్వం కల్పిస్తున్న ప్రత్యేక రాయితీ పథకం. అతి తక్కువ వడ్డీతో పాటు సులభ వాయిదాల చెల్లింపు సదుపాయం ఉంటుంది.",
+                isTopMatch=is_obc and not is_woman and clean_loan <= 140000,
+            )
+        )
+
+    # 5. Pradhan Mantri MUDRA Yojana (PMMY)
+    schemes.append(
+        TailoredSchemeRecommendation(
+            id="mudra",
+            name="Pradhan Mantri MUDRA Yojana (Kishor / Tarun)",
+            nameTe="పీఎం ముద్రా యోజన (MUDRA Kishor/Tarun)",
+            agency="National Credit Guarantee Trustee Company (NCGTC) & Banks",
+            maxAmount=1000000.0,
+            subsidyOrConcession="100% collateral-free, MUDRA RuPay card overdraft for working capital, 0.25% Mahila Udyami rebate",
+            subsidyOrConcessionTe="100% తనఖా రహితం, వర్కింగ్ క్యాపిటల్ కోసం ముద్రా కార్డ్ సదుపాయం, మహిళలకు ప్రత్యేక వడ్డీ రాయితీ",
+            whyRecommended="Universal collateral-free credit for micro-enterprises up to ₹10 Lakhs. The accompanying MUDRA card allows you to withdraw and service working capital on a revolving credit basis.",
+            whyRecommendedTe="రూ. 10 లక్షల వరకు ఎలాంటి షూరిటీ లేదా ఆస్తి పత్రాలు అవసరం లేని జాతీయ పథకం. ముద్రా కార్డు ద్వారా అవసరమైనప్పుడు నగదు విత్‌డ్రా చేసుకోవచ్చు.",
+            isTopMatch=(not has_special_subsidy) or (not any(s.isTopMatch for s in schemes)),
+        )
+    )
+
+    # Ensure exactly one top match is flagged and sorted first
+    top_matches = [s for s in schemes if s.isTopMatch]
+    if not top_matches:
+        schemes[0].isTopMatch = True
+
+    # Sort so top match is at the very beginning
+    schemes.sort(key=lambda s: 0 if s.isTopMatch else 1)
+    return schemes
+
+
+def generate_finance_advice(req: FinanceAdviceRequest) -> FinanceAdviceResponse:
+    """
+    Synthesizes conversational AI finance advisory:
+    1. Keeps 100% deterministic calculations for loan math.
+    2. Computes working capital vs. capex split.
+    3. Analyzes business seasonality and advises on repayment moratorium.
+    4. Ranks credit schemes biased by demographics (woman, SC/ST, OBC).
+    5. Answers follow-up queries conversationally via Gemini 2.5 Flash with grounded fallback.
+    """
+    is_te = req.language == "te"
+    wc_breakdown = get_working_capital_breakdown(
+        loan_amount=req.loanAmount,
+        category=req.category,
+        custom_ratio=req.workingCapitalRatio,
+    )
+    moratorium_advice = get_seasonal_moratorium_advice(
+        category=req.category,
+        language=req.language,
+    )
+    schemes = get_tailored_scheme_recommendations(
+        loan_amount=req.loanAmount,
+        gender=req.gender,
+        social_category=req.socialCategory,
+        category=req.category,
+        language=req.language,
+    )
+
+    top_scheme = schemes[0] if schemes else None
+    scheme_name = top_scheme.name if top_scheme else "Micro Finance Scheme"
+
+    # Base plain-language explanation grounded in deterministic math
+    if is_te:
+        loan_exp = (
+            f"మీ {req.category} వ్యాపారం కోసం మొత్తం ప్రాజెక్ట్ వ్యయం ₹{req.projectCost:,.0f} గా లెక్కించబడింది. "
+            f"ఇందులో మీ స్వంత మూలధన వాటా ₹{req.marginCapital:,.0f} (10%) కాగా, బ్యాంక్ ద్వారా లభించే రుణం ₹{req.loanAmount:,.0f} (90%). "
+            f"ప్రతి 3 నెలలకు తగ్గుతున్న అసలుపై చెల్లించాల్సిన EMI ₹{req.quarterlyEmi:,.0f}. "
+            f"మీ ప్రొఫైల్ ప్రకారం '{top_scheme.nameTe if top_scheme else scheme_name}' పథకం అత్యుత్తమంగా సరిపోతుంది ({top_scheme.whyRecommendedTe if top_scheme else ''})."
+        )
+    else:
+        loan_exp = (
+            f"For your {req.category} enterprise, our banking model establishes a total project outlay of ₹{req.projectCost:,.0f}. "
+            f"Your promoter equity contribution is ₹{req.marginCapital:,.0f} (10%), with the remaining ₹{req.loanAmount:,.0f} (90%) funded via institutional credit. "
+            f"Your quarterly reducing-balance repayment will be ₹{req.quarterlyEmi:,.0f}. "
+            f"Based on your profile, '{scheme_name}' is prioritized ({top_scheme.whyRecommended if top_scheme else ''})."
+        )
+
+    # Conversational reply handling (answering userQuery or welcome overview)
+    provider_used = "Grounded Local Finance Engine"
+    reply_text = ""
+
+    loan_context = {
+        "marginCapital": req.marginCapital,
+        "loanAmount": req.loanAmount,
+        "projectCost": req.projectCost,
+        "quarterlyEmi": req.quarterlyEmi,
+        "workingCapitalAmount": wc_breakdown.workingCapitalAmount,
+        "workingCapitalPercent": wc_breakdown.workingCapitalPercent,
+        "capexAmount": wc_breakdown.capexAmount,
+        "capexPercent": wc_breakdown.capexPercent,
+        "gender": req.gender,
+        "socialCategory": req.socialCategory,
+        "category": req.category,
+        "location": req.location,
+        "moratoriumGuidance": moratorium_advice.guidance,
+        "topSchemes": ", ".join([f"{s.name} ({s.whyRecommended})" for s in schemes[:3]]),
+    }
+
+    if req.userQuery and req.userQuery.strip():
+        # Attempt Gemini 2.5 Flash first
+        if gemini_service.is_available():
+            gemini_reply = gemini_service.generate_conversational_finance_reply(
+                user_query=req.userQuery,
+                loan_context=loan_context,
+                language=req.language,
+                history=req.history,
+            )
+            if gemini_reply:
+                reply_text = gemini_reply
+                provider_used = f"Google Gemini ({gemini_service.last_model_used or 'gemini-2.5-flash'})"
+
+        # Grounded conversational fallback if Gemini was unavailable or returned empty
+        if not reply_text:
+            q_lower = req.userQuery.lower()
+            if "why" in q_lower or "scheme" in q_lower or "stand-up" in q_lower or "pmegp" in q_lower or "mudra" in q_lower:
+                reply_text = (
+                    f"We recommended {top_scheme.name if top_scheme else 'this scheme'} because: {top_scheme.whyRecommended if top_scheme else ''} "
+                    f"It provides {top_scheme.subsidyOrConcession if top_scheme else ''}, keeping your quarterly repayment at ₹{req.quarterlyEmi:,.0f}."
+                )
+            elif "moratorium" in q_lower or "summer" in q_lower or "lean" in q_lower or "skip" in q_lower or "pause" in q_lower:
+                reply_text = (
+                    f"{moratorium_advice.guidance} "
+                    f"During the initial {moratorium_advice.moratoriumQuartersRecommended * 3} months, you only need to service accrued interest, giving your cash flows time to stabilize."
+                )
+            elif "working capital" in q_lower or "capex" in q_lower or "equipment" in q_lower or "stock" in q_lower or "split" in q_lower:
+                reply_text = (
+                    f"Of your ₹{req.loanAmount:,.0f} loan, we allocate ₹{wc_breakdown.workingCapitalAmount:,.0f} ({wc_breakdown.workingCapitalPercent}%) "
+                    f"to day-to-day working capital ({', '.join(wc_breakdown.workingCapitalUses[:2])}) and ₹{wc_breakdown.capexAmount:,.0f} "
+                    f"({wc_breakdown.capexPercent}%) to one-time equipment/capex ({', '.join(wc_breakdown.capexUses[:2])}). "
+                    f"This separation gives lenders confidence that funds won't be diverted."
+                )
+            elif "document" in q_lower or "bank" in q_lower or "apply" in q_lower or "approval" in q_lower:
+                reply_text = (
+                    f"To apply for your ₹{req.loanAmount:,.0f} loan under {top_scheme.name if top_scheme else 'the scheme'}, lenders will require: "
+                    f"1) Aadhaar & PAN, 2) Residence & Caste certificate (if SC/ST/OBC), 3) Quotations for capex equipment (₹{wc_breakdown.capexAmount:,.0f}), "
+                    f"and 4) 6 months of bank account or logbook cash flow statements showing your ₹{req.marginCapital:,.0f} margin capital readiness."
+                )
+            else:
+                reply_text = (
+                    f"Based on your {req.category} profile in {req.location}, your loan of ₹{req.loanAmount:,.0f} requires a quarterly payment of ₹{req.quarterlyEmi:,.0f}. "
+                    f"We have structured ₹{wc_breakdown.workingCapitalAmount:,.0f} for working capital and ₹{wc_breakdown.capexAmount:,.0f} for equipment. "
+                    f"Feel free to ask about scheme eligibility, seasonal grace periods, or required bank paperwork."
+                )
+    else:
+        # Default greeting / executive advisor overview
+        if is_te:
+            reply_text = (
+                f"నమస్కారం! మీ {req.category} వ్యాపారానికి సంబంధించిన ఆర్థిక విశ్లేషణ సిద్ధంగా ఉంది. "
+                f"మీకు ₹{req.loanAmount:,.0f} రుణం అవసరమవుతుంది, త్రైమాసిక వాయిదా ₹{req.quarterlyEmi:,.0f}. "
+                f"మీ ప్రొఫైల్ ఆధారంగా '{top_scheme.nameTe if top_scheme else scheme_name}' పథకం సిఫార్సు చేయబడింది. "
+                f"రుణ వివరాలు, మారటోరియం లేదా వర్కింగ్ క్యాపిటల్ గురించి ఏవైనా సందేహాలుంటే నన్ను అడగండి."
+            )
+        else:
+            reply_text = (
+                f"Welcome! I have analyzed your {req.category} enterprise requirements. "
+                f"Based on your ₹{req.marginCapital:,.0f} equity margin, you qualify for an institutional loan of ₹{req.loanAmount:,.0f} with a quarterly EMI of ₹{req.quarterlyEmi:,.0f}. "
+                f"I have tailored '{scheme_name}' as your top scheme match and scheduled a seasonal moratorium for your lean months. "
+                f"You can ask me any questions about interest rates, working capital, or bank approval requirements below."
+            )
+
+    return FinanceAdviceResponse(
+        reply=reply_text,
+        replyTe=reply_text if is_te else None,
+        loanExplanation=loan_exp,
+        loanExplanationTe=loan_exp if is_te else None,
+        recommendedSchemes=schemes,
+        workingCapitalBreakdown=wc_breakdown,
+        seasonalMoratoriumAdvice=moratorium_advice,
+        providerUsed=provider_used,
+    )
+
