@@ -9,6 +9,10 @@ export interface GeminiCallParams {
   userPrompt: string;
   responseMimeType?: 'application/json' | 'text/plain';
   temperature?: number;
+  audioInline?: {
+    mimeType: string;
+    dataBase64: string;
+  };
 }
 
 export interface GeminiCallResult {
@@ -46,13 +50,26 @@ export async function callGeminiApi(params: GeminiCallParams): Promise<GeminiCal
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cleanKey}`;
 
-      const contents: any[] = [];
+      const parts: any[] = [];
+      if (params.audioInline) {
+        let cleanB64 = params.audioInline.dataBase64;
+        if (cleanB64.includes(',')) {
+          cleanB64 = cleanB64.split(',')[1];
+        }
+        parts.push({
+          inlineData: {
+            mimeType: params.audioInline.mimeType || 'audio/webm',
+            data: cleanB64,
+          },
+        });
+      }
+      parts.push({ text: params.userPrompt });
 
       const body: Record<string, any> = {
         contents: [
           {
             role: 'user',
-            parts: [{ text: params.userPrompt }],
+            parts,
           },
         ],
         generationConfig: {

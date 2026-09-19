@@ -1,10 +1,13 @@
 import { en } from './en';
 import { te } from './te';
+import { hi } from './hi';
 
-export type Language = 'en' | 'te';
+export type Language = 'en' | 'te' | 'hi';
 
 export function getDictionary(lang: Language) {
-  return lang === 'te' ? te : en;
+  if (lang === 'te') return te;
+  if (lang === 'hi') return hi;
+  return en;
 }
 
-export { en, te };
+export { en, te, hi };

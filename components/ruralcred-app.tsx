@@ -482,15 +482,24 @@ function RuralCredAppInner() {
               </div>
             )}
 
-            {/* Language Selector Toggle */}
-            <button
-              onClick={toggleLanguage}
-              className="flex items-center gap-1.5 rounded-lg border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-xs"
-              title="Toggle English / Telugu"
-            >
-              <Languages className="size-3.5 text-primary" />
-              <span>{language === 'en' ? 'తెలుగు' : 'English'}</span>
-            </button>
+            {/* Multilingual Selector (English, Telugu, Hindi) */}
+            <div className="flex items-center rounded-lg border bg-card p-0.5 text-xs font-semibold shadow-xs">
+              {(['en', 'te', 'hi'] as const).map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  onClick={() => setLanguage(l)}
+                  className={`px-2 py-1 rounded-md text-[11px] transition-all cursor-pointer ${
+                    language === l
+                      ? 'bg-primary text-primary-foreground shadow-2xs font-bold'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  }`}
+                  title={l === 'en' ? 'English' : l === 'te' ? 'Telugu (తెలుగు)' : 'Hindi (हिन्दी)'}
+                >
+                  {l === 'en' ? 'EN' : l === 'te' ? 'తె' : 'हि'}
+                </button>
+              ))}
+            </div>
 
             {/* Notifications / Risk Alerts Icon */}
             <button

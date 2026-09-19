@@ -43,7 +43,9 @@ import {
   startSpeechListening,
   isSpeechRecognitionSupported,
   parseSpokenTransaction,
+  SpokenTransactionResult,
 } from '@/lib/voice/speech';
+import { VoiceInputModal } from '@/components/voice/VoiceInputModal';
 
 export function DigitalLogbookScreen() {
   const {
@@ -55,6 +57,7 @@ export function DigitalLogbookScreen() {
     totalExpenses,
     netCashFlow,
     language,
+    setLanguage,
     inputMode,
     syncStatus,
     dictionary,
@@ -129,28 +132,24 @@ export function DigitalLogbookScreen() {
     expense: ['Feed / Supplies', 'Raw Material', 'Veterinary', 'Wages', 'Transport', 'Rent & Power'],
   };
 
-  const handleVoiceQuickAdd = () => {
-    if (!isSpeechRecognitionSupported()) {
-      alert(dictionary.speechUnsupported);
-      return;
-    }
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
 
-    setIsListening(true);
-    startSpeechListening({
-      language,
-      onResult: (transcript) => {
-        setIsListening(false);
-        const parsed = parseSpokenTransaction(transcript);
-        if (parsed.amount) {
-          setAmount(parsed.amount.toString());
-        }
-        setType(parsed.type);
-        setNote(parsed.note);
-        setShowAddForm(true);
-      },
-      onError: () => setIsListening(false),
-      onEnd: () => setIsListening(false),
-    });
+  const handleVoiceQuickAdd = () => {
+    setShowVoiceModal(true);
+  };
+
+  const handleVoiceExtracted = (result: SpokenTransactionResult) => {
+    if (result.amount) {
+      setAmount(result.amount.toString());
+    }
+    setType(result.type);
+    if (result.category) {
+      setCategory(result.category);
+    }
+    if (result.note) {
+      setNote(result.note);
+    }
+    setShowAddForm(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -286,18 +285,15 @@ export function DigitalLogbookScreen() {
             <span>{isTe ? '− ఖర్చు నమోదు' : '− Add Expense'}</span>
           </button>
 
-          {/* Voice Button with concentric pulse animation */}
+          {/* Voice Button with interactive recording & visualizer */}
           <button
             type="button"
             onClick={handleVoiceQuickAdd}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer shadow-xs ${
-              isListening
-                ? 'bg-rose-50 border-rose-400 text-rose-700 pulse-subtle ring-2 ring-rose-400/40'
-                : 'bg-card hover:bg-muted text-foreground'
-            }`}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer shadow-xs bg-card hover:bg-muted text-foreground hover:border-primary/50"
+            title="Open smart voice assistant with visualizer and multi-language support"
           >
-            <Mic className={`size-3.5 ${isListening ? 'animate-bounce text-rose-600' : 'text-primary'}`} />
-            <span>{isListening ? (isTe ? 'వింటున్నాము...' : 'Listening...') : (isTe ? 'వాయిస్' : 'Voice')}</span>
+            <Mic className="size-3.5 text-primary" />
+            <span>{language === 'te' ? 'వాయిస్' : language === 'hi' ? 'वॉइस' : 'Voice'}</span>
           </button>
 
           {/* OCR Slip Scan Button */}
@@ -547,6 +543,14 @@ export function DigitalLogbookScreen() {
           </div>
         )}
       </section>
+
+      <VoiceInputModal
+        isOpen={showVoiceModal}
+        onClose={() => setShowVoiceModal(false)}
+        language={language}
+        onLanguageChange={setLanguage}
+        onExtracted={handleVoiceExtracted}
+      />
     </div>
   );
 }

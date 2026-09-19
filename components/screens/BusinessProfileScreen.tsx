@@ -138,7 +138,7 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
         <div className="grid gap-4 sm:grid-cols-2 pb-6 border-b">
           <div>
             <label className="text-xs font-medium text-muted-foreground">{t.languageSelectLabel}</label>
-            <div className="mt-2 flex gap-2">
+            <div className="mt-2 flex gap-1.5">
               <button
                 type="button"
                 onClick={() => setLanguage('en')}
@@ -156,6 +156,15 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
                 }`}
               >
                 తెలుగు
+              </button>
+              <button
+                type="button"
+                onClick={() => setLanguage('hi')}
+                className={`flex-1 rounded-lg border py-2 text-xs font-medium transition-colors cursor-pointer ${
+                  language === 'hi' ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-muted'
+                }`}
+              >
+                हिन्दी
               </button>
             </div>
           </div>

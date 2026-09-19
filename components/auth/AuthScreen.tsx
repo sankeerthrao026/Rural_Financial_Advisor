@@ -153,16 +153,23 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
 
   return (
     <div className="min-h-screen bg-background flex flex-col justify-center items-center px-4 py-12 relative">
-      {/* Top Language Toggle */}
-      <div className="absolute top-6 right-6 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setLanguage(language === 'en' ? 'te' : 'en')}
-          className="flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-xs cursor-pointer"
-        >
-          <Languages className="size-3.5 text-primary" />
-          <span>{language === 'en' ? 'తెలుగు' : 'English'}</span>
-        </button>
+      {/* Top Language Selector */}
+      <div className="absolute top-6 right-6 flex items-center rounded-lg border bg-card p-0.5 text-xs font-semibold shadow-xs">
+        {(['en', 'te', 'hi'] as const).map((l) => (
+          <button
+            key={l}
+            type="button"
+            onClick={() => setLanguage(l)}
+            className={`px-2 py-1 rounded-md text-[11px] transition-all cursor-pointer ${
+              language === l
+                ? 'bg-primary text-primary-foreground shadow-2xs font-bold'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+            }`}
+            title={l === 'en' ? 'English' : l === 'te' ? 'Telugu' : 'Hindi'}
+          >
+            {l === 'en' ? 'EN' : l === 'te' ? 'తె' : 'हि'}
+          </button>
+        ))}
       </div>
 
       <div className="w-full max-w-md flex flex-col gap-6">
