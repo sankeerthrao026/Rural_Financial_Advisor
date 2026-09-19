@@ -348,7 +348,7 @@ function MainContent({ active, setActive }: { active: string; setActive: (value:
   const copy = pageCopy[active] || pageCopy.Overview;
 
   return (
-    <div className="mx-auto max-w-[1440px] px-5 py-7 sm:px-8 sm:py-9">
+    <div key={active} className="page-enter mx-auto max-w-[1440px] px-5 py-7 sm:px-8 sm:py-9">
       {/* Page Header */}
       <div className="mb-7">
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">{copy.eyebrow}</p>
@@ -395,6 +395,13 @@ function RuralCredAppInner() {
     .slice(0, 2)
     .toUpperCase();
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return isTe ? 'శుభోదయం' : 'Good morning';
+    if (hour < 17) return isTe ? 'శుభ మధ్యాహ్నం' : 'Good afternoon';
+    return isTe ? 'శుభ సాయంత్రం' : 'Good evening';
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground lg:flex">
       <Sidebar active={active} setActive={setActive} open={open} setOpen={setOpen} />
@@ -412,10 +419,15 @@ function RuralCredAppInner() {
             >
               <Menu className="size-5" />
             </Button>
-            <div className="hidden text-xs text-muted-foreground sm:flex items-center">
-              <span>{dictionary.workspace}</span>
-              <ChevronRight className="mx-1.5 size-3 text-muted-foreground" />
-              <span className="font-semibold text-foreground">{active}</span>
+            <div className="hidden text-xs text-muted-foreground sm:flex items-center gap-2">
+              <span className="font-medium text-foreground">{getGreeting()}, {profile.name.split(' ')[0]}</span>
+              <span className="text-muted-foreground/50">•</span>
+              <span className="truncate max-w-44 text-muted-foreground">{profile.businessName || 'Rural Enterprise'}</span>
+              {profile.location && (
+                <span className="hidden md:inline-flex items-center text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium border">
+                  {profile.location}
+                </span>
+              )}
             </div>
             <div className="sm:hidden">
               <Brand />

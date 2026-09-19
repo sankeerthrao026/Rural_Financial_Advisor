@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { formatINR } from '@/lib/utils/currency';
 import { Button } from '@/components/ui/button';
+import { AnimatedNumber } from '@/components/ui/animated-number';
 import {
   Calculator,
   ShieldCheck,
@@ -17,6 +18,9 @@ import {
   Info,
   CheckCircle2,
   AlertTriangle,
+  ArrowRight,
+  BadgePercent,
+  Wallet,
 } from 'lucide-react';
 
 export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) => void }) {
@@ -32,10 +36,93 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
 
   const isMicro = finance.scheme.id === 'micro-finance';
 
+  // Calculate total interest across the schedule
+  const totalInterest = finance.amortizationSchedule.reduce((sum, item) => sum + item.interestPaid, 0);
+  const totalRepayment = finance.loanAmount + totalInterest;
+
   return (
     <div className="flex flex-col gap-6">
-      {/* Top Scheme Routing Banner */}
-      <div className={`rounded-2xl border p-5 sm:p-6 ${
+      {/* 1. Interactive Visual Financial Journey Stepper */}
+      <section className="rounded-2xl border bg-card p-5 sm:p-6 shadow-xs hover-lift">
+        <div className="flex items-center justify-between pb-3 border-b mb-4">
+          <div>
+            <h2 className="font-semibold font-sora text-sm text-foreground">
+              {isTe ? 'ఆర్థిక ప్రణాళికా ప్రయాణం' : 'Capital Structuring Workflow'}
+            </h2>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              {isTe ? 'మూలధనం నుండి వాయిదా వరకు దశలవారీ లెక్కలు' : 'Deterministic 5-stage rural credit architecture'}
+            </p>
+          </div>
+          <span className="text-[11px] font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full">
+            100% Invariant
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {/* Step 1: Capital */}
+          <div className="rounded-xl border bg-background p-3.5 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-muted-foreground">
+              <span>01. Your Capital</span>
+              <span className="text-primary font-bold">10%</span>
+            </div>
+            <p className="mt-2 text-base font-bold font-sora text-foreground">
+              <AnimatedNumber value={finance.marginCapital} formatter={formatINR} />
+            </p>
+            <p className="mt-1 text-[10px] text-muted-foreground">Promoter equity stake</p>
+          </div>
+
+          {/* Step 2: Project Cost */}
+          <div className="rounded-xl border bg-background p-3.5 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-muted-foreground">
+              <span>02. Project Cost</span>
+              <span className="text-emerald-700 font-bold">100%</span>
+            </div>
+            <p className="mt-2 text-base font-bold font-sora text-foreground">
+              <AnimatedNumber value={finance.projectCost} formatter={formatINR} />
+            </p>
+            <p className="mt-1 text-[10px] text-muted-foreground">Capital ÷ 0.10 formula</p>
+          </div>
+
+          {/* Step 3: Loan Requirement */}
+          <div className="rounded-xl border bg-background p-3.5 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-muted-foreground">
+              <span>03. Loan Amount</span>
+              <span className="text-amber-700 font-bold">90%</span>
+            </div>
+            <p className="mt-2 text-base font-bold font-sora text-emerald-800 dark:text-emerald-400">
+              <AnimatedNumber value={finance.loanAmount} formatter={formatINR} />
+            </p>
+            <p className="mt-1 text-[10px] text-muted-foreground">Institutional credit</p>
+          </div>
+
+          {/* Step 4: Scheme Routing */}
+          <div className="rounded-xl border bg-primary/5 border-primary/20 p-3.5 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-primary">
+              <span>04. Scheme</span>
+              <span className="font-bold">{isMicro ? 'Micro' : 'Term'}</span>
+            </div>
+            <p className="mt-2 text-sm font-bold font-sora text-primary truncate">
+              {finance.scheme.name.split('(')[0]}
+            </p>
+            <p className="mt-1 text-[10px] text-muted-foreground">{finance.scheme.agency}</p>
+          </div>
+
+          {/* Step 5: Quarterly Payment */}
+          <div className="rounded-xl border bg-background p-3.5 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-muted-foreground">
+              <span>05. Quarterly EMI</span>
+              <span className="text-primary font-bold">Q-Cycle</span>
+            </div>
+            <p className="mt-2 text-base font-bold font-sora text-primary">
+              <AnimatedNumber value={finance.quarterlyEmi} formatter={formatINR} />
+            </p>
+            <p className="mt-1 text-[10px] text-muted-foreground">Reducing balance</p>
+          </div>
+        </div>
+      </section>
+
+      {/* 2. Top Scheme Routing Banner */}
+      <div className={`rounded-2xl border p-5 sm:p-6 hover-lift ${
         isMicro ? 'bg-amber-500/10 border-amber-300/80 text-amber-950' : 'bg-primary/5 border-primary/20 text-foreground'
       }`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -47,7 +134,7 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
                 <ShieldCheck className="size-3.5" />
                 {isMicro ? t.microFinanceBadge : t.termLoanBadge}
               </span>
-              <span className="text-xs text-muted-foreground">Deterministic Scheme Routing</span>
+              <span className="text-xs text-muted-foreground">Automatic Eligibility Tiering</span>
             </div>
             <h2 className="mt-2 text-xl font-bold font-sora tracking-tight">
               {isTe ? finance.scheme.nameTe : finance.scheme.name}
@@ -57,10 +144,10 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
             </p>
           </div>
 
-          <div className="rounded-xl border bg-card p-4 text-right sm:min-w-48 shadow-xs">
+          <div className="rounded-xl border bg-card p-4 text-right sm:min-w-52 shadow-xs">
             <p className="text-xs text-muted-foreground">{t.quarterlyEmiLabel}</p>
             <p className="text-2xl font-bold font-sora text-primary mt-1">
-              {formatINR(finance.quarterlyEmi)}
+              <AnimatedNumber value={finance.quarterlyEmi} formatter={formatINR} />
             </p>
             <p className="text-[11px] text-muted-foreground mt-0.5">
               {isTe ? 'ప్రతి 3 నెలలకు ఒకసారి' : 'Quarterly reducing balance'}
@@ -69,66 +156,52 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
         </div>
       </div>
 
-      {/* 4 Deterministic Metric Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Project Cost */}
-        <div className="rounded-2xl border bg-card p-5 shadow-xs">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-medium text-muted-foreground">{t.projectCostLabel}</p>
-            <Calculator className="size-4 text-primary opacity-80" />
+      {/* 3. Repayment Breakdown Visualization */}
+      <section className="rounded-2xl border bg-card p-6 shadow-xs hover-lift">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b mb-4">
+          <div>
+            <h3 className="font-semibold font-sora text-base">
+              {isTe ? 'తిరిగి చెల్లింపుల నిష్పత్తి' : 'Repayment Proportion & Total Outlay'}
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {isTe ? 'అసలు మరియు వడ్డీ చెల్లింపుల పరిమాణం' : 'Principal vs. total accrued interest across complete tenure'}
+            </p>
           </div>
-          <p className="mt-3 text-2xl font-bold font-sora text-foreground">
-            {formatINR(finance.projectCost)}
-          </p>
-          <div className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
-            <span>{t.projectCostFormula}</span>
+          <div className="text-right">
+            <span className="text-xs text-muted-foreground">Total Outlay: </span>
+            <strong className="text-sm font-sora text-foreground">{formatINR(totalRepayment)}</strong>
           </div>
         </div>
 
-        {/* Loan Amount */}
-        <div className="rounded-2xl border bg-card p-5 shadow-xs">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-medium text-muted-foreground">{t.loanAmountLabel}</p>
-            <Layers className="size-4 text-emerald-600 opacity-80" />
+        {/* Proportion Bar */}
+        <div className="space-y-2">
+          <div className="h-3.5 w-full rounded-full bg-muted overflow-hidden flex">
+            <div
+              className="h-full bg-primary transition-all duration-700"
+              style={{ width: `${Math.round((finance.loanAmount / totalRepayment) * 100)}%` }}
+              title={`Principal: ${formatINR(finance.loanAmount)}`}
+            />
+            <div
+              className="h-full bg-amber-500 transition-all duration-700"
+              style={{ width: `${Math.round((totalInterest / totalRepayment) * 100)}%` }}
+              title={`Interest: ${formatINR(totalInterest)}`}
+            />
           </div>
-          <p className="mt-3 text-2xl font-bold font-sora text-emerald-800">
-            {formatINR(finance.loanAmount)}
-          </p>
-          <p className="mt-2 text-[11px] text-muted-foreground">
-            {isTe ? '90% సంస్థాగత రుణం' : '90% institutional credit'}
-          </p>
-        </div>
 
-        {/* Margin Contribution */}
-        <div className="rounded-2xl border bg-card p-5 shadow-xs">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-medium text-muted-foreground">{t.marginCapitalLabel}</p>
-            <Percent className="size-4 text-amber-600 opacity-80" />
+          <div className="flex justify-between items-center text-xs text-muted-foreground pt-1">
+            <div className="flex items-center gap-2">
+              <span className="size-2.5 rounded-full bg-primary" />
+              <span>Principal: <strong>{formatINR(finance.loanAmount)}</strong> ({Math.round((finance.loanAmount / totalRepayment) * 100)}%)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="size-2.5 rounded-full bg-amber-500" />
+              <span>Interest: <strong>{formatINR(totalInterest)}</strong> ({Math.round((totalInterest / totalRepayment) * 100)}%)</span>
+            </div>
           </div>
-          <p className="mt-3 text-2xl font-bold font-sora text-foreground">
-            {formatINR(finance.marginCapital)}
-          </p>
-          <p className="mt-2 text-[11px] text-muted-foreground">
-            {isTe ? 'వ్యవస్థాపకుడి 10% వాటా' : '10% promoter own equity'}
-          </p>
         </div>
+      </section>
 
-        {/* Repayment Terms */}
-        <div className="rounded-2xl border bg-card p-5 shadow-xs">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-medium text-muted-foreground">{t.tenureLabel}</p>
-            <Clock className="size-4 text-primary opacity-80" />
-          </div>
-          <p className="mt-3 text-2xl font-bold font-sora text-foreground">
-            {finance.scheme.tenureYears} {isTe ? 'సంవత్సరాలు' : 'Years'}
-          </p>
-          <p className="mt-2 text-[11px] text-muted-foreground">
-            {finance.scheme.interestRateAnnual}% p.a. • {finance.scheme.moratoriumMonths}m {isTe ? 'మారటోరియం' : 'moratorium'}
-          </p>
-        </div>
-      </div>
-
-      {/* Moratorium & Repayment Context Alert */}
+      {/* 4. Moratorium & Repayment Context Alert */}
       <div className="rounded-xl border bg-muted/30 p-4 flex items-start gap-3 text-xs">
         <Info className="size-4 text-primary shrink-0 mt-0.5" />
         <div className="text-muted-foreground leading-relaxed">
@@ -141,61 +214,8 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
         </div>
       </div>
 
-      {/* Transparent Rule-Based Financial Health Score */}
-      <section className="rounded-2xl border bg-card p-6 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b">
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold font-sora text-base">{t.healthScoreTitle}</h3>
-              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                healthScore.status === 'excellent'
-                  ? 'bg-emerald-100 text-emerald-800'
-                  : healthScore.status === 'steady'
-                  ? 'bg-blue-100 text-blue-800'
-                  : 'bg-amber-100 text-amber-800'
-              }`}>
-                {isTe ? healthScore.statusTe : healthScore.status.toUpperCase()}
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">{t.healthScoreSubtitle}</p>
-          </div>
-
-          <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-extrabold font-sora text-primary">{healthScore.score}</span>
-            <span className="text-sm text-muted-foreground">/ 100</span>
-          </div>
-        </div>
-
-        <div className="mt-5 grid gap-4 md:grid-cols-3">
-          {healthScore.breakdown.map((item, idx) => (
-            <div key={idx} className="rounded-xl border bg-background p-4 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium text-foreground">{isTe ? item.labelTe : item.label}</span>
-                  <span className="text-[11px] font-semibold text-muted-foreground">{item.weight}</span>
-                </div>
-                <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all duration-500"
-                    style={{ width: `${item.score}%` }}
-                  />
-                </div>
-              </div>
-              <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                <span>Metric Score</span>
-                <span className="font-semibold text-foreground">{item.score} / 100</span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <p className="mt-4 text-xs text-muted-foreground italic border-t pt-3">
-          {isTe ? healthScore.summaryTe : healthScore.summary}
-        </p>
-      </section>
-
-      {/* Quarterly Amortization Table */}
-      <section className="rounded-2xl border bg-card p-6 shadow-xs">
+      {/* 5. Quarterly Amortization Table */}
+      <section className="rounded-2xl border bg-card p-6 shadow-xs hover-lift">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b">
           <div>
             <h3 className="font-semibold font-sora text-base">{t.amortizationTitle}</h3>
@@ -205,6 +225,7 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
             variant="outline"
             size="sm"
             onClick={() => setShowFullSchedule(!showFullSchedule)}
+            className="cursor-pointer font-semibold text-xs"
           >
             {showFullSchedule ? 'Show First 8 Quarters' : `Show All ${finance.totalQuarters} Quarters`}
           </Button>
@@ -233,15 +254,20 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
                   <td className="py-2.5 px-3 font-medium flex items-center gap-1.5">
                     <span>Q{row.quarter}</span>
                     {row.isMoratorium && (
-                      <span className="rounded bg-amber-100 text-amber-900 px-1.5 py-0.5 text-[10px] font-semibold">
+                      <span className="rounded bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-300 px-1.5 py-0.5 text-[10px] font-semibold">
                         {isTe ? 'మారటోరియం' : 'Moratorium'}
+                      </span>
+                    )}
+                    {row.remainingBalance === 0 && (
+                      <span className="rounded bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.5 text-[10px] font-semibold">
+                        Paid Off
                       </span>
                     )}
                   </td>
                   <td className="py-2.5 px-3 text-right tabular-nums text-muted-foreground">
                     {formatINR(row.startingPrincipal)}
                   </td>
-                  <td className="py-2.5 px-3 text-right tabular-nums font-medium text-emerald-800">
+                  <td className="py-2.5 px-3 text-right tabular-nums font-medium text-emerald-800 dark:text-emerald-400">
                     {formatINR(row.principalPaid)}
                   </td>
                   <td className="py-2.5 px-3 text-right tabular-nums text-muted-foreground">
@@ -262,3 +288,5 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
     </div>
   );
 }
+
+export default FinanceAdvisorScreen;

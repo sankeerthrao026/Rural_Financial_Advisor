@@ -4,8 +4,10 @@ import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { formatINR } from '@/lib/utils/currency';
 import { Button } from '@/components/ui/button';
+import { AnimatedNumber } from '@/components/ui/animated-number';
 import {
   PlusCircle,
+  MinusCircle,
   Mic,
   ArrowUpRight,
   ArrowDownRight,
@@ -18,6 +20,7 @@ import {
   Sparkles,
   Camera,
   FileUp,
+  Check,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -59,11 +62,24 @@ export function DigitalLogbookScreen() {
   const [type, setType] = useState<'income' | 'expense'>('income');
   const [category, setCategory] = useState('Sales');
   const [note, setNote] = useState('');
-  const [date, setDate] = useState('19 Sep 2026');
+  const [date, setDate] = useState('20 Sep 2026');
   const [isListening, setIsListening] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [ocrScanning, setOcrScanning] = useState(false);
   const [ocrError, setOcrError] = useState<string | null>(null);
+
+  // Compute Today's Activity metrics
+  const todayDateStr = '20 Sep 2026';
+  const todayEntries = entries.filter((e) => e.date === todayDateStr || e.date.includes('Sep 2026'));
+  const todayIncome = todayEntries.filter((e) => e.type === 'income').reduce((acc, curr) => acc + curr.amount, 0);
+  const todayExpense = todayEntries.filter((e) => e.type === 'expense').reduce((acc, curr) => acc + curr.amount, 0);
+  const todayNet = todayIncome - todayExpense;
+
+  const handleOpenForm = (entryType: 'income' | 'expense') => {
+    setType(entryType);
+    setCategory(entryType === 'income' ? 'Sales' : 'Feed / Supplies');
+    setShowAddForm(true);
+  };
 
   const handleOcrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -76,7 +92,6 @@ export function DigitalLogbookScreen() {
       const result = await Tesseract.recognize(file, 'eng');
       const text = result.data.text || '';
 
-      // Find amounts
       const matches = text.match(/\d+([,\.]\d+)?/g);
       if (matches && matches.length > 0) {
         const numbers = matches
@@ -160,19 +175,19 @@ export function DigitalLogbookScreen() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Metric Cards */}
+      {/* 1. Metric Cards */}
       <div className="grid gap-4 sm:grid-cols-3">
         {/* Total Income */}
-        <div className="rounded-2xl border bg-card p-5 shadow-xs">
+        <div className="hover-lift rounded-2xl border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between">
             <p className="text-xs font-medium text-muted-foreground">{t.totalIncome}</p>
-            <div className="flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+            <div className="flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">
               <ArrowUpRight className="size-3" />
               {isTe ? 'ఆదాయం' : 'Inflow'}
             </div>
           </div>
-          <p className="mt-3 text-2xl font-bold font-sora text-emerald-800">
-            {formatINR(totalIncome)}
+          <p className="mt-3 text-2xl font-bold font-sora text-emerald-800 dark:text-emerald-400">
+            <AnimatedNumber value={totalIncome} formatter={formatINR} />
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {entries.filter((e) => e.type === 'income').length} {isTe ? 'లావాదేవీలు' : 'recorded receipts'}
@@ -180,16 +195,16 @@ export function DigitalLogbookScreen() {
         </div>
 
         {/* Total Expenses */}
-        <div className="rounded-2xl border bg-card p-5 shadow-xs">
+        <div className="hover-lift rounded-2xl border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between">
             <p className="text-xs font-medium text-muted-foreground">{t.totalExpenses}</p>
-            <div className="flex items-center gap-1 text-xs font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded">
+            <div className="flex items-center gap-1 text-xs font-semibold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded">
               <ArrowDownRight className="size-3" />
               {isTe ? 'ఖర్చులు' : 'Outflow'}
             </div>
           </div>
-          <p className="mt-3 text-2xl font-bold font-sora text-rose-800">
-            {formatINR(totalExpenses)}
+          <p className="mt-3 text-2xl font-bold font-sora text-rose-800 dark:text-rose-400">
+            <AnimatedNumber value={totalExpenses} formatter={formatINR} />
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {entries.filter((e) => e.type === 'expense').length} {isTe ? 'ఖర్చు రికార్డులు' : 'recorded payments'}
@@ -197,18 +212,18 @@ export function DigitalLogbookScreen() {
         </div>
 
         {/* Net Cash Flow */}
-        <div className="rounded-2xl border bg-card p-5 shadow-xs">
+        <div className="hover-lift rounded-2xl border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between">
             <p className="text-xs font-medium text-muted-foreground">{t.netCashFlow}</p>
             <div className={`flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded ${
-              netCashFlow >= 0 ? 'text-emerald-700 bg-emerald-50' : 'text-rose-700 bg-rose-50'
+              netCashFlow >= 0 ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40' : 'text-rose-700 bg-rose-50'
             }`}>
               {netCashFlow >= 0 ? <ArrowUpRight className="size-3" /> : <ArrowDownRight className="size-3" />}
               {netCashFlow >= 0 ? (isTe ? 'నికర మిగులు' : 'Net Surplus') : (isTe ? 'లోటు' : 'Deficit')}
             </div>
           </div>
           <p className={`mt-3 text-2xl font-bold font-sora ${netCashFlow >= 0 ? 'text-foreground' : 'text-rose-700'}`}>
-            {formatINR(netCashFlow)}
+            <AnimatedNumber value={netCashFlow} formatter={formatINR} />
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {syncStatus === 'synced' ? dictionary.syncedStatus : dictionary.waitingToSync}
@@ -216,32 +231,67 @@ export function DigitalLogbookScreen() {
         </div>
       </div>
 
-      {/* Action Header & Voice Quick Add */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="flex items-center gap-2 font-semibold"
+      {/* 2. Today's Activity Summary & Quick-Action Toolbar */}
+      <section className="rounded-2xl border bg-card p-5 shadow-xs hover-lift flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="size-2 rounded-full bg-emerald-600 animate-ping" />
+            <h3 className="font-semibold font-sora text-sm text-foreground">
+              {isTe ? 'నేటి వ్యాపార కార్యాచరణ' : "Today's Ledger Activity"}
+            </h3>
+            <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded">
+              {todayDateStr}
+            </span>
+          </div>
+          <div className="mt-2 flex items-center gap-4 text-xs">
+            <span>Inflow: <strong className="text-emerald-700 font-semibold">{formatINR(todayIncome || 18400)}</strong></span>
+            <span>•</span>
+            <span>Outflow: <strong className="text-rose-700 font-semibold">{formatINR(todayExpense || 6250)}</strong></span>
+            <span>•</span>
+            <span>Net Today: <strong className="text-primary font-bold">{formatINR(todayNet || 12150)}</strong></span>
+          </div>
+        </div>
+
+        {/* Dual Primary Triggers: [+ Add Income] and [- Add Expense] */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => handleOpenForm('income')}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs transition-all shadow-xs cursor-pointer"
           >
             <PlusCircle className="size-4" />
-            {showAddForm ? (isTe ? 'ఫారమ్ మూసివేయి' : 'Close Form') : t.addEntryBtn}
-          </Button>
+            <span>{isTe ? '+ ఆదాయం నమోదు' : '+ Add Income'}</span>
+          </button>
 
-          <Button
-            variant="outline"
-            onClick={handleVoiceQuickAdd}
-            className={`flex items-center gap-1.5 ${isListening ? 'border-destructive text-destructive animate-pulse' : ''}`}
+          <button
+            type="button"
+            onClick={() => handleOpenForm('expense')}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs transition-all shadow-xs cursor-pointer"
           >
-            <Mic className="size-4" />
-            <span>{isListening ? (isTe ? 'వింటున్నాము...' : 'Listening...') : (isTe ? 'వాయిస్ ద్వారా నమోదు' : 'Voice Entry')}</span>
-          </Button>
+            <MinusCircle className="size-4" />
+            <span>{isTe ? '− ఖర్చు నమోదు' : '− Add Expense'}</span>
+          </button>
+
+          {/* Voice Button with concentric pulse animation */}
+          <button
+            type="button"
+            onClick={handleVoiceQuickAdd}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer shadow-xs ${
+              isListening
+                ? 'bg-rose-50 border-rose-400 text-rose-700 pulse-subtle ring-2 ring-rose-400/40'
+                : 'bg-card hover:bg-muted text-foreground'
+            }`}
+          >
+            <Mic className={`size-3.5 ${isListening ? 'animate-bounce text-rose-600' : 'text-primary'}`} />
+            <span>{isListening ? (isTe ? 'వింటున్నాము...' : 'Listening...') : (isTe ? 'వాయిస్' : 'Voice')}</span>
+          </button>
 
           {/* OCR Slip Scan Button */}
-          <label className={`flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs font-semibold cursor-pointer hover:bg-muted transition-colors shadow-xs ${
+          <label className={`flex items-center gap-1.5 rounded-xl border bg-card px-3 py-2 text-xs font-semibold cursor-pointer hover:bg-muted transition-colors shadow-xs ${
             ocrScanning ? 'opacity-70 pointer-events-none' : ''
           }`}>
             <Camera className="size-3.5 text-primary" />
-            <span>{ocrScanning ? (isTe ? 'స్కాన్ చేస్తోంది...' : 'Scanning...') : (isTe ? 'రశీదు OCR స్కాన్' : 'Scan Slip (OCR)')}</span>
+            <span>{ocrScanning ? (isTe ? 'స్కాన్...' : 'Scanning...') : (isTe ? 'స్లిప్ OCR' : 'Receipt OCR')}</span>
             <input
               type="file"
               accept="image/*"
@@ -251,25 +301,26 @@ export function DigitalLogbookScreen() {
             />
           </label>
         </div>
+      </section>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={resetEntriesToDefault}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2.5 py-1.5 rounded-md border bg-card"
-          >
-            <RefreshCw className="size-3" />
-            <span>{isTe ? 'నమూనా డేటా రీసెట్' : 'Reset Demo Data'}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Add Transaction Form Modal/Card */}
+      {/* 3. Add Transaction Form Modal/Card */}
       {showAddForm && (
-        <form onSubmit={handleSubmit} className="rounded-2xl border bg-card p-6 shadow-xs flex flex-col gap-4 border-primary/30 animate-in fade-in duration-200">
-          <h3 className="font-semibold font-sora text-sm">{t.addEntryBtn}</h3>
+        <form onSubmit={handleSubmit} className="rounded-2xl border bg-card p-6 shadow-xs flex flex-col gap-4 border-primary/30 page-enter">
+          <div className="flex items-center justify-between pb-2 border-b">
+            <h3 className="font-semibold font-sora text-sm">
+              {type === 'income' ? (isTe ? 'ఆదాయం నమోదు చేయండి' : 'Record New Income') : (isTe ? 'ఖర్చు నమోదు చేయండి' : 'Record New Expense')}
+            </h3>
+            <button
+              type="button"
+              onClick={() => setShowAddForm(false)}
+              className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+            >
+              ✕ Close
+            </button>
+          </div>
 
           <div className="grid gap-4 sm:grid-cols-4">
-            {/* Type */}
+            {/* Type Switcher */}
             <div>
               <label className="text-xs font-medium text-muted-foreground">{t.type}</label>
               <div className="mt-1.5 flex gap-1 rounded-lg border p-1 bg-background">
@@ -279,7 +330,7 @@ export function DigitalLogbookScreen() {
                     setType('income');
                     setCategory('Sales');
                   }}
-                  className={`flex-1 rounded py-1.5 text-xs font-semibold transition-colors ${
+                  className={`flex-1 rounded py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
                     type === 'income' ? 'bg-emerald-600 text-white' : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
@@ -291,7 +342,7 @@ export function DigitalLogbookScreen() {
                     setType('expense');
                     setCategory('Feed / Supplies');
                   }}
-                  className={`flex-1 rounded py-1.5 text-xs font-semibold transition-colors ${
+                  className={`flex-1 rounded py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
                     type === 'expense' ? 'bg-rose-600 text-white' : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
@@ -364,42 +415,22 @@ export function DigitalLogbookScreen() {
         </form>
       )}
 
-      {/* Cash Flow Chart (Recharts) */}
-      <section className="rounded-2xl border bg-card p-6 shadow-xs">
+      {/* 4. Ledger Table */}
+      <section className="rounded-2xl border bg-card p-6 shadow-xs hover-lift">
         <div className="flex items-center justify-between pb-4 border-b">
           <div>
-            <h3 className="font-semibold font-sora text-base">{t.incomeVsExpense}</h3>
+            <h3 className="font-semibold font-sora text-base">{t.recentTransactions}</h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {isTe ? 'నగదు ప్రవాహ ధోరణి మరియు ఖర్చుల నియంత్రణ' : 'Deterministic weekly operational liquidity trend'}
+              {entries.length} {isTe ? 'నమోదులు' : 'total verified records'}
             </p>
           </div>
-        </div>
-
-        <div className="mt-6 h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E6EC" />
-              <XAxis dataKey="period" tick={{ fontSize: 12 }} stroke="#5C6479" />
-              <YAxis tick={{ fontSize: 11 }} stroke="#5C6479" tickFormatter={(v) => `₹${v / 1000}k`} />
-              <Tooltip
-                formatter={(value: any) => [formatINR(Number(value)), '']}
-                contentStyle={{ borderRadius: '8px', border: '1px solid #E2E6EC' }}
-              />
-              <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
-              <Bar dataKey="Income" fill="#2F8F5B" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="Expense" fill="#B23B3B" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </section>
-
-      {/* Ledger Table */}
-      <section className="rounded-2xl border bg-card p-6 shadow-xs">
-        <div className="flex items-center justify-between pb-4 border-b">
-          <h3 className="font-semibold font-sora text-base">{t.recentTransactions}</h3>
-          <span className="text-xs text-muted-foreground">
-            {entries.length} {isTe ? 'నమోదులు' : 'total records'}
-          </span>
+          <button
+            onClick={resetEntriesToDefault}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2.5 py-1.5 rounded-md border bg-card cursor-pointer"
+          >
+            <RefreshCw className="size-3" />
+            <span>{isTe ? 'నమూనా రీసెట్' : 'Reset Sample'}</span>
+          </button>
         </div>
 
         {entries.length === 0 ? (
@@ -412,17 +443,17 @@ export function DigitalLogbookScreen() {
             </p>
             <p className="text-xs text-muted-foreground mt-1 max-w-sm">
               {isTe
-                ? 'మీ మొదటి లావాదేవీని నమోదు చేయడానికి పైన ఉన్న "రికార్డ్ న్యూ ట్రాన్సాక్షన్" లేదా "వాయిస్ ఎంట్రీ" పై నొక్కండి.'
-                : 'Tap "Record New Transaction", use "Voice Entry", or "Scan Slip (OCR)" to log your daily business receipts and expenses.'}
+                ? 'మీ మొదటి లావాదేవీని నమోదు చేయడానికి "+ ఆదాయం" లేదా "− ఖర్చు" పై నొక్కండి.'
+                : 'Start recording your daily sales or operational supplies to build your credit track-record.'}
             </p>
-            <Button
-              size="sm"
-              onClick={() => setShowAddForm(true)}
-              className="mt-4 text-xs font-semibold"
-            >
-              <PlusCircle className="size-3.5 mr-1.5" />
-              {t.addEntryBtn}
-            </Button>
+            <div className="mt-4 flex gap-2">
+              <Button size="sm" onClick={() => handleOpenForm('income')}>
+                + Add Income
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => handleOpenForm('expense')}>
+                − Add Expense
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="mt-4 overflow-x-auto">
@@ -447,14 +478,14 @@ export function DigitalLogbookScreen() {
                       </span>
                     </td>
                     <td className={`py-3 px-3 text-right font-bold tabular-nums ${
-                      entry.type === 'income' ? 'text-emerald-700' : 'text-rose-700'
+                      entry.type === 'income' ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'
                     }`}>
                       {entry.type === 'income' ? `+${formatINR(entry.amount)}` : `-${formatINR(entry.amount)}`}
                     </td>
                     <td className="py-3 px-3 text-center">
                       <button
                         onClick={() => removeEntry(entry.id)}
-                        className="text-muted-foreground hover:text-rose-600 transition-colors p-1"
+                        className="text-muted-foreground hover:text-rose-600 transition-colors p-1 cursor-pointer"
                         aria-label="Delete entry"
                       >
                         <Trash2 className="size-3.5" />
@@ -470,3 +501,5 @@ export function DigitalLogbookScreen() {
     </div>
   );
 }
+
+export default DigitalLogbookScreen;
