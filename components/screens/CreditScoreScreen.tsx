@@ -1,78 +1,75 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import { formatINR } from '@/lib/utils/currency';
 import { Button } from '@/components/ui/button';
+import {
+  calculateCreditReadiness,
+  generateCreditReadinessCertificatePdf,
+  CreditReadinessResult,
+} from '@/lib/finance/credit-score';
 import {
   ShieldCheck,
   Award,
   TrendingUp,
   CheckCircle2,
   AlertTriangle,
-  FileCheck,
   Download,
-  HelpCircle,
   Clock,
   ArrowRight,
   Sparkles,
   BookOpen,
+  Calendar,
+  Percent,
+  Activity,
+  FileCheck,
+  PlusCircle,
+  Zap,
+  Info,
 } from 'lucide-react';
 
 export function CreditScoreScreen({ setActive }: { setActive?: (value: string) => void }) {
-  const { healthScore, profile, finance, entries, totalIncome, totalExpenses, netCashFlow, language } = useApp();
+  const { entries, profile, finance, netCashFlow, language } = useApp();
   const isTe = language === 'te';
+  const isHi = language === 'hi';
 
-  // Overall Score (from deterministic health score)
-  const score = healthScore?.score || 78;
-  const isPrime = score >= 75;
+  const [downloading, setDownloading] = useState(false);
 
-  const ratingGrade = score >= 85 ? 'Grade A+ (Exemplary)' : score >= 75 ? 'Grade A (Prime / Low Risk)' : score >= 60 ? 'Grade B (Acceptable)' : 'Grade C (Needs Improvement)';
-  const ratingGradeTe = score >= 85 ? 'గ్రేడ్ A+ (అత్యుత్తమం)' : score >= 75 ? 'గ్రేడ్ A (ప్రైమ్ / తక్కువ రిస్క్)' : score >= 60 ? 'గ్రేడ్ B (సంతృప్తికరం)' : 'గ్రేడ్ C (మెరుగుదల అవసరం)';
+  // Calculate deterministic 30/40/30 alternative credit readiness from real logbook data
+  const creditResult: CreditReadinessResult = useMemo(() => {
+    const liquidBuffer = Math.round(finance.projectCost * 0.10);
+    const availableCash = Math.max(0, netCashFlow) + liquidBuffer;
 
-  // 4 Core Factors
-  const factors = [
-    {
-      title: isTe ? 'లాగ్‌బుక్ నిర్వహణ క్రమశిక్షణ' : 'Logbook Consistency & Habit',
-      weight: '30%',
-      score: healthScore?.loggingScore || 85,
-      status: (healthScore?.loggingScore || 85) >= 75 ? 'High' : 'Moderate',
-      desc: isTe
-        ? 'రోజువారీ వ్యాపార ఆదాయం మరియు ఖర్చులను క్రమం తప్పకుండా నమోదు చేసే అలవాటు.'
-        : 'Frequency and regularity of transaction entries recorded over rolling 30-day windows.',
-    },
-    {
-      title: isTe ? 'నికర లాభాల మార్జిన్ & మిగులు' : 'Operating Profit Margin & Surplus',
-      weight: '30%',
-      score: healthScore?.profitTrendScore || 80,
-      status: (healthScore?.profitTrendScore || 80) >= 70 ? 'Strong' : 'Moderate',
-      desc: isTe
-        ? 'రుణ వాయిదాలు చెల్లించిన తర్వాత వ్యాపారంలో మిగిలే నికర మిగులు నగదు.'
-        : 'Ability of incoming business revenue to comfortably exceed ongoing operational costs.',
-    },
-    {
-      title: isTe ? 'ఖర్చుల నియంత్రణ నిష్పత్తి' : 'Cost Containment & Efficiency',
-      weight: '20%',
-      score: healthScore?.expenseRatioScore || 72,
-      status: (healthScore?.expenseRatioScore || 72) >= 65 ? 'Controlled' : 'High Outflow',
-      desc: isTe
-        ? 'మొత్తం ఆదాయంలో ఖర్చుల శాతం 70% కంటే తక్కువగా నిర్వహించబడటం.'
-        : 'Maintaining operating expense ratios within sustainable sub-sector benchmark bands.',
-    },
-    {
-      title: isTe ? 'క్రియాశీల రుణ భారం & అప్పులు' : 'Debt Leverage & Active Obligations',
-      weight: '20%',
-      score: profile.hasActiveLoan ? 65 : 90,
-      status: profile.hasActiveLoan ? 'Committed' : 'Zero Debt',
-      desc: isTe
-        ? 'ప్రస్తుత రుణాల వాయిదాల భారం మరియు ఓవర్-లెవరేజింగ్ ప్రమాదం లేకపోవడం.'
-        : 'Evaluation of existing credit facilities to safeguard against over-indebtedness.',
-    },
-  ];
+    return calculateCreditReadiness(entries, {
+      availableCashOverride: availableCash,
+      userName: profile.name,
+      businessName: profile.businessName,
+    });
+  }, [entries, netCashFlow, finance.projectCost, profile.name, profile.businessName]);
+
+  const { overallScore, cibilEquivalent, grade, gradeTe, summary, summaryTe, components, suggestions } = creditResult;
+
+  // Handle PDF Certificate download
+  const handleDownloadCertificate = () => {
+    setDownloading(true);
+    try {
+      generateCreditReadinessCertificatePdf(creditResult, {
+        name: profile.name,
+        businessName: profile.businessName,
+        category: profile.category,
+        location: profile.location,
+      });
+    } catch (err) {
+      console.error('Failed to generate credit certificate PDF:', err);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6">
-      {/* 1. Header Banner */}
+      {/* 1. Header Banner & Certificate Download Button */}
       <div className="rounded-2xl border bg-card p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -81,7 +78,7 @@ export function CreditScoreScreen({ setActive }: { setActive?: (value: string) =
               {isTe ? 'ప్రత్యామ్నాయ క్రెడిట్ స్కోరింగ్' : 'Alternative Credit Underwriting'}
             </span>
             <span className="text-xs text-muted-foreground">
-              {isTe ? 'పారదర్శక 0–100 నియమాధారిత స్కోరు' : 'Transparent 0–100 Scoring (Zero Black-Box ML)'}
+              {isTe ? 'పారదర్శక 30/40/30 సూత్రం' : 'Transparent 30/40/30 Formula (Zero Black-Box)'}
             </span>
           </div>
           <h2 className="mt-2 text-xl font-bold font-sora tracking-tight text-foreground">
@@ -89,156 +86,402 @@ export function CreditScoreScreen({ setActive }: { setActive?: (value: string) =
           </h2>
           <p className="mt-1 text-xs text-muted-foreground max-w-xl">
             {isTe
-              ? 'సాంప్రదాయ సిబిల్ రికార్డు లేని గ్రామీణ వ్యవస్థాపకుల కోసం లాగ్‌బుక్ రికార్డులు మరియు నగదు ప్రవాహం ఆధారంగా రూపొందించిన స్కోరు.'
-              : 'Empowers rural entrepreneurs without CIBIL history by converting daily ledger activity and operating margins into verifiable creditworthiness.'}
+              ? 'సిబిల్ హిస్టరీ లేని గ్రామీణ వ్యవస్థాపకుల కోసం మీ రోజువారీ లాగ్‌బుక్ రికార్డులు మరియు నికర లాభాల ఆధారంగా రూపొందించిన స్కోరు.'
+              : 'Empowers rural entrepreneurs without traditional CIBIL histories by transforming cash-flow consistency and operating margins into verifiable creditworthiness.'}
           </p>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
           <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setActive?.('Digital Logbook')}
-            className="flex items-center gap-1.5 font-medium cursor-pointer"
+            onClick={handleDownloadCertificate}
+            disabled={downloading}
+            className="flex items-center gap-1.5 font-semibold bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs cursor-pointer"
           >
-            <BookOpen className="size-3.5" />
-            <span>{isTe ? 'లాగ్‌బుక్ నమోదు' : 'Open Logbook'}</span>
-          </Button>
-
-          <Button
-            size="sm"
-            onClick={() => setActive?.('Business Plan')}
-            className="flex items-center gap-1.5 font-semibold bg-emerald-700 hover:bg-emerald-800 text-white cursor-pointer"
-          >
-            <span>{isTe ? 'రుణ దరఖాస్తు' : 'Apply for Loan'}</span>
-            <ArrowRight className="size-3.5" />
+            <Download className="size-3.5" />
+            <span>{isTe ? 'క్రెడిట్ సర్టిఫికేట్ డౌన్‌లోడ్' : 'Download Certificate (PDF)'}</span>
           </Button>
         </div>
       </div>
 
-      {/* 2. Score Highlight Callout Card */}
-      <div className="rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-card via-card to-primary/5 p-6 sm:p-8 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex items-center gap-5">
-          {/* Circular Score Badge */}
-          <div className="relative grid size-28 sm:size-32 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-md shrink-0">
-            <span className="text-4xl sm:text-5xl font-extrabold font-sora tracking-tight">{score}</span>
-            <span className="text-[10px] uppercase font-bold tracking-widest text-primary-foreground/80 mt-[-4px]">
-              OUT OF 100
-            </span>
-          </div>
-
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-800 dark:text-emerald-400 text-xs font-bold">
-                {isTe ? ratingGradeTe : ratingGrade}
-              </span>
-              <span className="text-xs text-muted-foreground">•</span>
-              <span className="text-xs text-muted-foreground font-medium">
-                {isTe ? 'బ్యాంక్ రుణం పొందడానికి సిద్ధం' : 'Bank Appraisal Ready'}
-              </span>
+      {/* 2. Prominent Overall Score Card (Requirement 2) */}
+      <div className="rounded-2xl border bg-card p-6 sm:p-8 shadow-xs">
+        <div className="grid md:grid-cols-3 gap-6 items-center">
+          {/* Radial Score Badge */}
+          <div className="flex flex-col items-center justify-center text-center p-4 border-b md:border-b-0 md:border-r">
+            <div className="relative grid size-36 place-items-center rounded-full bg-primary/5 border-4 border-primary/20 shadow-inner">
+              <div className="flex flex-col items-center">
+                <span className="text-4xl sm:text-5xl font-extrabold font-sora tracking-tight text-primary">
+                  {overallScore}
+                </span>
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mt-0.5">
+                  out of 100
+                </span>
+              </div>
             </div>
 
-            <h3 className="text-lg font-bold font-sora text-foreground mt-1.5">
-              {profile.name} — {profile.businessName}
-            </h3>
+            <div className="mt-4 flex flex-col items-center gap-1">
+              <span className="text-xs font-semibold px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border border-emerald-500/30">
+                {isTe ? gradeTe : grade}
+              </span>
+              <span className="text-[11px] text-muted-foreground">
+                CIBIL Equivalent: <strong className="text-foreground font-sora">~{cibilEquivalent} / 900</strong>
+              </span>
+            </div>
+          </div>
 
-            <p className="text-xs text-muted-foreground mt-1 leading-relaxed max-w-lg">
-              {isTe
-                ? 'మీ వ్యాపార ఆదాయం మరియు లాగ్‌బుక్ క్రమశిక్షణ ఆధారంగా రూపొందించిన నికర స్కోరు. బ్యాంకులు మరియు MFIs దీనిని ప్రాధాన్య రంగ రుణాలు (PSL) మంజూరు చేయడానికి ప్రామాణికంగా పరిగణిస్తాయి.'
-                : 'Scored deterministically using audited logbook receipts, net cash flow surpluses, and zero default markers. Meets credit policy criteria for uncollateralized PSL sanction.'}
-            </p>
-          </div>
-        </div>
+          {/* Assessment Summary & Value Proposition */}
+          <div className="md:col-span-2 flex flex-col justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="size-5 text-emerald-800 dark:text-emerald-400 shrink-0" />
+                <h3 className="text-base font-bold font-sora text-foreground">
+                  {overallScore >= 75
+                    ? (isTe ? 'రుణ అర్హత ధ్రువీకరించబడింది (Credit Ready)' : 'Statutory Credit Ready — Prime Tier')
+                    : (isTe ? 'స్థిరమైన క్రెడిట్ పునాది' : 'Active Credit Readiness in Progress')}
+                </h3>
+              </div>
+              <p className="mt-2 text-xs sm:text-sm text-foreground/85 leading-relaxed">
+                {isTe ? summaryTe : summary}
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+                {isTe
+                  ? 'ఈ స్కోరు బ్యాంకులు మరియు ఎన్‌బిఎఫ్‌సిలకు తక్షణమే ఆమోదయోగ్యమైనది. ఇది మీ నిజమైన రోజువారీ వ్యాపార క్రమశిక్షణను ప్రతిబింబిస్తుంది.'
+                  : 'Unlike opaque black-box credit models, this score is 100% auditable. Lenders evaluate your actual cash retention and logbook discipline to approve formal micro-finance.'}
+              </p>
+            </div>
 
-        {/* Quick Underwriting Markers */}
-        <div className="flex flex-col gap-2 rounded-xl bg-muted/40 p-4 border text-xs min-w-[220px]">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Default Probability:</span>
-            <strong className="text-emerald-700 dark:text-emerald-400">Very Low (3.2%)</strong>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Sanction Feasibility:</span>
-            <strong className="text-primary">High (&gt; 92%)</strong>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">PSL Category:</span>
-            <strong className="text-foreground">Micro Enterprise</strong>
+            {/* Quick Stats Strip */}
+            <div className="grid grid-cols-3 gap-3 pt-4 border-t text-center">
+              <div className="rounded-xl border p-2.5 bg-muted/20">
+                <span className="text-[10px] text-muted-foreground block">Active Log Days</span>
+                <strong className="text-xs sm:text-sm font-bold text-foreground mt-0.5 block">
+                  {components.daysLoggedCount} Days
+                </strong>
+              </div>
+              <div className="rounded-xl border p-2.5 bg-muted/20">
+                <span className="text-[10px] text-muted-foreground block">Net Surplus</span>
+                <strong className="text-xs sm:text-sm font-bold text-emerald-800 dark:text-emerald-400 mt-0.5 block">
+                  {formatINR(components.netProfit)}
+                </strong>
+              </div>
+              <div className="rounded-xl border p-2.5 bg-muted/20">
+                <span className="text-[10px] text-muted-foreground block">Expense Ratio</span>
+                <strong className="text-xs sm:text-sm font-bold text-primary mt-0.5 block">
+                  {components.expenseRatioPct}%
+                </strong>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 3. Transparent 4-Factor Breakdown */}
+      {/* 3. Transparent 30/40/30 Component Breakdown (Requirement 1 & 2) */}
       <section className="rounded-2xl border bg-card p-6 shadow-xs">
-        <div className="pb-3 border-b">
-          <h3 className="font-bold font-sora text-base text-foreground">
-            {isTe ? 'పారదర్శక స్కోరు విశ్లేషణ పారామితులు' : 'Factor Score Breakdown & Sub-Weights'}
-          </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Every point is traceable to your verified logbook records and profile financials.
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b gap-2">
+          <div>
+            <h3 className="font-bold font-sora text-base text-foreground">
+              {isTe ? 'పారదర్శక స్కోరు విశ్లేషణ (30 / 40 / 30 సూత్రం)' : 'Transparent 30/40/30 Formula Breakdown'}
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {isTe
+                ? 'మీ మొత్తం స్కోరు ఎలా లెక్కించబడిందో క్రింది మూడు భాగాల ద్వారా స్పష్టంగా చూడవచ్చు.'
+                : 'See exactly how each component contributes weighted points to your final score with zero hidden penalties.'}
+            </p>
+          </div>
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/10 text-primary self-start sm:self-auto">
+            100% Transparent Rule Engine
+          </span>
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-4 mt-4">
-          {factors.map((f, idx) => (
-            <div key={idx} className="rounded-xl border p-4 bg-muted/20 flex flex-col justify-between gap-3">
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    <CheckCircle2 className="size-3.5 text-primary" />
-                    {f.title}
-                  </span>
-                  <span className="text-[11px] font-semibold text-muted-foreground">Weight {f.weight}</span>
+        <div className="mt-5 flex flex-col gap-5">
+          {/* Component 1: 30% Logging Habit & Discipline */}
+          <div className="rounded-xl border p-5 bg-muted/15 transition-colors hover:bg-muted/25">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="grid size-8 place-items-center rounded-lg bg-primary/10 text-primary">
+                  <Calendar className="size-4" />
                 </div>
-                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{f.desc}</p>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold font-sora text-sm text-foreground">
+                      {isTe ? 'లాగ్‌బుక్ నిర్వహణ క్రమశిక్షణ' : 'Logging Habit & Discipline'}
+                    </h4>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-primary/10 text-primary font-bold">
+                      Weight: 30%
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {isTe
+                      ? 'రోజువారీ వ్యాపార ఆదాయం మరియు ఖర్చులను నమోదు చేసే క్రమబద్ధత.'
+                      : 'Consistency of transaction recording, frequency per week, and absence of long record gaps.'}
+                  </p>
+                </div>
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-border/50 text-xs">
-                <span className="text-[11px] text-muted-foreground">Sub-Score:</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-24 h-2 rounded-full bg-muted overflow-hidden">
-                    <div className="h-full bg-primary rounded-full" style={{ width: `${f.score}%` }} />
-                  </div>
-                  <strong className="font-mono text-foreground">{f.score}/100</strong>
+              <div className="text-left sm:text-right shrink-0">
+                <div className="flex items-baseline sm:justify-end gap-1.5">
+                  <strong className="text-lg font-bold font-sora text-foreground">
+                    {components.loggingScore}
+                  </strong>
+                  <span className="text-xs text-muted-foreground">/ 100</span>
+                  <span className="text-xs font-bold text-primary ml-2">
+                    (+{components.loggingWeightedPoints} pts)
+                  </span>
                 </div>
+                <span className="text-[10px] text-muted-foreground block">
+                  Contributes 30% to total score
+                </span>
+              </div>
+            </div>
+
+            {/* Visual Progress Bar */}
+            <div className="mt-3.5">
+              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-primary transition-all duration-500"
+                  style={{ width: `${components.loggingScore}%` }}
+                />
+              </div>
+              <p className="mt-2 text-xs text-foreground/80 leading-relaxed">
+                {isTe ? components.loggingSummaryTe : components.loggingSummary}
+              </p>
+            </div>
+          </div>
+
+          {/* Component 2: 40% Operating Profit Stability & Consistency */}
+          <div className="rounded-xl border p-5 bg-muted/15 transition-colors hover:bg-muted/25">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="grid size-8 place-items-center rounded-lg bg-emerald-500/10 text-emerald-800 dark:text-emerald-400">
+                  <TrendingUp className="size-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold font-sora text-sm text-foreground">
+                      {isTe ? 'నికర లాభాల స్థిరత్వం & మార్జిన్' : 'Operating Profit Consistency & Stability'}
+                    </h4>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 font-bold">
+                      Weight: 40%
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {isTe
+                      ? 'ఖర్చులు పోను వ్యాపారంలో మిగిలే స్థిరమైన నికర లాభం మరియు మార్జిన్.'
+                      : 'Consistency of net positive profit margin and absence of severe month-to-month volatility.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-left sm:text-right shrink-0">
+                <div className="flex items-baseline sm:justify-end gap-1.5">
+                  <strong className="text-lg font-bold font-sora text-emerald-800 dark:text-emerald-400">
+                    {components.profitScore}
+                  </strong>
+                  <span className="text-xs text-muted-foreground">/ 100</span>
+                  <span className="text-xs font-bold text-emerald-800 dark:text-emerald-400 ml-2">
+                    (+{components.profitWeightedPoints} pts)
+                  </span>
+                </div>
+                <span className="text-[10px] text-muted-foreground block">
+                  Contributes 40% to total score
+                </span>
+              </div>
+            </div>
+
+            {/* Visual Progress Bar */}
+            <div className="mt-3.5">
+              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-emerald-700 transition-all duration-500"
+                  style={{ width: `${components.profitScore}%` }}
+                />
+              </div>
+              <p className="mt-2 text-xs text-foreground/80 leading-relaxed">
+                {isTe ? components.profitSummaryTe : components.profitSummary}
+              </p>
+            </div>
+          </div>
+
+          {/* Component 3: 30% Expense-to-Income Discipline & Cash Buffer */}
+          <div className="rounded-xl border p-5 bg-muted/15 transition-colors hover:bg-muted/25">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="grid size-8 place-items-center rounded-lg bg-indigo-500/10 text-indigo-700 dark:text-indigo-400">
+                  <Activity className="size-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold font-sora text-sm text-foreground">
+                      {isTe ? 'ఖర్చుల నియంత్రణ & నగదు నిల్వలు (రన్‌వే)' : 'Expense Discipline & Cash Buffer'}
+                    </h4>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 font-bold">
+                      Weight: 30%
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {isTe
+                      ? 'ఆదాయంలో ఖర్చుల పరిమితి మరియు అత్యవసర సమయాల్లో ఆదుకునే వర్కింగ్ క్యాపిటల్ రన్‌వే.'
+                      : 'Maintaining expenses below 60% of revenue and holding a multi-week liquid cash buffer.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-left sm:text-right shrink-0">
+                <div className="flex items-baseline sm:justify-end gap-1.5">
+                  <strong className="text-lg font-bold font-sora text-indigo-700 dark:text-indigo-400">
+                    {components.expenseDisciplineScore}
+                  </strong>
+                  <span className="text-xs text-muted-foreground">/ 100</span>
+                  <span className="text-xs font-bold text-indigo-700 dark:text-indigo-400 ml-2">
+                    (+{components.expenseDisciplineWeightedPoints} pts)
+                  </span>
+                </div>
+                <span className="text-[10px] text-muted-foreground block">
+                  Contributes 30% to total score
+                </span>
+              </div>
+            </div>
+
+            {/* Visual Progress Bar */}
+            <div className="mt-3.5">
+              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-indigo-600 transition-all duration-500"
+                  style={{ width: `${components.expenseDisciplineScore}%` }}
+                />
+              </div>
+              <p className="mt-2 text-xs text-foreground/80 leading-relaxed">
+                {isTe ? components.expenseSummaryTe : components.expenseSummary}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Exact Additive Sum Summary Row */}
+        <div className="mt-6 p-4 rounded-xl border bg-card/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="size-4 text-emerald-800 dark:text-emerald-400 shrink-0" />
+            <span className="font-semibold text-foreground">
+              {isTe ? 'పారదర్శక సమీకరణ ధ్రువీకరణ:' : 'Additive Formula Verification:'}
+            </span>
+            <span className="text-muted-foreground font-mono">
+              {components.loggingWeightedPoints} (Logging) + {components.profitWeightedPoints} (Profit) + {components.expenseDisciplineWeightedPoints} (Discipline) =
+            </span>
+          </div>
+          <strong className="text-base font-bold font-sora text-primary">
+            {overallScore} / 100 Total Score
+          </strong>
+        </div>
+      </section>
+
+      {/* 4. Actionable Suggestions with Simulated Point Impact (Requirement 3) */}
+      <section className="rounded-2xl border bg-card p-6 shadow-xs">
+        <div className="flex items-center justify-between pb-4 border-b">
+          <div className="flex items-center gap-2">
+            <Sparkles className="size-4 text-primary" />
+            <h3 className="font-bold font-sora text-base text-foreground">
+              {isTe ? 'స్కోరును పెంచుకోవడానికి స్పష్టమైన చర్యలు' : 'Actionable Steps to Elevate Your Score'}
+            </h3>
+          </div>
+          <span className="text-xs text-muted-foreground">
+            {isTe ? 'గణితీయ అంచనా' : 'Mathematically Simulated Point Impact'}
+          </span>
+        </div>
+
+        <div className="mt-5 grid md:grid-cols-2 gap-4">
+          {suggestions.map((sugg) => (
+            <div
+              key={sugg.id}
+              className="rounded-xl border p-5 bg-card flex flex-col justify-between shadow-2xs hover:border-primary/40 transition-colors"
+            >
+              <div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-foreground">
+                    {isTe ? sugg.titleTe : sugg.title}
+                  </span>
+                  {sugg.estimatedPointsGain > 0 ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border border-emerald-500/20">
+                      <Zap className="size-3" />
+                      +{sugg.estimatedPointsGain} Points
+                    </span>
+                  ) : (
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                      Prime Tier
+                    </span>
+                  )}
+                </div>
+
+                <p className="mt-2.5 text-xs text-muted-foreground leading-relaxed">
+                  {isTe ? sugg.actionTextTe : sugg.actionText}
+                </p>
+              </div>
+
+              <div className="mt-4 pt-3 border-t flex items-center justify-between text-[11px] text-muted-foreground">
+                <span>
+                  Projected Score: <strong className="text-foreground">{sugg.simulatedScore}/100</strong>
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setActive?.(sugg.component === 'logging' ? 'Digital Logbook' : 'Financial Analytics')}
+                  className="h-7 px-2 text-xs text-primary hover:text-primary/90 font-medium cursor-pointer"
+                >
+                  <span>{isTe ? 'చర్య తీసుకోండి' : 'Take Action'}</span>
+                  <ArrowRight className="size-3 ml-1" />
+                </Button>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* 4. Action Steps to Reach 90+ */}
+      {/* 5. Underwriting Standards & MFI Benchmark Criteria */}
       <section className="rounded-2xl border bg-card p-6 shadow-xs">
-        <div className="pb-3 border-b flex items-center justify-between">
+        <div className="flex items-center justify-between pb-3 border-b">
           <div>
-            <h3 className="font-bold font-sora text-base text-foreground flex items-center gap-2">
-              <Sparkles className="size-4 text-primary" />
-              <span>{isTe ? 'స్కోరును 90+ కి పెంచుకోవడానికి సూచనలు' : 'Action Steps to Boost Your Score to 90+'}</span>
+            <h3 className="font-bold font-sora text-base text-foreground">
+              {isTe ? 'బ్యాంకులు & మైక్రోఫైనాన్స్ సంస్థల ప్రమాణాలు' : 'Institutional Underwriting Benchmarks'}
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Follow these simple record-keeping routines to unlock larger loan sanctions at lower interest rates.
+              Criteria used by NBFCs and state corporations (e.g. NBCFDC) to sanction priority sector loans.
             </p>
           </div>
         </div>
 
         <div className="grid sm:grid-cols-3 gap-4 mt-4 text-xs">
-          <div className="rounded-xl border p-3.5 bg-muted/20">
-            <span className="font-bold text-primary block mb-1">1. Daily Logbook Habit</span>
-            <p className="text-muted-foreground leading-relaxed">
-              Record both morning and evening receipts daily for the next 21 days without gap.
+          <div className="rounded-xl border p-4 bg-muted/20">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-foreground">Grade A+ (80–100)</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-800 dark:text-emerald-400">
+                Prime Fast-Track
+              </span>
+            </div>
+            <p className="text-muted-foreground mt-2 leading-relaxed">
+              Lowest statutory interest rates (6.0%–6.5%), expedited sanctioning with minimum promoter guarantee.
             </p>
           </div>
 
-          <div className="rounded-xl border p-3.5 bg-muted/20">
-            <span className="font-bold text-primary block mb-1">2. Working Capital Buffer</span>
-            <p className="text-muted-foreground leading-relaxed">
-              Maintain a rolling cash reserve equal to at least 15 days of feed / stock procurement.
+          <div className="rounded-xl border p-4 bg-muted/20">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-foreground">Grade A (70–79)</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                Standard Sanction
+              </span>
+            </div>
+            <p className="text-muted-foreground mt-2 leading-relaxed">
+              Standard NBCFDC / MUDRA eligibility. Standard 90% debt sanction with regular quarterly repayment.
             </p>
           </div>
 
-          <div className="rounded-xl border p-3.5 bg-muted/20">
-            <span className="font-bold text-primary block mb-1">3. Settle Customer Udhaar</span>
-            <p className="text-muted-foreground leading-relaxed">
-              Follow up on outstanding customer credit balances weekly to increase net operating cash flow.
+          <div className="rounded-xl border p-4 bg-muted/20">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-foreground">Grade B (60–69)</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-800 dark:text-amber-400">
+                Marginal Collateral
+              </span>
+            </div>
+            <p className="text-muted-foreground mt-2 leading-relaxed">
+              Eligible for micro-finance credit tickets with enhanced margin equity or self-help group cosigners.
             </p>
           </div>
         </div>
