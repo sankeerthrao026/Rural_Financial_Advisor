@@ -13,7 +13,7 @@ export const SCHEMES: Record<'micro-finance' | 'term-loan', SchemeConfig> = {
   'micro-finance': {
     id: 'micro-finance',
     name: 'Micro Finance Scheme',
-    nameTe: 'సూక్ష్మ రుణ పథకం (Micro Finance Scheme)',
+    nameTe: 'సూక్ష్మ రుణ పథకం',
     agency: 'NBCFDC / State Minorities & Backward Classes Corporations',
     interestRateAnnual: 6.5,
     tenureYears: 3,
@@ -23,7 +23,7 @@ export const SCHEMES: Record<'micro-finance' | 'term-loan', SchemeConfig> = {
   'term-loan': {
     id: 'term-loan',
     name: 'Term Loan Scheme',
-    nameTe: 'టర్మ్ లోన్ పథకం (Term Loan Scheme)',
+    nameTe: 'టర్మ్ లోన్ పథకం',
     agency: 'National Backward Classes Finance & Development Corporation (NBCFDC)',
     interestRateAnnual: 8.0,
     tenureYears: 7,
@@ -232,18 +232,18 @@ export function calculateFinancialHealthScore(params: {
   const score = Math.min(100, Math.max(0, Math.round(rawScore)));
 
   let status: 'excellent' | 'steady' | 'needs_attention' = 'steady';
-  let statusTe = 'స్థిరంగా ఉంది (Steady)';
+  let statusTe = 'స్థిరంగా ఉంది';
   let summary = 'Your business cash flow is stable with positive operating margin.';
   let summaryTe = 'మీ వ్యాపార నగదు ప్రవాహం సానుకూల లాభాల మార్జిన్‌తో స్థిరంగా ఉంది.';
 
   if (score >= 80) {
     status = 'excellent';
-    statusTe = 'అత్యుత్తమంగా ఉంది (Excellent)';
+    statusTe = 'అత్యుత్తమంగా ఉంది';
     summary = 'Strong financial discipline. Consistent records and healthy margin qualify you for priority scheme approvals.';
     summaryTe = 'గొప్ప ఆర్థిక క్రమశిక్షణ. క్రమబద్ధమైన రికార్డులు మరియు ఆరోగ్యకరమైన మార్జిన్ రుణ మంజూరుకు సహాయపడతాయి.';
   } else if (score < 50) {
     status = 'needs_attention';
-    statusTe = 'శ్రద్ధ వహించాలి (Needs Attention)';
+    statusTe = 'శ్రద్ధ వహించాలి';
     summary = 'High expense ratio or negative cash flow detected. Focus on lowering operating costs before expanding.';
     summaryTe = 'అధిక ఖర్చులు లేదా ప్రతికూల నగదు ప్రవాహం ఉంది. వ్యాపార విస్తరణకు ముందు ఖర్చులను తగ్గించుకోవడం ముఖ్యం.';
   }

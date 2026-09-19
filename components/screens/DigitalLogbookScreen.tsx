@@ -244,11 +244,11 @@ export function DigitalLogbookScreen() {
             </span>
           </div>
           <div className="mt-2 flex items-center gap-4 text-xs">
-            <span>Inflow: <strong className="text-emerald-700 font-semibold">{formatINR(todayIncome || 18400)}</strong></span>
+            <span>{isTe ? 'ఆదాయం: ' : 'Inflow: '}<strong className="text-emerald-700 font-semibold">{formatINR(todayIncome || 18400)}</strong></span>
             <span>•</span>
-            <span>Outflow: <strong className="text-rose-700 font-semibold">{formatINR(todayExpense || 6250)}</strong></span>
+            <span>{isTe ? 'ఖర్చులు: ' : 'Outflow: '}<strong className="text-rose-700 font-semibold">{formatINR(todayExpense || 6250)}</strong></span>
             <span>•</span>
-            <span>Net Today: <strong className="text-primary font-bold">{formatINR(todayNet || 12150)}</strong></span>
+            <span>{isTe ? 'నేటి నికర మొత్తం: ' : 'Net Today: '}<strong className="text-primary font-bold">{formatINR(todayNet || 12150)}</strong></span>
           </div>
         </div>
 
@@ -406,10 +406,10 @@ export function DigitalLogbookScreen() {
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" size="sm" onClick={() => setShowAddForm(false)}>
-              Cancel
+              {isTe ? 'రద్దు చేయండి' : 'Cancel'}
             </Button>
             <Button type="submit" size="sm" disabled={submitting}>
-              {submitting ? 'Saving...' : t.saveEntry}
+              {submitting ? (isTe ? 'భద్రపరుస్తున్నాము...' : 'Saving...') : t.saveEntry}
             </Button>
           </div>
         </form>
@@ -448,10 +448,10 @@ export function DigitalLogbookScreen() {
             </p>
             <div className="mt-4 flex gap-2">
               <Button size="sm" onClick={() => handleOpenForm('income')}>
-                + Add Income
+                {isTe ? '+ ఆదాయం నమోదు' : '+ Add Income'}
               </Button>
               <Button size="sm" variant="outline" onClick={() => handleOpenForm('expense')}>
-                − Add Expense
+                {isTe ? '− ఖర్చు నమోదు' : '− Add Expense'}
               </Button>
             </div>
           </div>
@@ -464,7 +464,7 @@ export function DigitalLogbookScreen() {
                   <th className="py-2.5 px-3 font-semibold">{t.note}</th>
                   <th className="py-2.5 px-3 font-semibold">{t.category}</th>
                   <th className="py-2.5 px-3 font-semibold text-right">{t.amount}</th>
-                  <th className="py-2.5 px-3 font-semibold text-center">Action</th>
+                  <th className="py-2.5 px-3 font-semibold text-center">{isTe ? 'చర్య' : 'Action'}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">

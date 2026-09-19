@@ -98,18 +98,18 @@ function Sidebar({
   const getNavLabel = (label: string) => {
     if (!isTe) return label;
     const map: Record<string, string> = {
-      Overview: 'ఓవర్‌వ్యూ (Overview)',
-      Business: 'వ్యాపారం (Business)',
+      Overview: 'ముఖ్యాంశాలు',
+      Business: 'వ్యాపారం',
       'Business Profile': 'వ్యాపార ప్రొఫైల్',
       'Digital Logbook': 'డిజిటల్ లాగ్‌బుక్',
       'Business Plan': 'వ్యాపార ప్రణాళిక',
-      Finances: 'ఆర్థిక అంశాలు (Finances)',
+      Finances: 'ఆర్థిక అంశాలు',
       'Financial Analytics': 'ఆర్థిక విశ్లేషణ',
-      'Cash Flow': 'నగదు ప్రవాహం (Cash Flow)',
-      Advisor: 'సలహాదారు (Advisor)',
-      'Business Advisor': 'వ్యాపార సలహాదారు (AI)',
+      'Cash Flow': 'నగదు ప్రవాహం',
+      Advisor: 'సలహాదారు',
+      'Business Advisor': 'వ్యాపార సలహాదారు',
       'Finance Advisor': 'ఆర్థిక సలహాదారు',
-      Opportunities: 'అవకాశాలు (Opportunities)',
+      Opportunities: 'అవకాశాలు',
       'Scheme Matching': 'ప్రభుత్వ పథకాలు',
       'Credit Score': 'క్రెడిట్ స్కోరు',
       'Risk Alerts': 'రిస్క్ హెచ్చరికలు',
@@ -235,19 +235,19 @@ function Sidebar({
             <button
               type="button"
               onClick={() => exitDemo()}
-              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-amber-800 dark:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 transition-colors"
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-amber-800 dark:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 transition-colors cursor-pointer"
             >
               <LogOut className="size-3.5" />
-              <span>{isTe ? 'డెమో ముగించు (Exit Demo)' : 'Exit Demo'}</span>
+              <span>{isTe ? 'డెమో ముగించు' : 'Exit Demo'}</span>
             </button>
           ) : (
             <button
               type="button"
               onClick={() => signOut()}
-              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
             >
               <LogOut className="size-3.5" />
-              <span>{isTe ? 'లాగ్ అవుట్ (Logout)' : 'Sign Out'}</span>
+              <span>{isTe ? 'లాగ్ అవుట్' : 'Sign Out'}</span>
             </button>
           )}
         </div>
@@ -262,7 +262,7 @@ function MainContent({ active, setActive }: { active: string; setActive: (value:
 
   const pageCopy: Record<string, { eyebrow: string; title: string; description: string }> = {
     Overview: {
-      eyebrow: 'Monday, 19 September 2026',
+      eyebrow: isTe ? 'సెప్టెంబర్ 19, 2026' : 'Monday, 19 September 2026',
       title: isTe ? `నమస్కారం, ${profile.name}` : `Good morning, ${profile.name}`,
       description: isTe
         ? 'మీ గ్రామీణ వ్యాపారం యొక్క సమగ్ర ఆర్థిక స్థితి మరియు మార్కెట్ అవకాశాల సమాచారం.'
@@ -298,7 +298,7 @@ function MainContent({ active, setActive }: { active: string; setActive: (value:
     },
     'Cash Flow': {
       eyebrow: dictionary.logbook.netCashFlow,
-      title: isTe ? 'నగదు ప్రవాహం (Cash Flow Analytics)' : 'Cash Flow Analytics',
+      title: isTe ? 'నగదు ప్రవాహ విశ్లేషణ' : 'Cash Flow Analytics',
       description: isTe
         ? 'నగదు నిల్వలు, రాబడులు మరియు వ్యయాల సమగ్ర పర్యవేక్షణ.'
         : 'Monitor incoming revenue, operational outflows, and liquid reserves.',
@@ -312,7 +312,7 @@ function MainContent({ active, setActive }: { active: string; setActive: (value:
     },
     'Finance Advisor': {
       eyebrow: dictionary.finance.title,
-      title: isTe ? 'ఆర్థిక సలహాదారు (Finance Advisor)' : 'Deterministic Finance Advisor',
+      title: isTe ? 'ఆర్థిక సలహాదారు' : 'Deterministic Finance Advisor',
       description: isTe
         ? 'ఖచ్చితమైన ప్రభుత్వ నిబంధనల ప్రకారం రుణం, వడ్డీ మరియు వాయిదాల ప్రణాళిక.'
         : 'Standard government guidelines applied with zero hallucination. 100% deterministic math.',
@@ -326,7 +326,7 @@ function MainContent({ active, setActive }: { active: string; setActive: (value:
     },
     'Credit Score': {
       eyebrow: dictionary.finance.healthScoreTitle,
-      title: isTe ? 'ఆర్థిక ఆరోగ్య స్కోరు (Health Score)' : 'Rule-Based Financial Health Score',
+      title: isTe ? 'ఆర్థిక ఆరోగ్య స్కోరు' : 'Rule-Based Financial Health Score',
       description: isTe
         ? 'లాగ్‌బుక్ రికార్డులు, లాభాల మార్జిన్ ఆధారంగా పారదర్శక 0–100 స్కోరు.'
         : 'Transparent 0–100 business scoring with explicit weights (No black-box ML).',
@@ -339,7 +339,7 @@ function MainContent({ active, setActive }: { active: string; setActive: (value:
         : 'Deterministic invariant rule evaluation with friendly, localized action steps.',
     },
     Settings: {
-      eyebrow: 'Configuration',
+      eyebrow: isTe ? 'కాన్ఫిగరేషన్' : 'Configuration',
       title: isTe ? 'సెట్టింగ్‌లు & ప్రొఫైల్' : 'Settings & Preferences',
       description: isTe ? 'భాష మరియు ఇన్‌పుట్ పద్ధతులను నిర్వహించండి.' : 'Manage language, voice preference, and rural persona.',
     },

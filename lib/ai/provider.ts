@@ -137,7 +137,7 @@ function synthesizeGroundedLocalAdvisor(
       targetSegment: isTe
         ? 'గ్రామీణ కుటుంబాలు, స్థానిక చిరు దుకాణాలు & మండల వ్యాపారులు'
         : 'Rural households, mandal retail outlets & local cooperative unions',
-      estimatedLocalDemand: isTe ? 'స్థిరమైన రోజువారీ గిరాకీ (Daily Active Demand)' : 'High daily recurring consumption',
+      estimatedLocalDemand: isTe ? 'స్థిరమైన రోజువారీ గిరాకీ' : 'High daily recurring consumption',
     },
     opportunityAnalysis: {
       overview: isTe

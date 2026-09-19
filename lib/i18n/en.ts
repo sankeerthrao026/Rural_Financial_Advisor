@@ -5,18 +5,27 @@ export const en = {
   brandShort: 'R',
   language: 'Language',
   english: 'English',
-  telugu: 'తెలుగు (Telugu)',
+  telugu: 'Telugu',
   inputMode: 'Input Mode',
   textMode: 'Text Input',
   voiceMode: 'Voice Input',
   voicePrompt: 'Tap microphone and speak in English or Telugu',
   listening: 'Listening... speak your business details or logbook entry',
   speechUnsupported: 'Voice recognition not supported in this browser. Please use text input.',
-  aiEstimateBadge: 'AI-estimated',
+  aiEstimateBadge: 'AI-Estimated',
   aiEstimateDisclaimer: 'Estimates based on grounded local benchmark data. Not a guaranteed financial return.',
   offlineSimulationStatus: 'Local cache active • Offline ready',
   syncedStatus: 'Synced with cloud registry',
   waitingToSync: 'Waiting to sync (1 entry queued)',
+
+  categories: {
+    dairy: 'Dairy Farming',
+    poultry: 'Poultry Farming',
+    kirana: 'Rural Grocery / Kirana',
+    handloom: 'Handloom / Weaving',
+    tailoring: 'Tailoring & Boutique',
+    flourMill: 'Agri-Processing & Flour Mill',
+  },
 
   nav: {
     overview: 'Overview',
@@ -34,12 +43,16 @@ export const en = {
     schemeMatching: 'Scheme Matching',
     creditScore: 'Credit Score',
     riskAlerts: 'Risk Alerts',
-    settings: 'Settings'
+    settings: 'Settings',
   },
 
   onboarding: {
     title: 'Rural Business Onboarding',
     subtitle: 'Configure your enterprise location, trade, and available margin to unlock tailored financing & market advisory.',
+    step1: 'Step 1: Language & Input Mode',
+    step2: 'Step 2: Enterprise Profile',
+    preferences: 'Preferences',
+    groundingData: 'Grounding Data',
     languageSelectLabel: 'Select Preferred Language',
     inputModeLabel: 'Select Input Preference',
     locationLabel: 'Business Location (Village / Mandal / District)',
@@ -49,12 +62,16 @@ export const en = {
     marginPlaceholder: 'e.g. 100000',
     marginHelp: 'Under standard financing schemes, your margin capital represents 10% of total project cost.',
     saveProfileBtn: 'Save Profile & Run Financial Analysis',
+    enterBtn: 'Complete Setup & Open Dashboard',
+    savingText: 'Saving Enterprise Profile...',
     loadPresetLabel: 'Or choose a verified rural persona:',
+    evaluatorPresetTitle: '1-Click Hackathon Evaluator Profiles',
+    speakPrompt: 'Speak location and capital amount',
     presets: {
       dairy: 'Dairy Smallholder (Warangal, ₹1,00,000 Margin)',
       weaving: 'Handloom Weaver (Nalgonda, ₹30,000 Margin)',
-      kirana: 'Village Kirana Store (Karimnagar, ₹12,000 Margin)'
-    }
+      kirana: 'Village Kirana Store (Karimnagar, ₹12,000 Margin)',
+    },
   },
 
   finance: {
@@ -83,7 +100,14 @@ export const en = {
     healthScoreSubtitle: 'Transparent 0–100 scoring based strictly on business metrics, not black-box ML',
     loggingConsistency: 'Logging Consistency (Weight 30%)',
     profitTrend: 'Profit Trend (Weight 40%)',
-    expenseRatio: 'Expense-to-Income Ratio (Weight 30%)'
+    expenseRatio: 'Expense-to-Income Ratio (Weight 30%)',
+    capitalWorkflow: 'Capital Structuring Workflow',
+    workflowSubtitle: 'Deterministic 5-stage rural credit architecture',
+    stepCapital: '01. Your Capital',
+    stepProject: '02. Project Cost',
+    stepLoan: '03. Loan Amount',
+    stepScheme: '04. Scheme',
+    stepEmi: '05. Quarterly EMI',
   },
 
   risk: {
@@ -98,7 +122,10 @@ export const en = {
     rule3Active: 'Downward Profit Trend Alert (Rule 3)',
     rule3Desc: 'Net monthly cash flow has decreased continuously over the last two recording intervals.',
     aiExplanationLabel: 'AI Localized Risk Analysis & Action Plan',
-    aiExplaining: 'Synthesizing actionable mitigation steps...'
+    aiExplaining: 'Synthesizing actionable mitigation steps...',
+    deterministicReason: 'Deterministic Detection Reason:',
+    actionSteps: 'Recommended Immediate Action Steps:',
+    explainBtn: 'Explain & Generate Action Plan',
   },
 
   logbook: {
@@ -112,13 +139,28 @@ export const en = {
     incomeVsExpense: 'Income vs. Expense Trend',
     date: 'Date',
     type: 'Type',
-    income: 'Income (ఆదాయం)',
-    expense: 'Expense (ఖర్చు)',
+    income: 'Income',
+    expense: 'Expense',
     amount: 'Amount (₹)',
     category: 'Category',
     note: 'Description / Note',
     saveEntry: 'Save Entry to Cloud Ledger',
-    voiceQuickAdd: 'Voice Record: Say e.g. "Sold 20 litres milk for 1200 rupees"'
+    voiceQuickAdd: 'Voice Record: Say e.g. "Sold 20 litres milk for 1200 rupees"',
+    addIncome: '+ Add Income',
+    addExpense: '− Add Expense',
+    todayActivity: "Today's Ledger Activity",
+    inflow: 'Inflow',
+    outflow: 'Outflow',
+    netSurplus: 'Net Surplus',
+    deficit: 'Deficit',
+    action: 'Action',
+    cancel: 'Cancel',
+    saving: 'Saving...',
+    resetSample: 'Reset Sample',
+    noEntries: 'No Transactions Recorded Yet',
+    noEntriesSub: 'Start recording your daily sales or operational supplies to build your credit track-record.',
+    voice: 'Voice',
+    receiptOcr: 'Receipt OCR',
   },
 
   businessAdvisor: {
@@ -136,7 +178,17 @@ export const en = {
     competitorDensity: 'Competitor Density Assessment',
     pricingSuggestion: 'Recommended Pricing Band',
     keyRisks: 'Locality Risk Factors',
-    assumptions: 'Modeling Assumptions'
+    assumptions: 'Modeling Assumptions',
+    districtIntelligence: 'Locally Grounded District Intelligence',
+    districtSub: 'Derived from regional mandi data, rural population clusters, and NBCFDC benchmarks.',
+    coreDrivers: 'Core Value Drivers',
+    seasonality: 'Seasonality Dynamic:',
+    differentiationStrategy: 'Moat & Differentiation Strategy:',
+    swotSubtitle: 'Balanced diagnostic across internal capabilities and external market dynamics',
+    targetMargin: 'Target Net Margin',
+    benchmarkOpex: 'District Benchmark Cost Breakdown',
+    assumptionsTitle: 'Modeling Assumptions & Legal Notice',
+    retryBtn: 'Retry Advisory',
   },
 
   businessPlan: {
@@ -144,6 +196,7 @@ export const en = {
     subtitle: 'Consolidates deterministic finance structuring and AI market advisory into a bank-ready business proposal.',
     generateBtn: 'Synthesize Bank-Ready Business Plan',
     generatingText: 'Generating executive business plan...',
-    downloadPdf: 'Print / Save as PDF'
-  }
+    downloadPdf: 'Print / Save as PDF',
+    memoTitle: 'PROJECT PROPOSAL & CREDIT APPRAISAL MEMORANDUM',
+  },
 };

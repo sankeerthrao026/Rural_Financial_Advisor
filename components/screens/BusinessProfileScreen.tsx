@@ -10,6 +10,7 @@ import { startSpeechListening, isSpeechRecognitionSupported } from '@/lib/voice/
 export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
   const { language, setLanguage, inputMode, setInputMode, profile, updateProfile, loadPreset, dictionary } = useApp();
   const t = dictionary.onboarding;
+  const isTe = language === 'te';
 
   const [location, setLocation] = useState(profile.location);
   const [category, setCategory] = useState(profile.category);
@@ -19,12 +20,12 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   const categories = [
-    { key: 'Dairy Farming', labelEn: 'Dairy Farming (పాడి పరిశ్రమ)', labelTe: 'పాడి పరిశ్రమ (Dairy Farming)' },
-    { key: 'Country / Broiler Poultry', labelEn: 'Country / Broiler Poultry (కోళ్ల పెంపకం)', labelTe: 'కోళ్ల పెంపకం (Poultry)' },
-    { key: 'Rural Grocery / Kirana', labelEn: 'Rural Grocery / Kirana Store (కిరాణా దుకాణం)', labelTe: 'కిరాణా దుకాణం (Kirana Store)' },
-    { key: 'Handloom / Weaving', labelEn: 'Handloom / Powerloom Weaving (చేనేత వస్త్రాలు)', labelTe: 'చేనేత వస్త్రాలు (Handloom)' },
-    { key: 'Tailoring & Boutique', labelEn: 'Tailoring & Boutique (టైలరింగ్)', labelTe: 'టైలరింగ్ (Tailoring & Boutique)' },
-    { key: 'Agri-Processing & Flour Mill', labelEn: 'Agri-Processing & Flour Mill (పిండి మిల్లు)', labelTe: 'పిండి మిల్లు / ప్రాసెసింగ్ (Agri-Processing)' },
+    { key: 'Dairy Farming', label: isTe ? dictionary.categories.dairy : 'Dairy Farming' },
+    { key: 'Country / Broiler Poultry', label: isTe ? dictionary.categories.poultry : 'Poultry Farming' },
+    { key: 'Rural Grocery / Kirana', label: isTe ? dictionary.categories.kirana : 'Rural Grocery / Kirana' },
+    { key: 'Handloom / Weaving', label: isTe ? dictionary.categories.handloom : 'Handloom / Weaving' },
+    { key: 'Tailoring & Boutique', label: isTe ? dictionary.categories.tailoring : 'Tailoring & Boutique' },
+    { key: 'Agri-Processing & Flour Mill', label: isTe ? dictionary.categories.flourMill : 'Agri-Processing & Flour Mill' },
   ];
 
   const handleVoiceInput = () => {
@@ -43,7 +44,6 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
       language,
       onResult: (transcript) => {
         setIsListening(false);
-        // Simple heuristic: check if contains district/village or numbers
         const numbers = transcript.match(/\d+/g);
         if (numbers && numbers.length > 0) {
           const detectedCapital = parseInt(numbers.join(''), 10);
@@ -100,7 +100,7 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
               setMarginCapital('100000');
               setHasActiveLoan(false);
             }}
-            className="rounded-lg border bg-card px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-primary hover:text-primary-foreground shadow-xs"
+            className="rounded-lg border bg-card px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-primary hover:text-primary-foreground shadow-xs cursor-pointer"
           >
             {t.presets.dairy}
           </button>
@@ -113,7 +113,7 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
               setMarginCapital('12000');
               setHasActiveLoan(false);
             }}
-            className="rounded-lg border bg-card px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-primary hover:text-primary-foreground shadow-xs"
+            className="rounded-lg border bg-card px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-primary hover:text-primary-foreground shadow-xs cursor-pointer"
           >
             {t.presets.kirana}
           </button>
@@ -126,7 +126,7 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
               setMarginCapital('30000');
               setHasActiveLoan(false);
             }}
-            className="rounded-lg border bg-card px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-primary hover:text-primary-foreground shadow-xs"
+            className="rounded-lg border bg-card px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-primary hover:text-primary-foreground shadow-xs cursor-pointer"
           >
             {t.presets.weaving}
           </button>
@@ -142,7 +142,7 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
               <button
                 type="button"
                 onClick={() => setLanguage('en')}
-                className={`flex-1 rounded-lg border py-2 text-xs font-medium transition-colors ${
+                className={`flex-1 rounded-lg border py-2 text-xs font-medium transition-colors cursor-pointer ${
                   language === 'en' ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-muted'
                 }`}
               >
@@ -151,11 +151,11 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
               <button
                 type="button"
                 onClick={() => setLanguage('te')}
-                className={`flex-1 rounded-lg border py-2 text-xs font-medium transition-colors ${
+                className={`flex-1 rounded-lg border py-2 text-xs font-medium transition-colors cursor-pointer ${
                   language === 'te' ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-muted'
                 }`}
               >
-                తెలుగు (Telugu)
+                తెలుగు
               </button>
             </div>
           </div>
@@ -166,7 +166,7 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
               <button
                 type="button"
                 onClick={() => setInputMode('text')}
-                className={`flex-1 rounded-lg border py-2 text-xs font-medium transition-colors ${
+                className={`flex-1 rounded-lg border py-2 text-xs font-medium transition-colors cursor-pointer ${
                   inputMode === 'text' ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-muted'
                 }`}
               >
@@ -175,7 +175,7 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
               <button
                 type="button"
                 onClick={() => setInputMode('voice')}
-                className={`flex-1 rounded-lg border py-2 text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                className={`flex-1 rounded-lg border py-2 text-xs font-medium transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
                   inputMode === 'voice' ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-muted'
                 }`}
               >
@@ -191,12 +191,12 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
           <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className={`grid size-10 place-items-center rounded-full ${isListening ? 'bg-destructive text-white animate-pulse' : 'bg-primary text-primary-foreground'}`}>
-                {isListening ? <Mic className="size-5" /> : <Mic className="size-5" />}
+                <Mic className="size-5" />
               </div>
               <div>
                 <p className="text-xs font-semibold">{isListening ? dictionary.listening : dictionary.voicePrompt}</p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                  {language === 'te' ? 'మాట్లాడితే లొకేషన్ మరియు పెట్టుబడి వివరాలు ఆటోమేటిక్‌గా నమోదు అవుతాయి' : 'Spoken location and numbers will auto-populate the form'}
+                  {language === 'te' ? 'మాట్లాడితే లొకేషన్ మరియు పెట్టుబడి వివరాలు నమోదు అవుతాయి' : 'Spoken location and numbers will auto-populate the form'}
                 </p>
               </div>
             </div>
@@ -206,7 +206,7 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
               size="sm"
               onClick={handleVoiceInput}
             >
-              {isListening ? 'Stop' : 'Speak Now'}
+              {isListening ? (isTe ? 'ఆపండి' : 'Stop') : (isTe ? 'మాట్లాడండి' : 'Speak Now')}
             </Button>
           </div>
         )}
@@ -226,7 +226,7 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
                   category === c.key ? 'border-primary bg-primary/5 font-semibold text-primary' : 'hover:bg-muted/50'
                 }`}
               >
-                <span>{language === 'te' ? c.labelTe : c.labelEn}</span>
+                <span>{c.label}</span>
                 {category === c.key && <Check className="size-4 text-primary" />}
               </label>
             ))}
@@ -282,11 +282,11 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
           />
           <label htmlFor="activeLoanCheckbox" className="cursor-pointer text-xs leading-5">
             <span className="font-semibold text-foreground">
-              {language === 'te' ? 'ప్రస్తుతం యాక్టివ్ రుణం ఉంది (Active Loan)' : 'User currently has an active institutional or SHG loan'}
+              {language === 'te' ? 'ప్రస్తుతం అమలులో ఉన్న రుణం ఉంది' : 'User currently has an active institutional or SHG loan'}
             </span>
             <p className="text-muted-foreground mt-0.5">
               {language === 'te'
-                ? 'దీన్ని ఎంచుకుంటే ఓవర్-లెవరేజ్ రిస్క్ రూల్ (Rule 1) మరియు AI పరిష్కారం పరీక్షించబడుతుంది.'
+                ? 'దీన్ని ఎంచుకుంటే అధిక అప్పుల రిస్క్ నిబంధన (రూల్ 1) మరియు AI పరిష్కారం పరీక్షించబడుతుంది.'
                 : 'Check this to simulate Rule 1 over-leverage risk detection and trigger localized AI coaching.'}
             </p>
           </label>
@@ -313,3 +313,5 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
     </div>
   );
 }
+
+export default BusinessProfileScreen;

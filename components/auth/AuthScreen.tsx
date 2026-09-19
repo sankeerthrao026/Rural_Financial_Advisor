@@ -161,7 +161,7 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
           className="flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-xs cursor-pointer"
         >
           <Languages className="size-3.5 text-primary" />
-          <span>{language === 'en' ? 'తెలుగు (Telugu)' : 'English'}</span>
+          <span>{language === 'en' ? 'తెలుగు' : 'English'}</span>
         </button>
       </div>
 
@@ -418,7 +418,7 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
                 {isTe ? '1-క్లిక్ జడ్జ్ ప్రొఫైల్స్' : '1-Click Evaluator Presets'}
               </span>
               <span className="text-[10px] text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-full">
-                Instant Access
+                {isTe ? 'తక్షణ ప్రవేశం' : 'Instant Access'}
               </span>
             </div>
             <div className="grid grid-cols-3 gap-2">
@@ -428,7 +428,7 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
                 className="p-2 rounded-lg border bg-background/60 hover:bg-primary/5 hover:border-primary/40 text-center transition-all cursor-pointer select-none"
               >
                 <p className="text-[11px] font-semibold text-foreground pointer-events-none">Anita S.</p>
-                <p className="text-[9px] text-muted-foreground pointer-events-none">Dairy (₹1.5L)</p>
+                <p className="text-[9px] text-muted-foreground pointer-events-none">{isTe ? 'పాడి (₹1.5ల)' : 'Dairy (₹1.5L)'}</p>
               </button>
               <button
                 type="button"
@@ -436,7 +436,7 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
                 className="p-2 rounded-lg border bg-background/60 hover:bg-primary/5 hover:border-primary/40 text-center transition-all cursor-pointer select-none"
               >
                 <p className="text-[11px] font-semibold text-foreground pointer-events-none">Ramesh K.</p>
-                <p className="text-[9px] text-muted-foreground pointer-events-none">Kirana (₹50k)</p>
+                <p className="text-[9px] text-muted-foreground pointer-events-none">{isTe ? 'కిరాణా (₹50వే)' : 'Kirana (₹50k)'}</p>
               </button>
               <button
                 type="button"
@@ -444,7 +444,7 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
                 className="p-2 rounded-lg border bg-background/60 hover:bg-primary/5 hover:border-primary/40 text-center transition-all cursor-pointer select-none"
               >
                 <p className="text-[11px] font-semibold text-foreground pointer-events-none">Lakshmi D.</p>
-                <p className="text-[9px] text-muted-foreground pointer-events-none">Weaver (₹30k)</p>
+                <p className="text-[9px] text-muted-foreground pointer-events-none">{isTe ? 'చేనేత (₹30వే)' : 'Weaver (₹30k)'}</p>
               </button>
             </div>
           </div>
@@ -452,7 +452,7 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
           <div className="mt-4 pt-3 border-t text-center flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
             <ShieldCheck className="size-3.5 text-emerald-600 pointer-events-none" />
             <span className="pointer-events-none">
-              {isConfigured ? 'Secured by Supabase Auth' : 'Local Demo Auth Ready'}
+              {isConfigured ? (isTe ? 'సురక్షితమైన సుపాబేస్ లాగిన్' : 'Secured by Supabase Auth') : (isTe ? 'లోకల్ డెమో లాగిన్ సిద్ధం' : 'Local Demo Auth Ready')}
             </span>
           </div>
         </div>

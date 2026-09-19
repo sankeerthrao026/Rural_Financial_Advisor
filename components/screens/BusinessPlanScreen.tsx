@@ -23,6 +23,19 @@ export function BusinessPlanScreen() {
   const t = dictionary.businessPlan;
   const isTe = language === 'te';
 
+  const categoryLabel = (() => {
+    if (!isTe) return profile.category;
+    const catMap: Record<string, string> = {
+      'Dairy Farming': dictionary.categories.dairy,
+      'Country / Broiler Poultry': dictionary.categories.poultry,
+      'Rural Grocery / Kirana': dictionary.categories.kirana,
+      'Handloom / Weaving': dictionary.categories.handloom,
+      'Tailoring & Boutique': dictionary.categories.tailoring,
+      'Agri-Processing & Flour Mill': dictionary.categories.flourMill,
+    };
+    return catMap[profile.category] || profile.category;
+  })();
+
   const [loading, setLoading] = useState(false);
   const [plan, setPlan] = useState<BusinessPlanOutput | null>(null);
 
@@ -64,9 +77,11 @@ export function BusinessPlanScreen() {
         <div>
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-semibold">
-              Bank-Ready Credit Package
+              {isTe ? 'బ్యాంక్ రుణ నివేదిక' : 'Bank-Ready Credit Package'}
             </span>
-            <span className="text-xs text-muted-foreground">1-Click Unified Synthesis</span>
+            <span className="text-xs text-muted-foreground">
+              {isTe ? '1-క్లిక్ సమగ్ర విశ్లేషణ' : '1-Click Unified Synthesis'}
+            </span>
           </div>
           <h2 className="mt-2 text-xl font-bold font-sora tracking-tight text-foreground">{t.title}</h2>
           <p className="mt-1 text-xs text-muted-foreground max-w-xl">{t.subtitle}</p>
@@ -93,47 +108,57 @@ export function BusinessPlanScreen() {
           <div className="border-b pb-6 flex justify-between items-start">
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-primary">
-                PROJECT PROPOSAL & CREDIT APPRAISAL MEMORANDUM
+                {isTe ? t.memoTitle : 'PROJECT PROPOSAL & CREDIT APPRAISAL MEMORANDUM'}
               </p>
               <h1 className="mt-1 text-2xl font-bold font-sora text-foreground">{profile.businessName}</h1>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {profile.category} • {profile.location}
+                {categoryLabel} • {profile.location}
               </p>
             </div>
             <div className="text-right">
               <span className="rounded bg-primary text-primary-foreground px-2 py-1 text-xs font-semibold">
                 {finance.scheme.name}
               </span>
-              <p className="mt-1 text-xs text-muted-foreground">Date: 19 Sep 2026</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {isTe ? 'తేదీ: 19 సెప్టెంబర్ 2026' : 'Date: 19 Sep 2026'}
+              </p>
             </div>
           </div>
 
           {/* Executive Summary */}
           <div>
-            <h3 className="font-semibold font-sora text-sm text-foreground">1. Executive Summary</h3>
+            <h3 className="font-semibold font-sora text-sm text-foreground">
+              {isTe ? '1. ప్రాజెక్ట్ సారాంశం' : '1. Executive Summary'}
+            </h3>
             <p className="mt-2 text-xs text-muted-foreground leading-relaxed">{plan.executiveSummary}</p>
           </div>
 
           {/* Capital Outlay Table */}
           <div>
             <h3 className="font-semibold font-sora text-sm text-foreground mb-3">
-              2. Total Capital Outlay & Financing Structure
+              {isTe ? '2. మొత్తం ప్రాజెక్ట్ వ్యయం & ఆర్థిక నిర్మాణం' : '2. Total Capital Outlay & Financing Structure'}
             </h3>
             <div className="grid gap-3 sm:grid-cols-3 mb-4">
               <div className="rounded-xl border p-3 bg-muted/20">
-                <p className="text-[11px] text-muted-foreground">Total Project Cost</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {isTe ? 'మొత్తం ప్రాజెక్ట్ వ్యయం' : 'Total Project Cost'}
+                </p>
                 <p className="text-lg font-bold font-sora text-foreground mt-0.5">
                   {formatINR(finance.projectCost)}
                 </p>
               </div>
               <div className="rounded-xl border p-3 bg-muted/20">
-                <p className="text-[11px] text-muted-foreground">Promoter Margin (10%)</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {isTe ? 'స్వంత పెట్టుబడి (10%)' : 'Promoter Margin (10%)'}
+                </p>
                 <p className="text-lg font-bold font-sora text-primary mt-0.5">
                   {formatINR(finance.marginCapital)}
                 </p>
               </div>
               <div className="rounded-xl border p-3 bg-muted/20">
-                <p className="text-[11px] text-muted-foreground">Term Scheme Loan (90%)</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {isTe ? 'పథకం రుణం (90%)' : 'Term Scheme Loan (90%)'}
+                </p>
                 <p className="text-lg font-bold font-sora text-emerald-700 mt-0.5">
                   {formatINR(finance.loanAmount)}
                 </p>
@@ -144,9 +169,15 @@ export function BusinessPlanScreen() {
               <table className="w-full text-left text-xs">
                 <thead className="bg-muted/40 border-b text-muted-foreground">
                   <tr>
-                    <th className="py-2.5 px-3 font-semibold">Asset / Expenditure Item</th>
-                    <th className="py-2.5 px-3 font-semibold text-right">Allocation (₹)</th>
-                    <th className="py-2.5 px-3 font-semibold text-right">Share (%)</th>
+                    <th className="py-2.5 px-3 font-semibold">
+                      {isTe ? 'ఆస్తి / వ్యయ విభాగం' : 'Asset / Expenditure Item'}
+                    </th>
+                    <th className="py-2.5 px-3 font-semibold text-right">
+                      {isTe ? 'కేటాయింపు (₹)' : 'Allocation (₹)'}
+                    </th>
+                    <th className="py-2.5 px-3 font-semibold text-right">
+                      {isTe ? 'వాటా (%)' : 'Share (%)'}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -166,34 +197,46 @@ export function BusinessPlanScreen() {
 
           {/* Operational Ramp-Up */}
           <div>
-            <h3 className="font-semibold font-sora text-sm text-foreground">3. Operational Schedule & Moratorium</h3>
+            <h3 className="font-semibold font-sora text-sm text-foreground">
+              {isTe ? '3. కార్యాచరణ ప్రణాళిక & మారటోరియం' : '3. Operational Schedule & Moratorium'}
+            </h3>
             <p className="mt-2 text-xs text-muted-foreground leading-relaxed">{plan.operationalPlan}</p>
           </div>
 
           {/* Financial Feasibility */}
           <div>
-            <h3 className="font-semibold font-sora text-sm text-foreground mb-3">4. Financial Feasibility Projections</h3>
+            <h3 className="font-semibold font-sora text-sm text-foreground mb-3">
+              {isTe ? '4. ఆర్థిక సాధ్యత అంచనాలు' : '4. Financial Feasibility Projections'}
+            </h3>
             <div className="grid gap-3 sm:grid-cols-4">
               <div className="rounded-xl border p-3">
-                <p className="text-[11px] text-muted-foreground">Projected Monthly Revenue</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {isTe ? 'అంచనా నెలవారీ ఆదాయం' : 'Projected Monthly Revenue'}
+                </p>
                 <p className="text-sm font-bold font-sora text-emerald-800 mt-1">
                   {plan.financialProjections.expectedMonthlyRevenue}
                 </p>
               </div>
               <div className="rounded-xl border p-3">
-                <p className="text-[11px] text-muted-foreground">Operating Expenses</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {isTe ? 'నెలవారీ నిర్వహణ ఖర్చులు' : 'Operating Expenses'}
+                </p>
                 <p className="text-sm font-bold font-sora text-rose-800 mt-1">
                   {plan.financialProjections.expectedMonthlyExpense}
                 </p>
               </div>
               <div className="rounded-xl border p-3">
-                <p className="text-[11px] text-muted-foreground">Expected Net Surplus</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {isTe ? 'నికర నెలవారీ మిగులు' : 'Expected Net Surplus'}
+                </p>
                 <p className="text-sm font-bold font-sora text-primary mt-1">
                   {plan.financialProjections.netMonthlySurplus}
                 </p>
               </div>
               <div className="rounded-xl border p-3">
-                <p className="text-[11px] text-muted-foreground">Debt Service Coverage</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {isTe ? 'రుణ చెల్లింపు కవరేజ్ (DSCR)' : 'Debt Service Coverage'}
+                </p>
                 <p className="text-sm font-bold font-sora text-emerald-700 mt-1">
                   {plan.financialProjections.quarterlyEmiCoverageRatio}
                 </p>
@@ -203,7 +246,9 @@ export function BusinessPlanScreen() {
 
           {/* Risk Mitigation */}
           <div>
-            <h3 className="font-semibold font-sora text-sm text-foreground mb-2">5. Risk Containment Safeguards</h3>
+            <h3 className="font-semibold font-sora text-sm text-foreground mb-2">
+              {isTe ? '5. రిస్క్ నియంత్రణ రక్షణలు' : '5. Risk Containment Safeguards'}
+            </h3>
             <ul className="space-y-1.5 text-xs text-muted-foreground">
               {plan.riskMitigation.map((m, idx) => (
                 <li key={idx} className="flex items-start gap-2">

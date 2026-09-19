@@ -31,12 +31,12 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
   const [loading, setLoading] = useState(false);
 
   const categories = [
-    { key: 'Dairy Farming', labelEn: 'Dairy Farming (పాడి పరిశ్రమ)', labelTe: 'పాడి పరిశ్రమ (Dairy Farming)' },
-    { key: 'Country / Broiler Poultry', labelEn: 'Poultry Farming (కోళ్ల పెంపకం)', labelTe: 'కోళ్ల పెంపకం (Poultry)' },
-    { key: 'Rural Grocery / Kirana', labelEn: 'Rural Grocery / Kirana (కిరాణా దుకాణం)', labelTe: 'కిరాణా దుకాణం (Kirana Store)' },
-    { key: 'Handloom / Weaving', labelEn: 'Handloom / Weaving (చేనేత వస్త్రాలు)', labelTe: 'చేనేత వస్త్రాలు (Handloom)' },
-    { key: 'Tailoring & Boutique', labelEn: 'Tailoring & Boutique (టైలరింగ్)', labelTe: 'టైలరింగ్ (Tailoring)' },
-    { key: 'Agri-Processing & Flour Mill', labelEn: 'Agri-Processing & Flour Mill (పిండి మిల్లు)', labelTe: 'పిండి మిల్లు / ప్రాసెసింగ్ (Agri-Processing)' },
+    { key: 'Dairy Farming', label: isTe ? dictionary.categories.dairy : 'Dairy Farming' },
+    { key: 'Country / Broiler Poultry', label: isTe ? dictionary.categories.poultry : 'Poultry Farming' },
+    { key: 'Rural Grocery / Kirana', label: isTe ? dictionary.categories.kirana : 'Rural Grocery / Kirana' },
+    { key: 'Handloom / Weaving', label: isTe ? dictionary.categories.handloom : 'Handloom / Weaving' },
+    { key: 'Tailoring & Boutique', label: isTe ? dictionary.categories.tailoring : 'Tailoring & Boutique' },
+    { key: 'Agri-Processing & Flour Mill', label: isTe ? dictionary.categories.flourMill : 'Agri-Processing & Flour Mill' },
   ];
 
   const handleVoiceInput = () => {
@@ -103,11 +103,12 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
       {/* Top Language Toggle */}
       <div className="absolute top-6 right-6 flex items-center gap-2">
         <button
+          type="button"
           onClick={() => setLanguage(language === 'en' ? 'te' : 'en')}
-          className="flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-xs"
+          className="flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-xs cursor-pointer"
         >
           <Languages className="size-3.5 text-primary" />
-          <span>{language === 'en' ? 'తెలుగు (Telugu)' : 'English'}</span>
+          <span>{language === 'en' ? 'తెలుగు' : 'English'}</span>
         </button>
       </div>
 
@@ -118,12 +119,10 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
             <span className="text-2xl font-bold font-sora">R</span>
           </div>
           <h1 className="text-2xl font-bold font-sora tracking-tight text-foreground">
-            {isTe ? 'వ్యాపార ప్రారంభ నమోదు' : 'Enterprise Setup & Onboarding'}
+            {t.title}
           </h1>
           <p className="mt-1 text-xs text-muted-foreground max-w-md">
-            {isTe
-              ? 'మీ ప్రాంతం మరియు పెట్టుబడి వివరాలను నమోదు చేసి వ్యక్తిగత రుణ ప్రణాళికను రూపొందించండి.'
-              : 'Configure your enterprise location, trade, and available margin to unlock tailored financing & market advisory.'}
+            {t.subtitle}
           </p>
         </div>
 
@@ -131,32 +130,32 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
         <div className="rounded-2xl border border-amber-200/80 bg-accent/40 p-4 shadow-xs">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-900">
             <Sparkles className="size-4 text-amber-700" />
-            <span>{isTe ? 'హ్యాకథాన్ తక్షణ ప్రొఫైల్ ఎంపిక' : '1-Click Hackathon Evaluator Profiles'}</span>
+            <span>{t.evaluatorPresetTitle}</span>
           </div>
           <div className="mt-2.5 grid gap-2 sm:grid-cols-3">
             <button
               type="button"
               onClick={() => handleSelectPreset('dairy')}
-              className="rounded-lg border bg-card p-2.5 text-left text-xs font-medium hover:bg-primary hover:text-primary-foreground transition-colors shadow-xs"
+              className="rounded-lg border bg-card p-2.5 text-left text-xs font-medium hover:bg-primary hover:text-primary-foreground transition-colors shadow-xs cursor-pointer"
             >
               <span className="font-semibold block truncate">Anita Sharma</span>
-              <span className="text-[10px] opacity-75 block">Dairy • ₹1,00,000</span>
+              <span className="text-[10px] opacity-75 block">{isTe ? 'పాడి • ₹1,00,000' : 'Dairy • ₹1,00,000'}</span>
             </button>
             <button
               type="button"
               onClick={() => handleSelectPreset('kirana')}
-              className="rounded-lg border bg-card p-2.5 text-left text-xs font-medium hover:bg-primary hover:text-primary-foreground transition-colors shadow-xs"
+              className="rounded-lg border bg-card p-2.5 text-left text-xs font-medium hover:bg-primary hover:text-primary-foreground transition-colors shadow-xs cursor-pointer"
             >
               <span className="font-semibold block truncate">Ramesh Kumar</span>
-              <span className="text-[10px] opacity-75 block">Kirana • ₹12,000</span>
+              <span className="text-[10px] opacity-75 block">{isTe ? 'కిరాణా • ₹12,000' : 'Kirana • ₹12,000'}</span>
             </button>
             <button
               type="button"
               onClick={() => handleSelectPreset('weaving')}
-              className="rounded-lg border bg-card p-2.5 text-left text-xs font-medium hover:bg-primary hover:text-primary-foreground transition-colors shadow-xs"
+              className="rounded-lg border bg-card p-2.5 text-left text-xs font-medium hover:bg-primary hover:text-primary-foreground transition-colors shadow-xs cursor-pointer"
             >
               <span className="font-semibold block truncate">Lakshmi Devi</span>
-              <span className="text-[10px] opacity-75 block">Handloom • ₹30,000</span>
+              <span className="text-[10px] opacity-75 block">{isTe ? 'చేనేత • ₹30,000' : 'Handloom • ₹30,000'}</span>
             </button>
           </div>
         </div>
@@ -167,9 +166,9 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
           <div>
             <div className="flex items-center justify-between pb-3 border-b mb-4">
               <span className="text-xs font-bold uppercase tracking-wider text-primary">
-                {isTe ? 'దశ 1: భాష & ఇన్‌పుట్ పద్ధతి' : 'Step 1: Language & Input Mode'}
+                {t.step1}
               </span>
-              <span className="text-xs text-muted-foreground">Preferences</span>
+              <span className="text-xs text-muted-foreground">{t.preferences}</span>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -179,7 +178,7 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
                   <button
                     type="button"
                     onClick={() => setLanguage('en')}
-                    className={`flex-1 rounded-lg border py-2 text-xs font-semibold transition-colors ${
+                    className={`flex-1 rounded-lg border py-2 text-xs font-semibold transition-colors cursor-pointer ${
                       language === 'en' ? 'bg-primary text-primary-foreground border-primary shadow-xs' : 'bg-background hover:bg-muted'
                     }`}
                   >
@@ -188,7 +187,7 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
                   <button
                     type="button"
                     onClick={() => setLanguage('te')}
-                    className={`flex-1 rounded-lg border py-2 text-xs font-semibold transition-colors ${
+                    className={`flex-1 rounded-lg border py-2 text-xs font-semibold transition-colors cursor-pointer ${
                       language === 'te' ? 'bg-primary text-primary-foreground border-primary shadow-xs' : 'bg-background hover:bg-muted'
                     }`}
                   >
@@ -203,7 +202,7 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
                   <button
                     type="button"
                     onClick={() => setInputMode('text')}
-                    className={`flex-1 rounded-lg border py-2 text-xs font-semibold transition-colors ${
+                    className={`flex-1 rounded-lg border py-2 text-xs font-semibold transition-colors cursor-pointer ${
                       inputMode === 'text' ? 'bg-primary text-primary-foreground border-primary shadow-xs' : 'bg-background hover:bg-muted'
                     }`}
                   >
@@ -212,7 +211,7 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
                   <button
                     type="button"
                     onClick={() => setInputMode('voice')}
-                    className={`flex-1 rounded-lg border py-2 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 ${
+                    className={`flex-1 rounded-lg border py-2 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
                       inputMode === 'voice' ? 'bg-primary text-primary-foreground border-primary shadow-xs' : 'bg-background hover:bg-muted'
                     }`}
                   >
@@ -228,9 +227,9 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
           <div className="pt-2">
             <div className="flex items-center justify-between pb-3 border-b mb-4">
               <span className="text-xs font-bold uppercase tracking-wider text-primary">
-                {isTe ? 'దశ 2: వ్యాపార వివరాలు' : 'Step 2: Enterprise Profile'}
+                {t.step2}
               </span>
-              <span className="text-xs text-muted-foreground">Grounding Data</span>
+              <span className="text-xs text-muted-foreground">{t.groundingData}</span>
             </div>
 
             {/* Voice Input Prompt if active */}
@@ -239,7 +238,7 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
                 <div className="flex items-center gap-2.5">
                   <Mic className={`size-4 ${isListening ? 'text-rose-600 animate-pulse' : 'text-primary'}`} />
                   <span className="text-xs font-medium text-foreground">
-                    {isListening ? dictionary.listening : (isTe ? 'వాయిస్ ద్వారా మాట్లాడి వివరాలు నింపండి' : 'Speak location and capital amount')}
+                    {isListening ? dictionary.listening : t.speakPrompt}
                   </span>
                 </div>
                 <Button
@@ -248,7 +247,7 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
                   variant={isListening ? 'destructive' : 'outline'}
                   onClick={handleVoiceInput}
                 >
-                  {isListening ? 'Stop' : 'Speak'}
+                  {isListening ? (isTe ? 'ఆపండి' : 'Stop') : (isTe ? 'మాట్లాడండి' : 'Speak')}
                 </Button>
               </div>
             )}
@@ -265,13 +264,13 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
                     key={c.key}
                     type="button"
                     onClick={() => setCategory(c.key)}
-                    className={`flex items-center justify-between rounded-xl border p-3 text-xs text-left transition-colors ${
+                    className={`flex items-center justify-between rounded-xl border p-3 text-xs text-left transition-colors cursor-pointer ${
                       category === c.key
                         ? 'border-primary bg-primary/5 font-semibold text-primary shadow-xs'
                         : 'bg-background hover:bg-muted/50 text-foreground'
                     }`}
                   >
-                    <span>{isTe ? c.labelTe : c.labelEn}</span>
+                    <span>{c.label}</span>
                     {category === c.key && <Check className="size-4 text-primary" />}
                   </button>
                 ))}
@@ -288,7 +287,7 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
                 type="text"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                placeholder="e.g. Mulkanoor, Warangal, Telangana"
+                placeholder={t.locationPlaceholder}
                 className="w-full rounded-lg border bg-background px-3.5 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                 required
               />
@@ -301,7 +300,7 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
                   <IndianRupee className="size-3.5 text-primary" />
                   {t.marginLabel}
                 </label>
-                <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200">
                   {formatINR(parseFloat(marginCapital.replace(/[^\d]/g, '')) || 0)}
                 </span>
               </div>
@@ -309,7 +308,7 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
                 type="text"
                 value={marginCapital}
                 onChange={(e) => setMarginCapital(e.target.value)}
-                placeholder="e.g. 100000"
+                placeholder={t.marginPlaceholder}
                 className="w-full rounded-lg border bg-background px-3.5 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                 required
               />
@@ -319,12 +318,12 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
             </div>
           </div>
 
-          <Button type="submit" size="lg" disabled={loading} className="w-full font-semibold mt-2">
+          <Button type="submit" size="lg" disabled={loading} className="w-full font-semibold mt-2 cursor-pointer">
             {loading ? (
-              <span>{isTe ? 'ఖాతా నమోదు చేస్తున్నాము...' : 'Saving Enterprise Profile...'}</span>
+              <span>{t.savingText}</span>
             ) : (
               <span className="flex items-center gap-2">
-                <span>{isTe ? 'ప్రారంభించండి (Enter RuralCred)' : 'Complete Setup & Open Dashboard'}</span>
+                <span>{t.enterBtn}</span>
                 <ArrowRight className="size-4" />
               </span>
             )}
@@ -334,3 +333,5 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
     </div>
   );
 }
+
+export default OnboardingScreen;

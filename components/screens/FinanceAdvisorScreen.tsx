@@ -47,14 +47,14 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
         <div className="flex items-center justify-between pb-3 border-b mb-4">
           <div>
             <h2 className="font-semibold font-sora text-sm text-foreground">
-              {isTe ? 'ఆర్థిక ప్రణాళికా ప్రయాణం' : 'Capital Structuring Workflow'}
+              {t.capitalWorkflow}
             </h2>
             <p className="text-[11px] text-muted-foreground mt-0.5">
-              {isTe ? 'మూలధనం నుండి వాయిదా వరకు దశలవారీ లెక్కలు' : 'Deterministic 5-stage rural credit architecture'}
+              {t.workflowSubtitle}
             </p>
           </div>
           <span className="text-[11px] font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full">
-            100% Invariant
+            {isTe ? 'నియమాధారితం' : '100% Invariant'}
           </span>
         </div>
 
@@ -62,47 +62,47 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
           {/* Step 1: Capital */}
           <div className="rounded-xl border bg-background p-3.5 flex flex-col justify-between">
             <div className="flex items-center justify-between text-[11px] font-semibold text-muted-foreground">
-              <span>01. Your Capital</span>
+              <span>{t.stepCapital}</span>
               <span className="text-primary font-bold">10%</span>
             </div>
             <p className="mt-2 text-base font-bold font-sora text-foreground">
               <AnimatedNumber value={finance.marginCapital} formatter={formatINR} />
             </p>
-            <p className="mt-1 text-[10px] text-muted-foreground">Promoter equity stake</p>
+            <p className="mt-1 text-[10px] text-muted-foreground">{isTe ? 'ప్రమోటర్ సొంత వాటా' : 'Promoter equity stake'}</p>
           </div>
 
           {/* Step 2: Project Cost */}
           <div className="rounded-xl border bg-background p-3.5 flex flex-col justify-between">
             <div className="flex items-center justify-between text-[11px] font-semibold text-muted-foreground">
-              <span>02. Project Cost</span>
+              <span>{t.stepProject}</span>
               <span className="text-emerald-700 font-bold">100%</span>
             </div>
             <p className="mt-2 text-base font-bold font-sora text-foreground">
               <AnimatedNumber value={finance.projectCost} formatter={formatINR} />
             </p>
-            <p className="mt-1 text-[10px] text-muted-foreground">Capital ÷ 0.10 formula</p>
+            <p className="mt-1 text-[10px] text-muted-foreground">{isTe ? 'మూలధనం ÷ 0.10 సూత్రం' : 'Capital ÷ 0.10 formula'}</p>
           </div>
 
           {/* Step 3: Loan Requirement */}
           <div className="rounded-xl border bg-background p-3.5 flex flex-col justify-between">
             <div className="flex items-center justify-between text-[11px] font-semibold text-muted-foreground">
-              <span>03. Loan Amount</span>
+              <span>{t.stepLoan}</span>
               <span className="text-amber-700 font-bold">90%</span>
             </div>
             <p className="mt-2 text-base font-bold font-sora text-emerald-800 dark:text-emerald-400">
               <AnimatedNumber value={finance.loanAmount} formatter={formatINR} />
             </p>
-            <p className="mt-1 text-[10px] text-muted-foreground">Institutional credit</p>
+            <p className="mt-1 text-[10px] text-muted-foreground">{isTe ? 'బ్యాంకు రుణం (90%)' : 'Institutional credit'}</p>
           </div>
 
           {/* Step 4: Scheme Routing */}
           <div className="rounded-xl border bg-primary/5 border-primary/20 p-3.5 flex flex-col justify-between">
             <div className="flex items-center justify-between text-[11px] font-semibold text-primary">
-              <span>04. Scheme</span>
-              <span className="font-bold">{isMicro ? 'Micro' : 'Term'}</span>
+              <span>{t.stepScheme}</span>
+              <span className="font-bold">{isMicro ? (isTe ? 'మైక్రో' : 'Micro') : (isTe ? 'టర్మ్' : 'Term')}</span>
             </div>
             <p className="mt-2 text-sm font-bold font-sora text-primary truncate">
-              {finance.scheme.name.split('(')[0]}
+              {isTe ? finance.scheme.nameTe : finance.scheme.name}
             </p>
             <p className="mt-1 text-[10px] text-muted-foreground">{finance.scheme.agency}</p>
           </div>
@@ -110,20 +110,20 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
           {/* Step 5: Quarterly Payment */}
           <div className="rounded-xl border bg-background p-3.5 flex flex-col justify-between">
             <div className="flex items-center justify-between text-[11px] font-semibold text-muted-foreground">
-              <span>05. Quarterly EMI</span>
-              <span className="text-primary font-bold">Q-Cycle</span>
+              <span>{t.stepEmi}</span>
+              <span className="text-primary font-bold">{isTe ? 'త్రైమాసికం' : 'Q-Cycle'}</span>
             </div>
             <p className="mt-2 text-base font-bold font-sora text-primary">
               <AnimatedNumber value={finance.quarterlyEmi} formatter={formatINR} />
             </p>
-            <p className="mt-1 text-[10px] text-muted-foreground">Reducing balance</p>
+            <p className="mt-1 text-[10px] text-muted-foreground">{isTe ? 'తగ్గుతున్న అసలుపై వడ్డీ' : 'Reducing balance'}</p>
           </div>
         </div>
       </section>
 
       {/* 2. Top Scheme Routing Banner */}
       <div className={`rounded-2xl border p-5 sm:p-6 hover-lift ${
-        isMicro ? 'bg-amber-500/10 border-amber-300/80 text-amber-950' : 'bg-primary/5 border-primary/20 text-foreground'
+        isMicro ? 'bg-amber-500/10 border-amber-300/80 text-amber-950 dark:text-amber-200' : 'bg-primary/5 border-primary/20 text-foreground'
       }`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -134,7 +134,7 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
                 <ShieldCheck className="size-3.5" />
                 {isMicro ? t.microFinanceBadge : t.termLoanBadge}
               </span>
-              <span className="text-xs text-muted-foreground">Automatic Eligibility Tiering</span>
+              <span className="text-xs text-muted-foreground">{isTe ? 'స్వయంచాలక పథక కేటాయింపు' : 'Automatic Eligibility Tiering'}</span>
             </div>
             <h2 className="mt-2 text-xl font-bold font-sora tracking-tight">
               {isTe ? finance.scheme.nameTe : finance.scheme.name}
@@ -168,7 +168,7 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
             </p>
           </div>
           <div className="text-right">
-            <span className="text-xs text-muted-foreground">Total Outlay: </span>
+            <span className="text-xs text-muted-foreground">{isTe ? 'మొత్తం తిరిగి చెల్లింపు: ' : 'Total Outlay: '}</span>
             <strong className="text-sm font-sora text-foreground">{formatINR(totalRepayment)}</strong>
           </div>
         </div>
@@ -191,11 +191,11 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
           <div className="flex justify-between items-center text-xs text-muted-foreground pt-1">
             <div className="flex items-center gap-2">
               <span className="size-2.5 rounded-full bg-primary" />
-              <span>Principal: <strong>{formatINR(finance.loanAmount)}</strong> ({Math.round((finance.loanAmount / totalRepayment) * 100)}%)</span>
+              <span>{isTe ? 'అసలు: ' : 'Principal: '}<strong>{formatINR(finance.loanAmount)}</strong> ({Math.round((finance.loanAmount / totalRepayment) * 100)}%)</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="size-2.5 rounded-full bg-amber-500" />
-              <span>Interest: <strong>{formatINR(totalInterest)}</strong> ({Math.round((totalInterest / totalRepayment) * 100)}%)</span>
+              <span>{isTe ? 'వడ్డీ: ' : 'Interest: '}<strong>{formatINR(totalInterest)}</strong> ({Math.round((totalInterest / totalRepayment) * 100)}%)</span>
             </div>
           </div>
         </div>
@@ -227,7 +227,9 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
             onClick={() => setShowFullSchedule(!showFullSchedule)}
             className="cursor-pointer font-semibold text-xs"
           >
-            {showFullSchedule ? 'Show First 8 Quarters' : `Show All ${finance.totalQuarters} Quarters`}
+            {showFullSchedule
+              ? (isTe ? 'మొదటి 8 త్రైమాసికాలు చూపించు' : 'Show First 8 Quarters')
+              : (isTe ? `అన్ని ${finance.totalQuarters} త్రైమాసికాలు చూపించు` : `Show All ${finance.totalQuarters} Quarters`)}
           </Button>
         </div>
 
@@ -260,7 +262,7 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
                     )}
                     {row.remainingBalance === 0 && (
                       <span className="rounded bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.5 text-[10px] font-semibold">
-                        Paid Off
+                        {isTe ? 'పూర్తయింది' : 'Paid Off'}
                       </span>
                     )}
                   </td>

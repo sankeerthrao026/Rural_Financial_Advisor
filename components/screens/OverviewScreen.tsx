@@ -134,7 +134,7 @@ export function OverviewScreen({ setActive }: { setActive: (value: string) => vo
               <AnimatedNumber value={finance.loanAmount} formatter={formatINR} />
             </p>
             <p className="mt-1 text-[11px] text-muted-foreground">
-              {finance.scheme.name.split('(')[0]}
+              {isTe ? finance.scheme.nameTe : finance.scheme.name}
             </p>
           </div>
         </div>
@@ -176,7 +176,7 @@ export function OverviewScreen({ setActive }: { setActive: (value: string) => vo
                   {isTe ? 'నగదు ప్రవాహ విశ్లేషణ' : 'Cash Flow Intelligence'}
                 </h2>
                 <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                  Interactive
+                  {isTe ? 'ఇంటరాక్టివ్' : 'Interactive'}
                 </span>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
@@ -188,27 +188,27 @@ export function OverviewScreen({ setActive }: { setActive: (value: string) => vo
             <div className="flex items-center rounded-lg border bg-muted/40 p-0.5 text-xs font-semibold self-start sm:self-auto">
               <button
                 onClick={() => setTimeframe('7d')}
-                className={`rounded-md px-2.5 py-1 transition-all ${
+                className={`rounded-md px-2.5 py-1 transition-all cursor-pointer ${
                   timeframe === '7d' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                7 Days
+                {isTe ? '7 రోజులు' : '7 Days'}
               </button>
               <button
                 onClick={() => setTimeframe('30d')}
-                className={`rounded-md px-2.5 py-1 transition-all ${
+                className={`rounded-md px-2.5 py-1 transition-all cursor-pointer ${
                   timeframe === '30d' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                30 Days
+                {isTe ? '30 రోజులు' : '30 Days'}
               </button>
               <button
                 onClick={() => setTimeframe('3m')}
-                className={`rounded-md px-2.5 py-1 transition-all ${
+                className={`rounded-md px-2.5 py-1 transition-all cursor-pointer ${
                   timeframe === '3m' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                3 Months
+                {isTe ? '3 నెలలు' : '3 Months'}
               </button>
             </div>
           </div>
@@ -266,7 +266,7 @@ export function OverviewScreen({ setActive }: { setActive: (value: string) => vo
                 </p>
               </div>
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-800 dark:text-emerald-400">
-                ● {healthScore.status}
+                ● {isTe ? healthScore.statusTe : healthScore.status}
               </span>
             </div>
 
@@ -350,7 +350,7 @@ export function OverviewScreen({ setActive }: { setActive: (value: string) => vo
               <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
                 detectedRisks.length > 0 ? 'bg-rose-500/10 text-rose-700' : 'bg-emerald-500/10 text-emerald-700'
               }`}>
-                {detectedRisks.length > 0 ? `${detectedRisks.length} Detected` : 'All Safe'}
+                {detectedRisks.length > 0 ? (isTe ? `${detectedRisks.length} కనుగొనబడ్డాయి` : `${detectedRisks.length} Detected`) : (isTe ? 'సురక్షితం' : 'All Safe')}
               </span>
             </div>
 
@@ -390,7 +390,7 @@ export function OverviewScreen({ setActive }: { setActive: (value: string) => vo
           </div>
 
           <div className="pt-3 border-t mt-4 flex items-center justify-between">
-            <span className="text-[11px] text-muted-foreground">Deterministic Guardrails</span>
+            <span className="text-[11px] text-muted-foreground">{isTe ? 'నియమాధారిత రక్షణలు' : 'Deterministic Guardrails'}</span>
             <button
               onClick={() => setActive('Risk Alerts')}
               className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
@@ -431,13 +431,15 @@ export function OverviewScreen({ setActive }: { setActive: (value: string) => vo
             <div className="my-4 rounded-xl border bg-background/80 p-4">
               <div className="flex items-center justify-between text-xs mb-1.5">
                 <span className="font-semibold text-foreground">{profile.category} in {profile.location || 'Telangana'}</span>
-                <span className="text-emerald-700 font-bold text-[11px]">High Demand</span>
+                <span className="text-emerald-700 font-bold text-[11px]">{isTe ? 'అధిక గిరాకీ' : 'High Demand'}</span>
               </div>
               <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                 <div className="h-full rounded-full bg-gradient-to-r from-primary to-amber-500" style={{ width: '84%' }} />
               </div>
               <p className="mt-2 text-[11px] text-muted-foreground line-clamp-2">
-                Priority-sector subsidies and local off-take aggregators present strong commercial viability for your capital tier.
+                {isTe
+                  ? 'ప్రాధాన్యతా రంగ సబ్సిడీలు మరియు స్థానిక కొనుగోలుదారులు మీ వ్యాపారానికి బలమైన వాణిజ్య అవకాశాలను అందిస్తున్నాయి.'
+                  : 'Priority-sector subsidies and local off-take aggregators present strong commercial viability for your capital tier.'}
               </p>
             </div>
           </div>
@@ -491,10 +493,10 @@ export function OverviewScreen({ setActive }: { setActive: (value: string) => vo
             <table className="w-full text-left text-xs">
               <thead className="text-muted-foreground border-b">
                 <tr>
-                  <th className="pb-2 font-medium">Description</th>
-                  <th className="pb-2 font-medium">Category</th>
-                  <th className="pb-2 font-medium">Date</th>
-                  <th className="pb-2 text-right font-medium">Amount</th>
+                  <th className="pb-2 font-medium">{isTe ? 'వివరణ' : 'Description'}</th>
+                  <th className="pb-2 font-medium">{isTe ? 'వర్గం' : 'Category'}</th>
+                  <th className="pb-2 font-medium">{isTe ? 'తేదీ' : 'Date'}</th>
+                  <th className="pb-2 text-right font-medium">{isTe ? 'మొత్తం' : 'Amount'}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">

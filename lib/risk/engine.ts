@@ -49,7 +49,7 @@ export function evaluateFinancialRisks(input: RiskEvaluationInput): DetectedRisk
       severity: 'alert',
       ruleCode: 'RULE_1',
       title: 'Active Loan & Over-Leverage Risk',
-      titleTe: 'ఇప్పటికే రుణం ఉన్నందున అధిక అప్పుల రిస్క్ (Rule 1)',
+      titleTe: 'ఇప్పటికే రుణం ఉన్నందున అధిక అప్పుల రిస్క్',
       reason:
         'You have an existing active loan while simulating a new loan. Servicing dual debt obligations may severely constrain working capital.',
       reasonTe:
@@ -68,7 +68,7 @@ export function evaluateFinancialRisks(input: RiskEvaluationInput): DetectedRisk
       severity: 'alert',
       ruleCode: 'RULE_2',
       title: 'Negative Cash Flow Alert',
-      titleTe: 'ప్రతికూల నగదు ప్రవాహం (Rule 2)',
+      titleTe: 'ప్రతికూల నగదు ప్రవాహం',
       reason: `Recorded operating expenses (₹${Math.abs(input.totalExpenses).toLocaleString('en-IN')}) exceed total revenue (₹${Math.abs(input.totalIncome).toLocaleString('en-IN')}) resulting in a deficit of ₹${Math.abs(input.netCashFlow).toLocaleString('en-IN')}.`,
       reasonTe: `మీ వ్యాపార ఆదాయం కంటే ఖర్చులు ఎక్కువగా ఉన్నాయి. నికర లోటు ₹${Math.abs(input.netCashFlow).toLocaleString('en-IN')} గా నమోదైంది.`,
       metrics: {
@@ -90,7 +90,7 @@ export function evaluateFinancialRisks(input: RiskEvaluationInput): DetectedRisk
       severity: 'warning',
       ruleCode: 'RULE_3',
       title: 'Downward Cash Flow Trend',
-      titleTe: 'తగ్గుతున్న నగదు నిల్వల హెచ్చరిక (Rule 3)',
+      titleTe: 'తగ్గుతున్న నగదు నిల్వల హెచ్చరిక',
       reason: `Latest net cash flow (₹${input.netCashFlow.toLocaleString('en-IN')}) is lower than the previous period (₹${input.previousNetCashFlow.toLocaleString('en-IN')}).`,
       reasonTe: `గత కాలంతో పోలిస్తే ప్రస్తుత కాలంలో నికర లాభాలు తగ్గుముఖం పట్టాయి.`,
       metrics: {

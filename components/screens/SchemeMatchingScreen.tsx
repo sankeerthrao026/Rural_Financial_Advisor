@@ -15,7 +15,7 @@ export function SchemeMatchingScreen({ setActive }: { setActive?: (tab: string) 
     <div className="flex flex-col gap-6">
       <div className="rounded-2xl border bg-card p-6 shadow-xs">
         <h2 className="text-xl font-bold font-sora tracking-tight text-foreground">
-          {isTe ? 'అధికారిక ప్రభుత్వ రుణ పథకాలు (Verified Government Schemes)' : 'Authentic Government Credit Schemes'}
+          {isTe ? 'అధికారిక ప్రభుత్వ రుణ పథకాలు' : 'Authentic Government Credit Schemes'}
         </h2>
         <p className="mt-1 text-xs text-muted-foreground max-w-2xl">
           {isTe
@@ -58,15 +58,15 @@ export function SchemeMatchingScreen({ setActive }: { setActive?: (tab: string) 
                 <div className="mt-4 grid grid-cols-3 gap-2 border-y py-3 text-xs">
                   <div>
                     <span className="text-[10px] text-muted-foreground block">{isTe ? 'వడ్డీ రేటు' : 'Interest Rate'}</span>
-                    <span className="font-bold font-sora text-foreground mt-0.5 block">{scheme.interestRate}% p.a.</span>
+                    <span className="font-bold font-sora text-foreground mt-0.5 block">{scheme.interestRate}% {isTe ? 'సం.' : 'p.a.'}</span>
                   </div>
                   <div>
                     <span className="text-[10px] text-muted-foreground block">{isTe ? 'కాలపరిమితి' : 'Tenure'}</span>
-                    <span className="font-bold font-sora text-foreground mt-0.5 block">{scheme.tenureYears} Years</span>
+                    <span className="font-bold font-sora text-foreground mt-0.5 block">{scheme.tenureYears} {isTe ? 'సంవత్సరాలు' : 'Years'}</span>
                   </div>
                   <div>
                     <span className="text-[10px] text-muted-foreground block">{isTe ? 'మారటోరియం' : 'Moratorium'}</span>
-                    <span className="font-bold font-sora text-foreground mt-0.5 block">{scheme.moratoriumMonths} Months</span>
+                    <span className="font-bold font-sora text-foreground mt-0.5 block">{scheme.moratoriumMonths} {isTe ? 'నెలలు' : 'Months'}</span>
                   </div>
                 </div>
 
@@ -78,7 +78,7 @@ export function SchemeMatchingScreen({ setActive }: { setActive?: (tab: string) 
 
               <div className="mt-5 pt-3 border-t flex items-center justify-between">
                 <span className="text-[11px] text-muted-foreground">
-                  Max Limit: {formatINR(scheme.maxProjectCost)}
+                  {isTe ? 'గరిష్ట పరిమితి:' : 'Max Limit:'} {formatINR(scheme.maxProjectCost)}
                 </span>
                 <Button
                   variant={isCurrentlyRouted ? 'default' : 'outline'}
@@ -86,7 +86,9 @@ export function SchemeMatchingScreen({ setActive }: { setActive?: (tab: string) 
                   onClick={() => setActive?.('Finance Advisor')}
                   className="text-xs"
                 >
-                  {isCurrentlyRouted ? 'View In Finance Engine' : 'Simulate in Advisor'}
+                  {isCurrentlyRouted
+                    ? (isTe ? 'ఫైనాన్స్ ఇంజిన్‌లో చూడండి' : 'View In Finance Engine')
+                    : (isTe ? 'అడ్వైజర్‌లో లెక్కించండి' : 'Simulate in Advisor')}
                 </Button>
               </div>
             </div>

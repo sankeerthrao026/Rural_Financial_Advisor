@@ -231,11 +231,11 @@ export function CashFlowScreen({ setActive }: { setActive?: (tab: string) => voi
             <div className="mt-4 flex gap-5 text-xs text-muted-foreground border-t pt-3">
               <span className="flex items-center gap-2">
                 <i className="size-2.5 rounded-full bg-emerald-600" />
-                {isTe ? 'రాబడి (Inflow)' : 'Inflow (Receipts)'}
+                {isTe ? 'రాబడి' : 'Inflow'}
               </span>
               <span className="flex items-center gap-2">
                 <i className="size-2.5 rounded-full bg-amber-500" />
-                {isTe ? 'ఖర్చులు (Outflow)' : 'Outflow (Payments)'}
+                {isTe ? 'ఖర్చులు' : 'Outflow'}
               </span>
             </div>
           </section>

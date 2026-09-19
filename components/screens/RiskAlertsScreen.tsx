@@ -134,7 +134,7 @@ export function RiskAlertsScreen() {
 
                 {/* Deterministic Reason */}
                 <div className="rounded-xl border border-rose-200 bg-white p-3.5 text-xs text-rose-900 leading-relaxed">
-                  <p className="font-semibold">{isTe ? 'నియమాధారిత గణాంక కారణం (Deterministic Trigger):' : 'Deterministic Detection Reason:'}</p>
+                  <p className="font-semibold">{isTe ? 'నియమాధారిత గణాంక కారణం:' : 'Deterministic Detection Reason:'}</p>
                   <p className="mt-0.5 text-rose-800">{isTe ? risk.reasonTe : risk.reason}</p>
                 </div>
 
@@ -156,7 +156,7 @@ export function RiskAlertsScreen() {
                     {explanation.practicalActionSteps && explanation.practicalActionSteps.length > 0 && (
                       <div className="rounded-lg bg-card p-3 border">
                         <p className="text-xs font-semibold text-foreground mb-1.5">
-                          {isTe ? 'ఆచరణాత్మక పరిష్కార చర్యలు (Practical Action Steps):' : 'Recommended Immediate Action Steps:'}
+                          {isTe ? 'ఆచరణాత్మక పరిష్కార చర్యలు:' : 'Recommended Immediate Action Steps:'}
                         </p>
                         <ul className="space-y-1 text-xs text-muted-foreground">
                           {explanation.practicalActionSteps.map((step: string, idx: number) => (
