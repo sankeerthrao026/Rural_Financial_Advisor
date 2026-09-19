@@ -46,6 +46,7 @@ import {
   SpokenTransactionResult,
 } from '@/lib/voice/speech';
 import { VoiceInputModal } from '@/components/voice/VoiceInputModal';
+import { OcrReviewModal } from '@/components/ocr/OcrReviewModal';
 
 export function DigitalLogbookScreen() {
   const {
@@ -65,6 +66,7 @@ export function DigitalLogbookScreen() {
 
   const t = dictionary.logbook;
   const isTe = language === 'te';
+  const isHi = language === 'hi';
 
   // Form State
   const [showAddForm, setShowAddForm] = useState(false);
@@ -75,8 +77,7 @@ export function DigitalLogbookScreen() {
   const [selectedDateIso, setSelectedDateIso] = useState(getTodayIso());
   const [isListening, setIsListening] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [ocrScanning, setOcrScanning] = useState(false);
-  const [ocrError, setOcrError] = useState<string | null>(null);
+  const [showOcrModal, setShowOcrModal] = useState(false);
 
   // Compute Today's Activity metrics dynamically
   const todayDisplay = getTodayDisplayDate();
@@ -92,38 +93,37 @@ export function DigitalLogbookScreen() {
     setShowAddForm(true);
   };
 
-  const handleOcrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleOcrSaveSingle = async (entry: {
+    date: string;
+    amount: number;
+    type: 'income' | 'expense';
+    category: string;
+    note: string;
+  }) => {
+    await addNewEntry({
+      date: formatIsoToDisplayDate(entry.date),
+      amount: entry.amount,
+      type: entry.type,
+      category: entry.category,
+      note: entry.note,
+    });
+  };
 
-    setOcrScanning(true);
-    setOcrError(null);
-    try {
-      const Tesseract = await import('tesseract.js');
-      const result = await Tesseract.recognize(file, 'eng');
-      const text = result.data.text || '';
-
-      const matches = text.match(/\d+([,\.]\d+)?/g);
-      if (matches && matches.length > 0) {
-        const numbers = matches
-          .map((n) => parseFloat(n.replace(/,/g, '')))
-          .filter((n) => n >= 50 && n < 1000000);
-        if (numbers.length > 0) {
-          setAmount(Math.max(...numbers).toString());
-        }
-      }
-
-      setNote(`Scanned Slip: ${text.slice(0, 35).replace(/[\r\n]+/g, ' ')}`);
-      setShowAddForm(true);
-    } catch (err: any) {
-      setOcrError(
-        isTe
-          ? 'రశీదు స్కాన్ విఫలమైంది. దయచేసి వివరాలను మాన్యువల్‌గా నమోదు చేయండి.'
-          : 'OCR scan failed. Please enter transaction details manually.'
-      );
-      setShowAddForm(true);
-    } finally {
-      setOcrScanning(false);
+  const handleOcrSaveBatch = async (entries: {
+    date: string;
+    amount: number;
+    type: 'income' | 'expense';
+    category: string;
+    note: string;
+  }[]) => {
+    for (const item of entries) {
+      await addNewEntry({
+        date: formatIsoToDisplayDate(item.date),
+        amount: item.amount,
+        type: item.type,
+        category: item.category,
+        note: item.note,
+      });
     }
   };
 
@@ -296,20 +296,16 @@ export function DigitalLogbookScreen() {
             <span>{language === 'te' ? 'వాయిస్' : language === 'hi' ? 'वॉइस' : 'Voice'}</span>
           </button>
 
-          {/* OCR Slip Scan Button */}
-          <label className={`flex items-center gap-1.5 rounded-xl border bg-card px-3 py-2 text-xs font-semibold cursor-pointer hover:bg-muted transition-colors shadow-xs ${
-            ocrScanning ? 'opacity-70 pointer-events-none' : ''
-          }`}>
+          {/* Smart OCR Slip & Ledger Scan Button */}
+          <button
+            type="button"
+            onClick={() => setShowOcrModal(true)}
+            className="flex items-center gap-1.5 rounded-xl border bg-card px-3 py-2 text-xs font-semibold cursor-pointer hover:bg-muted transition-colors shadow-xs hover:border-primary/50"
+            title="Scan printed slips, mandi receipts, or handwritten ledger pages"
+          >
             <Camera className="size-3.5 text-primary" />
-            <span>{ocrScanning ? (isTe ? 'స్కాన్...' : 'Scanning...') : (isTe ? 'స్లిప్ OCR' : 'Receipt OCR')}</span>
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleOcrUpload}
-              disabled={ocrScanning}
-            />
-          </label>
+            <span>{isTe ? 'స్లిప్ / లెడ్జర్ OCR' : isHi ? 'रसीद / खाता OCR' : 'Receipt / Ledger OCR'}</span>
+          </button>
         </div>
       </section>
 
@@ -550,6 +546,14 @@ export function DigitalLogbookScreen() {
         language={language}
         onLanguageChange={setLanguage}
         onExtracted={handleVoiceExtracted}
+      />
+
+      <OcrReviewModal
+        isOpen={showOcrModal}
+        onClose={() => setShowOcrModal(false)}
+        language={language}
+        onSaveSingle={handleOcrSaveSingle}
+        onSaveBatch={handleOcrSaveBatch}
       />
     </div>
   );
