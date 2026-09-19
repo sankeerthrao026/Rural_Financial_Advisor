@@ -39,6 +39,7 @@ app.add_middleware(
 )
 
 @app.get("/health", response_model=HealthResponse)
+@app.get(f"{settings.API_PREFIX}/health", response_model=HealthResponse)
 def health_check():
     return HealthResponse(
         status="healthy",
