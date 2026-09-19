@@ -15,9 +15,12 @@ class GeminiService:
             try:
                 from google import genai
                 self.client = genai.Client(api_key=self.api_key)
+                print("[INFO] Gemini AI Client initialized successfully with Google GenAI SDK.")
             except Exception as e:
                 print(f"[WARN] Failed to initialize Gemini client: {e}")
                 self.client = None
+        else:
+            print("[INFO] GEMINI_API_KEY not configured. AI advisor will utilize verified ChromaDB grounded fallback.")
 
     def is_available(self) -> bool:
         return bool(self.client and self.api_key)
@@ -88,11 +91,10 @@ Return a valid JSON object with the following structure:
 }}"""
 
         candidate_models = [
-            "gemini-3.5-flash-lite",
-            "gemini-3.7-flash",
-            "gemini-3.5-flash",
+            "gemini-2.5-flash",
+            "gemini-1.5-flash",
+            "gemini-2.0-flash",
             "gemini-flash-latest",
-            "gemini-3.6-flash",
         ]
         for model in candidate_models:
             try:
@@ -118,10 +120,12 @@ Return a valid JSON object with the following structure:
 
                 parsed = json.loads(json_text)
                 self.last_model_used = model
+                print(f"[INFO] Gemini advisory generated successfully via {model} with ChromaDB RAG context.")
                 return parsed
             except Exception as e:
                 print(f"[WARN] Gemini generation with {model} failed: {e}")
 
+        print("[WARN] All Gemini candidate models failed. Reverting to grounded local fallback.")
         return None
 
 gemini_service = GeminiService()

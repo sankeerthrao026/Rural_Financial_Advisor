@@ -16,10 +16,17 @@ async def lifespan(app: FastAPI):
         from app.ingestion.ingest import ingest_all_datasets
         try:
             ingest_all_datasets()
+            count = chroma_service.get_count()
         except Exception as e:
             print(f"[WARN] Ingestion during startup encountered: {e}")
-    else:
-        print(f"[INFO] ChromaDB vector store active with {count} documents.")
+    
+    gemini_status = "ONLINE (API Key Configured)" if gemini_service.is_available() else "FALLBACK (GEMINI_API_KEY missing - using grounded benchmarks)"
+    print("\n" + "=" * 65)
+    print("  RuralCred Advisor — AI & Vector Pipeline Initialized")
+    print(f"  AI Provider:  Google Gemini (gemini-2.5-flash) -> [{gemini_status}]")
+    print(f"  Vector Store: ChromaDB (Collection: ruralcred_knowledge) -> [{count} documents indexed]")
+    print("  RAG Flow:     ChromaDB Semantic Retrieval -> Context Injection -> Gemini Advisory")
+    print("=" * 65 + "\n")
     yield
 
 app = FastAPI(
@@ -41,12 +48,18 @@ app.add_middleware(
 @app.get("/health", response_model=HealthResponse)
 @app.get(f"{settings.API_PREFIX}/health", response_model=HealthResponse)
 def health_check():
+    doc_count = chroma_service.get_count()
+    has_gemini = gemini_service.is_available()
     return HealthResponse(
         status="healthy",
         service=settings.PROJECT_NAME,
         version=settings.VERSION,
-        chromadb_connected=chroma_service.get_count() > 0,
-        gemini_configured=gemini_service.is_available(),
+        ai_provider="Google Gemini (gemini-2.5-flash)",
+        vector_store="ChromaDB (ruralcred_knowledge)",
+        chromadb_connected=doc_count > 0,
+        chromadb_documents=doc_count,
+        gemini_configured=has_gemini,
+        active_mode="Live Gemini 2.5 Flash + ChromaDB RAG" if has_gemini else "Grounded Local Fallback (ChromaDB)",
     )
 
 @app.get("/")

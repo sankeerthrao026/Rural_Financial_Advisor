@@ -191,5 +191,9 @@ class HealthResponse(BaseModel):
     status: str = "healthy"
     service: str = "RuralCred Advisor FastAPI Backend"
     version: str = "1.0.0"
+    ai_provider: str = "Google Gemini (gemini-2.5-flash)"
+    vector_store: str = "ChromaDB (ruralcred_knowledge)"
     chromadb_connected: bool = False
+    chromadb_documents: int = 0
     gemini_configured: bool = False
+    active_mode: str = "Live Gemini + ChromaDB RAG"

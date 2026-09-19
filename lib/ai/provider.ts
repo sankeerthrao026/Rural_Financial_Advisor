@@ -1,14 +1,26 @@
-import { callAnthropicMessages } from './anthropic';
-import { callOpenAIChat } from './openai';
+/**
+ * RuralCred Advisor — Unified AI & RAG Orchestration Provider.
+ * Enforces a single AI provider pipeline: Google Gemini (gemini-2.5-flash) + ChromaDB RAG.
+ * Completely eliminates Anthropic and OpenAI.
+ * 
+ * Routing Hierarchy:
+ * 1. Primary: FastAPI backend /api/advisor/analyze (queries persistent ChromaDB vector store + Gemini).
+ * 2. Secondary: Next.js direct Gemini API call (grounded on local dataset indices via GEMINI_API_KEY).
+ * 3. Fallback: Grounded local dataset synthesis if API key is missing or service is unreachable (clearly flagged).
+ */
+
+import { callGeminiApi } from './gemini';
 import { lookupGroundedContext } from '@/lib/data/grounding';
 import { DetectedRisk } from '@/lib/risk/engine';
 import { FinanceAnalysisResult } from '@/lib/finance/engine';
+import { apiClient } from '@/lib/api/client';
 
 export interface BusinessAnalysisInput {
   location: string;
   category: string;
   marginCapital: number;
   language: 'en' | 'te';
+  userQuery?: string;
 }
 
 export interface BusinessAdvisorOutput {
@@ -46,7 +58,8 @@ export interface BusinessAdvisorOutput {
     category: string;
     benchmarkOpex: { item: string; percentage: number }[];
   };
-  providerUsed: 'anthropic' | 'openai' | 'grounded-local-fallback';
+  sourcesUsed?: string[];
+  providerUsed: string;
 }
 
 export interface RiskExplanationInput {
@@ -60,6 +73,7 @@ export interface RiskExplanationOutput {
   explanation: string;
   practicalActionSteps: string[];
   cashFlowPreservationTip: string;
+  providerUsed?: string;
 }
 
 export interface BusinessPlanInput {
@@ -87,36 +101,48 @@ export interface BusinessPlanOutput {
     quarterlyEmiCoverageRatio: string;
   };
   riskMitigation: string[];
+  providerUsed?: string;
 }
 
 /**
- * Executes a call across Anthropic, OpenAI, or grounded local fallback.
+ * Unified Google Gemini LLM caller.
+ * Never uses static mock responses when GEMINI_API_KEY is configured.
+ * Logs explicit diagnostic warnings if the key is missing or the call fails.
  */
-async function callLlmService(system: string, userPrompt: string): Promise<{ text: string; provider: 'anthropic' | 'openai' | 'grounded-local-fallback' }> {
-  if (process.env.ANTHROPIC_API_KEY) {
+async function callLlmService(
+  system: string,
+  userPrompt: string
+): Promise<{ text: string; provider: string }> {
+  if (process.env.GEMINI_API_KEY) {
     try {
-      const text = await callAnthropicMessages({ system, userPrompt });
-      return { text, provider: 'anthropic' };
-    } catch (err) {
-      console.warn('Anthropic call failed, attempting OpenAI or fallback:', err);
-    }
-  }
+      const res = await callGeminiApi({
+        systemInstruction: system,
+        userPrompt,
+        responseMimeType: 'application/json',
+      });
 
-  if (process.env.OPENAI_API_KEY) {
-    try {
-      const text = await callOpenAIChat({ system, userPrompt });
-      return { text, provider: 'openai' };
-    } catch (err) {
-      console.warn('OpenAI call failed, attempting fallback:', err);
+      if (res.success && res.text) {
+        return { text: res.text, provider: `Google Gemini (${res.model})` };
+      }
+
+      console.warn(
+        `[AI Pipeline Warning] Gemini API call returned no output (${res.error}). Falling back to grounded local dataset.`
+      );
+    } catch (err: any) {
+      console.warn('[AI Pipeline Warning] Gemini API call threw an error. Falling back:', err?.message);
     }
+  } else {
+    console.warn(
+      '[AI Pipeline Warning] GEMINI_API_KEY environment variable is not configured. Using grounded local fallback dataset.'
+    );
   }
 
   return { text: '', provider: 'grounded-local-fallback' };
 }
 
 /**
- * Deterministic grounded synthesizer used as a zero-dependency fallback.
- * Ensures the hackathon demo NEVER breaks even without external internet / API keys.
+ * Deterministic grounded synthesizer used as a resilient zero-dependency fallback.
+ * Operates when GEMINI_API_KEY is absent or the external API call fails.
  */
 function synthesizeGroundedLocalAdvisor(
   input: BusinessAnalysisInput,
@@ -195,14 +221,34 @@ function synthesizeGroundedLocalAdvisor(
       category: cData.name,
       benchmarkOpex: (cData.typicalCosts || []).map((c: any) => ({ item: c.item, percentage: c.percentageOfOpex })),
     },
+    sourcesUsed: ['Bundled Mandi & Demographic Knowledge Base'],
     providerUsed: 'grounded-local-fallback',
   };
 }
 
 /**
  * Grounded AI Business Advisor Generator.
+ * Routes to FastAPI ChromaDB RAG backend when online; uses Gemini with local grounding when standalone.
  */
 export async function generateBusinessAnalysis(input: BusinessAnalysisInput): Promise<BusinessAdvisorOutput> {
+  // 1. Primary AI Path: Try FastAPI backend endpoint (Persistent ChromaDB Vector Store + Gemini)
+  try {
+    const backendRes = await apiClient.analyzeAdvisor({
+      location: input.location,
+      category: input.category,
+      marginCapital: input.marginCapital,
+      language: input.language,
+      userQuery: input.userQuery,
+    });
+
+    if (backendRes.success && backendRes.data) {
+      return backendRes.data as BusinessAdvisorOutput;
+    }
+  } catch (backendErr) {
+    console.warn('[AI Pipeline] FastAPI advisor endpoint unreachable; falling back to direct Next.js Gemini engine:', backendErr);
+  }
+
+  // 2. Secondary Path: Direct Next.js Google Gemini Call (Grounded on local indices)
   const grounded = lookupGroundedContext(input.location, input.category);
   const isTe = input.language === 'te';
 
@@ -210,7 +256,7 @@ export async function generateBusinessAnalysis(input: BusinessAnalysisInput): Pr
 Your task is to provide realistic, grounded, and cautious business advisory for rural Indian micro-entrepreneurs.
 STRICT SAFETY & FACT RULES:
 1. Ground all recommendations strictly on the provided district profile and category benchmarks.
-2. NEVER calculate critical loan amounts, interest rates, or loan approval odds.
+2. NEVER calculate critical loan amounts, interest rates, or loan approval odds (these are deterministic).
 3. NEVER invent fake government schemes or fictitious competitors.
 4. If local data is insufficient, state "Insufficient local data for a reliable estimate."
 5. Output ONLY valid JSON matching the exact schema requested.
@@ -221,7 +267,7 @@ Location: ${input.location}
 Category: ${input.category}
 Margin Capital: ₹${input.marginCapital.toLocaleString('en-IN')}
 
-GROUNDING CONTEXT:
+GROUNDING CONTEXT (Local Market Data & District Benchmarks):
 ${grounded.summaryContext}
 
 Return pure JSON with keys:
@@ -239,7 +285,6 @@ Return pure JSON with keys:
 
   if (response.provider !== 'grounded-local-fallback' && response.text) {
     try {
-      // Parse JSON from text, extracting markdown codeblock if present
       const jsonMatch = response.text.match(/```(?:json)?([\s\S]*?)```/) || [null, response.text];
       const rawJson = (jsonMatch[1] || response.text).trim();
       const parsed = JSON.parse(rawJson);
@@ -254,20 +299,20 @@ Return pure JSON with keys:
             percentage: c.percentageOfOpex,
           })),
         },
+        sourcesUsed: ['Local District Profile', 'NBCFDC Category Benchmarks'],
         providerUsed: response.provider,
       };
     } catch (e) {
-      console.warn('Failed to parse LLM response JSON, using grounded synthesis:', e);
+      console.warn('[AI Pipeline Warning] Failed to parse Gemini response JSON, using grounded local synthesis:', e);
     }
   }
 
-  // Fallback to grounded local synthesis
+  // 3. Fallback: Grounded local dataset synthesis
   return synthesizeGroundedLocalAdvisor(input, grounded);
 }
 
 /**
- * Natural Language Risk Explanation Generator.
- * Explains already detected deterministic risks in simple, friendly rural language.
+ * Natural Language Risk Explanation Generator powered by Google Gemini.
  */
 export async function generateRiskExplanation(input: RiskExplanationInput): Promise<RiskExplanationOutput> {
   const isTe = input.language === 'te';
@@ -296,13 +341,16 @@ Metrics: ${JSON.stringify(risk.metrics)}`;
     try {
       const jsonMatch = response.text.match(/```(?:json)?([\s\S]*?)```/) || [null, response.text];
       const parsed = JSON.parse((jsonMatch[1] || response.text).trim());
-      return parsed;
+      return {
+        ...parsed,
+        providerUsed: response.provider,
+      };
     } catch (e) {
-      // Fallback
+      // Fallback below
     }
   }
 
-  // Grounded fallback
+  // Grounded local fallback
   if (risk.riskType === 'negative_cash_flow') {
     return {
       title: isTe ? 'ఖర్చులు ఆదాయాన్ని మించాయి' : 'Cash Outflow Exceeding Income',
@@ -316,6 +364,7 @@ Metrics: ${JSON.stringify(risk.metrics)}`;
       cashFlowPreservationTip: isTe
         ? 'రోజువారీ నగదు నిల్వను కనీసం ₹5,000 తగినంతగా ఉండేలా చూసుకోండి.'
         : 'Maintain a minimum rolling buffer of 15 days of operating expenses.',
+      providerUsed: 'grounded-local-fallback',
     };
   }
 
@@ -332,6 +381,7 @@ Metrics: ${JSON.stringify(risk.metrics)}`;
       cashFlowPreservationTip: isTe
         ? 'మొత్తం రుణ వాయిదాలు మీ నెలవారీ నికర లాభంలో 40% మించకూడదు.'
         : 'Total debt service should not exceed 40% of your average monthly net income.',
+      providerUsed: 'grounded-local-fallback',
     };
   }
 
@@ -347,11 +397,12 @@ Metrics: ${JSON.stringify(risk.metrics)}`;
     cashFlowPreservationTip: isTe
       ? 'ఖర్చులను లాగ్‌బుక్‌లో ప్రతిరోజూ క్రమం తప్పకుండా నమోదు చేయండి.'
       : 'Maintain daily entry habits to catch expenditure leaks early.',
+    providerUsed: 'grounded-local-fallback',
   };
 }
 
 /**
- * One-click Business Plan Synthesis combining deterministic finance & AI advisory.
+ * Bank-Ready Business Plan Synthesis powered by Google Gemini.
  */
 export async function generateBusinessPlan(input: BusinessPlanInput): Promise<BusinessPlanOutput> {
   const isTe = input.language === 'te';
@@ -394,9 +445,12 @@ Market Summary: ${input.advisor.marketReach.headline}`;
     try {
       const jsonMatch = response.text.match(/```(?:json)?([\s\S]*?)```/) || [null, response.text];
       const parsed = JSON.parse((jsonMatch[1] || response.text).trim());
-      return parsed;
+      return {
+        ...parsed,
+        providerUsed: response.provider,
+      };
     } catch (e) {
-      // Fallback
+      // Fallback below
     }
   }
 
@@ -433,5 +487,6 @@ Market Summary: ${input.advisor.marketReach.headline}`;
       isTe ? 'స్థానిక సహకార మార్కెట్లతో ముందుగానే ఒప్పందాలు' : 'Formal off-take linkage with registered mandal cooperatives',
       isTe ? 'వారపు లాగ్‌బుక్ రికార్డులను ఖచ్చితంగా నిర్వహించడం' : 'Rigorous maintenance of digital logbook records for quarterly audits',
     ],
+    providerUsed: 'grounded-local-fallback',
   };
 }
