@@ -62,12 +62,14 @@ class ChromaService:
             docs = results["documents"][0]
             metas = results["metadatas"][0] if "metadatas" in results and results["metadatas"] else [{}] * len(docs)
             ids = results["ids"][0] if "ids" in results and results["ids"] else [""] * len(docs)
+            dists = results["distances"][0] if "distances" in results and results["distances"] else [0.0] * len(docs)
 
-            for doc_text, meta, doc_id in zip(docs, metas, ids):
+            for doc_text, meta, doc_id, dist in zip(docs, metas, ids, dists):
                 matched.append({
                     "id": doc_id,
                     "document": doc_text,
                     "metadata": meta,
+                    "distance": float(dist),
                 })
         return matched
 

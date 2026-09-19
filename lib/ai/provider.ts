@@ -156,55 +156,57 @@ function synthesizeGroundedLocalAdvisor(
 
   const mandiTrends = cData.mandiPriceTrends || {};
   let seasonalDetails = cData.demandSeasonality;
-  const qLower = (input.userQuery || '').toLowerCase();
-  if (qLower.includes('festiv') || qLower.includes('diwali') || qLower.includes('sankranti') || qLower.includes('dussehra')) {
-    if (mandiTrends.festiveSurge) {
-      seasonalDetails = `${cData.demandSeasonality} • Festive Surge: ${mandiTrends.festiveSurge}`;
-    }
-  } else if (qLower.includes('harvest') || qLower.includes('post-harvest')) {
-    if (mandiTrends.postHarvest) {
-      seasonalDetails = `${cData.demandSeasonality} • Harvest Trend: ${mandiTrends.postHarvest}`;
-    }
-  } else if (qLower.includes('lean') || qLower.includes('summer') || qLower.includes('monsoon')) {
-    if (mandiTrends.summerLean || mandiTrends.monsoon) {
-      seasonalDetails = `${cData.demandSeasonality} • Lean/Monsoon Dynamic: ${mandiTrends.summerLean || mandiTrends.monsoon}`;
-    }
-  } else if (mandiTrends.festiveSurge) {
-    seasonalDetails = `${cData.demandSeasonality} • Mandi Trend: ${mandiTrends.festiveSurge}`;
-  }
+  const basePrice = (Object.values(cData.pricingBenchmarks || {})[0] as string) || '₹55 - ₹70 per unit';
+  const qLower = (input.userQuery || '').toLowerCase().trim();
 
-  let basePrice = Object.values(cData.pricingBenchmarks || {})[0] as string || '₹55 - ₹70 per unit';
-  if ((qLower.includes('festiv') || qLower.includes('surge')) && mandiTrends.festiveSurge) {
-    basePrice = `${basePrice} (Festive peak price)`;
-  }
+  // Classify user query intent into specific domains
+  const isFeed = ['feed', 'fodder', 'raw material', 'input cost', 'cost of feed', 'దాణా', 'పచ్చిగడ్డి', 'ముడిసరుకు', 'తక్కువ ఖర్చు'].some(w => qLower.includes(w));
+  const isSummerHeat = ['summer', 'heat', 'hot', 'yield in summer', 'temperature', 'weather', 'ఎండ', 'వేసవి', 'దిగుబడి'].some(w => qLower.includes(w));
+  const isPricing = ['price', 'pricing', 'rate', 'cost per', 'charge', 'ధర', 'ఎంత అమ్మాలి', 'ధర నిర్ణయం'].some(w => qLower.includes(w));
+  const isSchemes = ['scheme', 'subsidy', 'government', 'mudra', 'pmegp', 'nbcfdc', 'సబ్సిడీ', 'పథకం', 'ప్రభుత్వ'].some(w => qLower.includes(w));
+  const isCashFlow = ['cash flow', 'low sales', 'lean month', 'off-season', 'working capital', 'నగదు', 'తక్కువ అమ్మకాలు', 'ఖర్చులు'].some(w => qLower.includes(w));
+  const isExpansion = ['customer', 'expand', 'next village', 'grow', 'scale', 'sales', 'client', 'విస్తరణ', 'కస్టమర్', 'అమ్మకాలు పెంచడం'].some(w => qLower.includes(w));
+  const isLoanCapacity = ['loan amount', 'afford', 'borrow', 'eligible loan', 'credit support', 'రుణ మొత్తం', 'ఎంత రుణం'].some(w => qLower.includes(w));
 
   let replyText = '';
-  if (qLower) {
-    if (qLower.includes('expand') || qLower.includes('next village') || qLower.includes('మరో గ్రామం') || qLower.includes('విస్తరణ')) {
-      replyText = isTe
-        ? `సమీప గ్రామాలకు విస్తరించడం ద్వారా ${dData.name} లో మీ కస్టమర్ల సంఖ్య 25% నుండి 35% పెరుగుతుంది. అయితే రవాణా ఖర్చులు నెలకు ₹1,500 - ₹3,000 వరకు పెరగవచ్చు కాబట్టి సరఫరా షెడ్యూల్ పక్కాగా ఉండాలి.`
-        : `Expanding to neighboring villages in ${dData.name} can expand your addressable customer base by 25% to 35%. Plan your distribution routes carefully, as two-wheeler/transport logistics typically adds ₹1,500 - ₹3,000/month in operating overhead.`;
-    } else if (qLower.includes('feed') || qLower.includes('supplier') || qLower.includes('cheap') || qLower.includes('ధర') || qLower.includes('ముడిసరుకు')) {
-      replyText = isTe
-        ? `స్థానిక APMC మండి లేదా ప్రాథమిక వ్యవసాయ సహకార సంఘాల (PACS) ద్వారా పెద్ద మొత్తంలో ముడిసరుకు కొనుగోలు చేయడం ద్వారా 8% - 15% వరకు వ్యయం ఆదా అవుతుంది.`
-        : `Procuring feed and raw materials in bulk directly through ${dData.name} APMC mandis or Primary Agricultural Cooperative Societies (PACS) can reduce input costs by 8% to 15% compared to local retail middlemen.`;
-    } else if (qLower.includes('scheme') || qLower.includes('loan') || qLower.includes('రుణం') || qLower.includes('పథకం')) {
-      replyText = isTe
-        ? `మీరు PMEGP లేదా MUDRA కింద 15% నుండి 35% సబ్సిడీతో విస్తరణ రుణాన్ని పొందవచ్చు. ఇప్పటికే చెల్లింపుల రికార్డు బాగుంటే బ్యాంకులు సులభంగా ఆమోదిస్తాయి.`
-        : `For expanding your ${cData.name} unit in ${dData.name}, you can access MUDRA (Kishor category up to ₹5L) or PMEGP with 15-35% capital subsidy, supported by regional rural bank priority-sector lending.`;
-    } else if (qLower.includes('season') || qLower.includes('summer') || qLower.includes('weather')) {
-      replyText = isTe
-        ? `కాలానుగుణ మార్పుల దృష్ట్యా, పండుగల సమయంలో అధిక నిల్వలు ఉంచండి మరియు వేసవి కాలంలో ముందస్తు రక్షణ చర్యలు చేపట్టండి.`
-        : `During seasonal transitions in ${dData.name}, maintain dynamic working capital buffers: boost inventory ahead of festival surges and reduce perishable holding periods during peak heat months.`;
-    } else {
-      replyText = isTe
-        ? `${dData.name} లోని స్థానిక మార్కెట్ విశ్లేషణ ప్రకారం, మీ ${cData.name} వ్యాపారానికి గిరాకీ స్థిరంగా ఉంది. అధిక లాభాల కోసం ప్రత్యక్ష కస్టమర్ సంబంధాలు మరియు నాణ్యతపై దృష్టి పెట్టండి.`
-        : `Grounded in ${dData.name} local mandi records: your ${cData.name} enterprise maintains a stable market position. Focus on prompt service and transparent pricing to defend your ${cData.marginRange || 'target'} margin.`;
-    }
+  if (isFeed) {
+    replyText = isTe
+      ? `${dData.name} లో పశువుల దాణా మరియు ముడిసరుకు ఖర్చులను తగ్గించడానికి: 1) స్థానిక APMC మండి లేదా PACS ద్వారా టోకుగా నేరుగా కొనుగోలు చేయడం (8-15% ఆదా). 2) సైలేజ్ (పాతర గడ్డి) మరియు అజోల్లా ఉత్పత్తి ద్వారా ప్రొటీన్ ఖర్చును తగ్గించడం. 3) సమీప రైతులతో కలిసి ఉమ్మడిగా దాణా ఆర్డర్ చేయడం.`
+      : `To reduce feed and raw material costs in ${dData.name}: 1) Procure feed grains and oil cakes in bulk directly through ${dData.name} APMC mandis or Primary Agricultural Cooperative Societies (PACS) to cut retail markup by 10-15%. 2) Supplement with on-farm silage preservation and high-protein Azolla cultivation. 3) Form a joint-buying cluster with neighboring producers to negotiate wholesale mill rates and split freight.`;
+  } else if (isSummerHeat) {
+    replyText = isTe
+      ? `వేసవి కాలంలో ${dData.name} లో పాల దిగుబడి తగ్గకుండా తీసుకోవాల్సిన కీలక జాగ్రత్తలు: 1) పశువుల పాకపై గ్రీన్ షేడ్ నెట్ లేదా గడ్డి పైకప్పు ఏర్పాటు చేసి ఉష్ణోగ్రతను 4-6°C తగ్గించడం. 2) స్వచ్ఛమైన చల్లని తాగునీరు 24 గంటలు అందుబాటులో ఉంచడం మరియు ఎలక్ట్రోలైట్లు అందించడం. 3) వేడి తక్కువగా ఉండే రాత్రి వేళల్లో మాత్రమే దాణా తినిపించడం.`
+      : `To maintain milk yield during peak summer heat in ${dData.name}: 1) Install green agro-shade nets or thatched thatch roofs with water sprinkler/mist systems to lower shed temperature by 4-6°C. 2) Provide unlimited access to cool, clean drinking water enriched with electrolytes and mineral mixtures. 3) Shift the heavy concentrate feeding schedule to cooler nighttime and early morning hours to encourage digestion without heat stress.`;
+  } else if (isPricing) {
+    replyText = isTe
+      ? `${dData.name} మార్కెట్ ప్రకారం ధర నిర్ణయం: పాల ఫ్యాట్ మరియు SNF ఆధారంగా స్థానిక డైరీ కోఆపరేటివ్‌లకు విక్రయించేటప్పుడు లీటరుకు ₹42 - ₹48 లభిస్తుంది. అయితే స్థానిక మండల హోటళ్ళు, స్వీట్ షాపులు లేదా నేరుగా ఇళ్లకు విక్రయిస్తే లీటరుకు ₹58 - ₹68 వరకు పూర్తి రిటైల్ మార్జిన్ పొందవచ్చు.`
+      : `For ${cData.name} in ${dData.name}, prevailing pricing dynamics: Direct cooperative off-take yields ₹42 - ₹48/L based on Fat/SNF testing benchmarks. Direct-to-consumer and local commercial retail supply (tea stalls, canteens, sweet shops) commands ${basePrice} (₹58 - ₹68/L), capturing a 25-30% higher operating margin.`;
+  } else if (isSchemes) {
+    replyText = isTe
+      ? `${dData.name} లో ${cData.name} కోసం లభించే ప్రధాన ప్రభుత్వ పథకాలు: 1) PMEGP: గ్రామీణ ప్రాంతాల్లో 25% నుండి 35% మూలధన సబ్సిడీ. 2) MUDRA (కిశోర్ విభాగం): ₹5 లక్షల వరకు తాకట్టు లేని తక్కువ వడ్డీ రుణం. 3) నేషనల్ లైవ్‌స్టాక్ మిషన్ (NLM): డెయిరీ మరియు పశుగ్రాస అభివృద్ధికి ప్రత్యేక సబ్సిడీ.`
+      : `Key government subsidy and credit schemes for ${cData.name} in ${dData.name}: 1) PMEGP (Prime Minister Employment Generation Programme): 25% to 35% capital subsidy for rural micro-units. 2) MUDRA (Kishor tier up to ₹5L): Collateral-free priority-sector working capital and asset term loans. 3) National Livestock Mission (NLM) & AHIDF: Interest subvention of 3% for value-addition and cattle infrastructure.`;
+  } else if (isCashFlow) {
+    replyText = isTe
+      ? `తక్కువ అమ్మకాలు ఉండే కాలంలో (ఆఫ్-సీజన్) నగదు నిల్వలను నిర్వహించే వ్యూహం: 1) అనవసర మూలధన ఖర్చులను వాయిదా వేయండి. 2) పాత కస్టమర్ల బాకీలను UPI QR ద్వారా వేగంగా వసూలు చేయండి. 3) సహకార బ్యాంకులు లేదా స్వయం సహాయక సంఘాల ద్వారా తక్కువ వడ్డీ వర్కింగ్ క్యాపిటల్ కుషన్ సిద్ధంగా ఉంచుకోండి.`
+      : `To navigate lean-sales months in ${dData.name}: 1) Defer all discretionary capital expenditures and non-urgent asset purchases. 2) Accelerate recovery of outstanding customer credit balances via instant UPI QR settlements. 3) Maintain a 45-day operational cash buffer from peak-season profits to service quarterly EMIs comfortably.`;
+  } else if (isExpansion) {
+    replyText = isTe
+      ? `మీ కస్టమర్ల సంఖ్యను మరియు మార్కెట్ పరిధిని పెంచడానికి: సమీప 2-3 గ్రామాలు మరియు మండల కేంద్రంలోని హోటళ్ళు, హాస్టళ్ళు మరియు నివాస సముదాయాలతో నేరుగా సరఫరా ఒప్పందాలు కుదుర్చుకోండి. ఇది మీ రోజువారీ అమ్మకాలను 25% నుండి 40% వరకు పెంచుతుంది.`
+      : `To scale customer reach in ${dData.name}: Establish recurring B2B supply agreements with mandal-level tea stalls, hostel canteens, and residential clusters within a 5-8 km radius. This diversifies demand away from single-buyer risk and typically expands sales volumes by 25% to 40%.`;
+  } else if (isLoanCapacity) {
+    const maxLoan = input.marginCapital * 9;
+    const projectCost = input.marginCapital * 10;
+    replyText = isTe
+      ? `మీ ₹${input.marginCapital.toLocaleString('en-IN')} పెట్టుబడి (10% మార్జిన్) ఆధారంగా, మీ వ్యాపారం మొత్తం ₹${projectCost.toLocaleString('en-IN')} ప్రాజెక్ట్ ఖర్చుకు మరియు ₹${maxLoan.toLocaleString('en-IN')} బ్యాంక్ రుణానికి అర్హత కలిగి ఉంటుంది. బ్యాంకింగ్ నిబంధనల ప్రకారం DSCR కనీసం 1.25x ఉండేలా త్రైమాసిక వాయిదాలు లెక్కించబడతాయి.`
+      : `Based on your promoter contribution of ₹${input.marginCapital.toLocaleString('en-IN')} (10% margin capital), the banking finance engine supports a total project outlay of ₹${projectCost.toLocaleString('en-IN')} with an eligible institutional term loan of ₹${maxLoan.toLocaleString('en-IN')} at a healthy DSCR coverage.`;
+  } else if (input.userQuery) {
+    replyText = isTe
+      ? `${dData.name} లోని స్థానిక మార్కెట్ విశ్లేషణ ప్రకారం మీ ప్రశ్న (${input.userQuery}): మీ ${cData.name} వ్యాపారానికి నాణ్యత, స్థానిక సరఫరా గొలుసు మరియు సమయపాలన ప్రధాన లాభదాయక అంశాలు. మార్జిన్ ${cData.marginRange || '20-25%'} నిలబెట్టుకోవడానికి పారదర్శక ధరలు మరియు నేరుగా కొనుగోలుదారులతో సంబంధాలపై దృష్టి పెట్టండి.`
+      : `Addressing your specific inquiry regarding "${input.userQuery}" in ${dData.name}: For ${cData.name}, maintaining steady operational discipline, direct customer off-take, and raw input cost control defends your target ${cData.marginRange || '20-25%'} profit margin.`;
   } else {
     replyText = isTe
-      ? `${dData.name} పరిధిలో ${cData.name} వ్యాపారానికి సంబంధించిన సమగ్ర హైపర్-లోకల్ విశ్లేషణ సిద్ధంగా ఉంది.`
-      : `Comprehensive hyper-local viability analysis generated for ${dData.name} in ${dData.name}.`;
+      ? `${dData.name} పరిధిలో ${cData.name} వ్యాపారానికి సంబంధించిన సమగ్ర హైపర్-లోకల్ సాధ్యాసాధ్యాల విశ్లేషణ సిద్ధంగా ఉంది.`
+      : `Comprehensive hyper-local viability analysis generated for ${cData.name} in ${dData.name}.`;
   }
 
   return {
@@ -326,14 +328,15 @@ STRICT SAFETY & FACT RULES:
 6. Language requested: ${isTe ? 'Telugu (తెలుగు) with standard business loan terms' : 'English with clear Indian terminology'}.`;
 
   const historyBlock = input.history && input.history.length > 0
-    ? `RECENT CONVERSATION HISTORY:\n${input.history.slice(-6).map(m => `${m.role === 'user' ? 'Entrepreneur' : 'Advisor'}: ${m.content}`).join('\n')}\n\n`
+    ? `CONVERSATION HISTORY (RECENT TURNS):\n${input.history.slice(-8).map(m => `${m.role === 'user' ? 'Entrepreneur' : 'Advisor'}: ${m.content}`).join('\n')}\n\n`
     : '';
 
-  const userPrompt = `${historyBlock}Analyze the following rural micro-enterprise opportunity or follow-up question:
-Location: ${input.location}
-Category: ${input.category}
-Margin Capital: ₹${input.marginCapital.toLocaleString('en-IN')}
-${input.userQuery ? `Entrepreneur's Question / Follow-up: ${input.userQuery}\n` : ''}
+  const userPrompt = `${historyBlock}BUSINESS PROFILE:
+- Location: ${input.location}
+- Enterprise Category: ${input.category}
+- Promoter Margin Capital: ₹${input.marginCapital.toLocaleString('en-IN')}
+
+${input.userQuery ? `CURRENT USER QUESTION:\n${input.userQuery}\n\nINSTRUCTION: Provide a direct, practical, and query-specific advisory answer addressing this specific question in the "reply" field.` : 'CURRENT INQUIRY:\nProvide an initial comprehensive business viability assessment for starting or operating this enterprise.'}
 
 GROUNDING CONTEXT (Local Market Data, Mandi Price Trends & District Demographics):
 ${grounded.summaryContext}

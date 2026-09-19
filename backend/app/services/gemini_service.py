@@ -105,9 +105,11 @@ Return a valid JSON object with the following structure:
 }}"""
 
         candidate_models = [
-            "gemini-2.5-flash",
-            "gemini-1.5-flash",
-            "gemini-2.0-flash",
+            "gemini-3.6-flash",
+            "gemini-3.7-flash",
+            "gemini-3.8-flash",
+            "gemini-3.5-flash",
+            "gemini-3.1-flash-lite",
             "gemini-flash-latest",
         ]
         for model in candidate_models:
@@ -196,9 +198,11 @@ CURRENT ENTREPRENEUR INQUIRY:
 Provide a helpful, warm, and professional conversational response (2 to 4 paragraphs) addressing the entrepreneur's question with specific references to their profile and numbers."""
 
         candidate_models = [
-            "gemini-2.5-flash",
-            "gemini-1.5-flash",
-            "gemini-2.0-flash",
+            "gemini-3.6-flash",
+            "gemini-3.7-flash",
+            "gemini-3.8-flash",
+            "gemini-3.5-flash",
+            "gemini-3.1-flash-lite",
             "gemini-flash-latest",
         ]
         for model in candidate_models:
