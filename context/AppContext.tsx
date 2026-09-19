@@ -117,7 +117,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             setProfile(JSON.parse(savedProfile));
           } catch (e) {}
         } else if (user?.isDemo && active) {
-          // Keep demo profile
+          // If fresh random demo user without saved profile, initialize for onboarding
+          if (
+            user.id.startsWith('demo_') &&
+            !user.id.includes('anita') &&
+            !user.id.includes('ramesh') &&
+            !user.id.includes('lakshmi')
+          ) {
+            setProfile({
+              name: user.name || 'Demo Entrepreneur',
+              businessName: 'My Enterprise',
+              location: '',
+              category: 'Dairy Farming',
+              marginCapital: 100000,
+              hasActiveLoan: false,
+              simulatingSecondLoan: false,
+              onboardingCompleted: false,
+            });
+          }
         } else if (user && !user.isDemo && active) {
           // New registered user default profile
           setProfile({

@@ -29,6 +29,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { AppProvider, useApp } from '@/context/AppContext';
+import { WelcomeScreen } from './auth/WelcomeScreen';
 import { AuthScreen } from './auth/AuthScreen';
 import { OverviewScreen } from './screens/OverviewScreen';
 import { BusinessProfileScreen } from './screens/BusinessProfileScreen';
@@ -78,7 +79,7 @@ function Sidebar({
   setOpen: (value: boolean) => void;
 }) {
   const { profile, language, detectedRisks, dictionary } = useApp();
-  const { signOut } = useAuth();
+  const { signOut, exitDemo, isDemo } = useAuth();
   const [expanded, setExpanded] = useState(['Business', 'Finances', 'Advisor', 'Opportunities']);
   const isTe = language === 'te';
 
@@ -231,14 +232,25 @@ function Sidebar({
             <ChevronRight className="size-4 text-muted-foreground shrink-0" />
           </button>
 
-          <button
-            type="button"
-            onClick={() => signOut()}
-            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-          >
-            <LogOut className="size-3.5" />
-            <span>{isTe ? 'లాగ్ అవుట్ (Logout)' : 'Sign Out'}</span>
-          </button>
+          {isDemo ? (
+            <button
+              type="button"
+              onClick={() => exitDemo()}
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-amber-800 dark:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 transition-colors"
+            >
+              <LogOut className="size-3.5" />
+              <span>{isTe ? 'డెమో ముగించు (Exit Demo)' : 'Exit Demo'}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => signOut()}
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            >
+              <LogOut className="size-3.5" />
+              <span>{isTe ? 'లాగ్ అవుట్ (Logout)' : 'Sign Out'}</span>
+            </button>
+          )}
         </div>
       </aside>
     </>
@@ -370,7 +382,7 @@ function RuralCredAppInner() {
   const [active, setActive] = useState('Overview');
   const [open, setOpen] = useState(false);
   const { language, setLanguage, profile, detectedRisks, dictionary } = useApp();
-  const { signOut } = useAuth();
+  const { signOut, exitDemo, isDemo } = useAuth();
   const isTe = language === 'te';
 
   const toggleLanguage = () => {
@@ -412,6 +424,14 @@ function RuralCredAppInner() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Demo Mode Indicator (Requirement 10) */}
+            {isDemo && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[11px] font-semibold border border-amber-500/20 shadow-2xs">
+                <span className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
+                <span>Demo Mode</span>
+              </div>
+            )}
+
             {/* Language Selector Toggle */}
             <button
               onClick={toggleLanguage}
@@ -457,15 +477,26 @@ function RuralCredAppInner() {
               </div>
             </button>
 
-            {/* Logout Header Button */}
-            <button
-              onClick={() => signOut()}
-              title={isTe ? 'లాగ్ అవుట్' : 'Sign Out'}
-              className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors ml-1"
-              aria-label="Sign Out"
-            >
-              <LogOut className="size-4" />
-            </button>
+            {/* Logout / Exit Demo Header Button */}
+            {isDemo ? (
+              <button
+                onClick={() => exitDemo()}
+                title={isTe ? 'డెమో నుండి నిష్క్రమించండి' : 'Exit Demo'}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-amber-800 dark:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 transition-colors ml-1 border border-amber-500/20 shadow-2xs"
+              >
+                <LogOut className="size-3.5" />
+                <span className="hidden sm:inline">{isTe ? 'డెమో ముగించు' : 'Exit Demo'}</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => signOut()}
+                title={isTe ? 'లాగ్ అవుట్' : 'Sign Out'}
+                className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors ml-1"
+                aria-label="Sign Out"
+              >
+                <LogOut className="size-4" />
+              </button>
+            )}
           </div>
         </header>
 
@@ -479,51 +510,30 @@ function RuralCredAppInner() {
 }
 
 function RuralCredAppGate() {
-  const { user, loading, error, retryAuth, goToLogin } = useAuth();
+  const { user } = useAuth();
   const { hasCompletedOnboarding } = useApp();
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
-  if (loading) {
+  // 1. User session exists (Demo mode or Authenticated)
+  if (user) {
+    if (!hasCompletedOnboarding) {
+      return <OnboardingScreen />;
+    }
+    return <RuralCredAppInner />;
+  }
+
+  // 2. Optional Sign In screen requested
+  if (showAuthModal) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-        <div className="size-12 rounded-2xl bg-primary text-primary-foreground grid place-items-center shadow-md animate-pulse mb-3">
-          <span className="text-xl font-bold font-sora">R</span>
-        </div>
-        <p className="text-sm font-bold font-sora text-foreground">RuralCred Advisor</p>
-        <p className="text-xs text-muted-foreground mt-1">Connecting to authenticated session...</p>
-      </div>
+      <AuthScreen
+        onBack={() => setShowAuthModal(false)}
+        onAuthenticated={() => setShowAuthModal(false)}
+      />
     );
   }
 
-  if (error && !user) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 text-center">
-        <div className="size-12 rounded-2xl bg-destructive/10 text-destructive grid place-items-center shadow-xs mb-3">
-          <AlertCircle className="size-6" />
-        </div>
-        <p className="text-sm font-bold font-sora text-foreground">RuralCred Advisor</p>
-        <p className="text-xs text-destructive mt-1 max-w-sm font-medium">{error}</p>
-        <div className="flex items-center gap-2 mt-5">
-          <Button variant="outline" size="sm" onClick={() => retryAuth()}>
-            <RefreshCw className="size-3.5 mr-1.5" />
-            Retry
-          </Button>
-          <Button size="sm" onClick={() => goToLogin()}>
-            Go to Login
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <AuthScreen />;
-  }
-
-  if (!hasCompletedOnboarding) {
-    return <OnboardingScreen />;
-  }
-
-  return <RuralCredAppInner />;
+  // 3. Default frictionless startup: Welcome / Entry Screen
+  return <WelcomeScreen onOpenAuth={() => setShowAuthModal(true)} />;
 }
 
 export function RuralCredApp() {

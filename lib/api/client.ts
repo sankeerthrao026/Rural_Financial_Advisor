@@ -17,6 +17,7 @@ async function fetchJson<T>(
 
   if (userId) {
     headers['X-User-Id'] = userId;
+    headers['X-Auth-Mode'] = userId.startsWith('demo') ? 'demo' : 'authenticated';
   }
 
   const res = await fetch(url, {

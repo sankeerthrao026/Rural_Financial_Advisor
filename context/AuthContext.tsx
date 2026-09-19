@@ -9,6 +9,7 @@ export interface AuthUser {
   email: string;
   name?: string;
   isDemo?: boolean;
+  authMode?: 'demo' | 'authenticated';
 }
 
 export interface AuthContextType {
@@ -17,37 +18,60 @@ export interface AuthContextType {
   loading: boolean;
   error: string | null;
   isConfigured: boolean;
+  isDemo: boolean;
   configError: string | null;
+  continueAsDemo: () => AuthUser;
+  exitDemo: () => void;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, name?: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   loginAsDemoUser: (persona?: 'dairy' | 'kirana' | 'weaving') => Promise<void>;
-  retryAuth: () => Promise<void>;
-  goToLogin: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const LOCAL_AUTH_KEY = 'ruralcred_auth_user';
-const AUTH_TIMEOUT_MS = 3500; // Guarantees auth state transition within 3.5 seconds
+const DEMO_USER_ID_KEY = 'ruralcred_demo_user_id';
 
-function getLocalStoredUser(): AuthUser | null {
+function getInitialUser(): AuthUser | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(LOCAL_AUTH_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
+    // 1. Check active demo session first
+    const demoId = localStorage.getItem(DEMO_USER_ID_KEY);
+    if (demoId) {
+      const stored = localStorage.getItem(LOCAL_AUTH_KEY);
+      if (stored) {
+        return JSON.parse(stored);
+      }
+      return {
+        id: demoId,
+        email: `${demoId}@demo.ruralcred.in`,
+        name: 'Demo Entrepreneur',
+        isDemo: true,
+        authMode: 'demo',
+      };
+    }
+
+    // 2. Check stored authenticated/mock user
+    const stored = localStorage.getItem(LOCAL_AUTH_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch {}
+  return null;
 }
 
-function setLocalStoredUser(user: AuthUser | null) {
+function persistUser(user: AuthUser | null) {
   if (typeof window === 'undefined') return;
   try {
     if (user) {
       localStorage.setItem(LOCAL_AUTH_KEY, JSON.stringify(user));
+      if (user.isDemo) {
+        localStorage.setItem(DEMO_USER_ID_KEY, user.id);
+      }
     } else {
       localStorage.removeItem(LOCAL_AUTH_KEY);
+      localStorage.removeItem(DEMO_USER_ID_KEY);
     }
   } catch {}
 }
@@ -57,183 +81,148 @@ function mapSupabaseUser(user: User): AuthUser {
     id: user.id,
     email: user.email || '',
     name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+    isDemo: false,
+    authMode: 'authenticated',
   };
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  // Synchronous initialization from localStorage ensures ZERO loading delay on startup
+  const [user, setUser] = useState<AuthUser | null>(getInitialUser);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const initAuth = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const isDemo = Boolean(
+    user?.isDemo ||
+      user?.id?.startsWith('demo_') ||
+      user?.id?.startsWith('demo-') ||
+      (typeof window !== 'undefined' && Boolean(localStorage.getItem(DEMO_USER_ID_KEY)))
+  );
 
-    // Case 1: Supabase is NOT configured (e.g. local evaluation, demo mode)
-    if (!isSupabaseConfigured || !supabase) {
-      const local = getLocalStoredUser();
-      setUser(local);
-      setSession(null);
-      setLoading(false);
-      return;
-    }
-
-    // Case 2: Supabase IS configured -> Query getSession with timeout race
-    let timer: NodeJS.Timeout | null = null;
-    const timeoutPromise = new Promise<{ isTimeout: true }>((resolve) => {
-      timer = setTimeout(() => resolve({ isTimeout: true }), AUTH_TIMEOUT_MS);
-    });
-
-    try {
-      const sessionPromise = supabase.auth.getSession().then((res) => ({
-        isTimeout: false as const,
-        data: res.data,
-        error: res.error,
-      }));
-
-      const res = await Promise.race([sessionPromise, timeoutPromise]);
-      if (timer) clearTimeout(timer);
-
-      if (res.isTimeout) {
-        console.warn(`[Auth] Supabase getSession timed out after ${AUTH_TIMEOUT_MS}ms`);
-        // Check if there is an existing local fallback session first
-        const local = getLocalStoredUser();
-        if (local) {
-          setUser(local);
-          setLoading(false);
-        } else {
-          setError('Unable to connect to authentication service.');
-          setUser(null);
-          setSession(null);
-          setLoading(false);
-        }
-        return;
-      }
-
-      const { data, error: sessionErr } = res;
-
-      if (sessionErr) {
-        console.warn('[Auth] Supabase getSession error:', sessionErr.message);
-        // If token expired or invalid grant, clean up
-        if (
-          sessionErr.message?.includes('Refresh Token') ||
-          sessionErr.message?.includes('invalid_grant') ||
-          sessionErr.message?.includes('expired')
-        ) {
-          try {
-            await supabase.auth.signOut();
-          } catch {}
-        }
-
-        const local = getLocalStoredUser();
-        if (local) {
-          setUser(local);
-        } else {
-          setError('Unable to connect to authentication service.');
-          setUser(null);
-          setSession(null);
-        }
-        setLoading(false);
-        return;
-      }
-
-      // Check if active Supabase session exists
-      if (data?.session?.user) {
-        const u = mapSupabaseUser(data.session.user);
-        setSession(data.session);
-        setUser(u);
-        setLocalStoredUser(u);
-        setError(null);
-        setLoading(false);
-        return;
-      }
-
-      // Supabase has NO active session -> first visit or logged-out user
-      // Check local storage for persistent demo user
-      const local = getLocalStoredUser();
-      if (local && local.isDemo) {
-        setUser(local);
-      } else {
-        setUser(null);
-        setSession(null);
-        setLocalStoredUser(null);
-      }
-      setError(null);
-      setLoading(false);
-    } catch (err: any) {
-      if (timer) clearTimeout(timer);
-      console.warn('[Auth] Unexpected error during session check:', err);
-      const local = getLocalStoredUser();
-      if (local) {
-        setUser(local);
-      } else {
-        setError('Unable to connect to authentication service.');
-        setUser(null);
-        setSession(null);
-      }
-      setLoading(false);
-    }
-  }, []);
-
+  // Background non-blocking session check for optional Supabase
   useEffect(() => {
-    let authUnsubscribe: (() => void) | null = null;
+    let active = true;
 
-    if (isSupabaseConfigured && supabase) {
-      const { data: authListener } = supabase.auth.onAuthStateChange(
-        (event, newSession) => {
-          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-            if (newSession?.user) {
-              const u = mapSupabaseUser(newSession.user);
-              setSession(newSession);
-              setUser((prev) => {
-                if (prev?.id === u.id && prev?.email === u.email) return prev;
-                return u;
-              });
-              setLocalStoredUser(u);
-              setError(null);
-              setLoading(false);
-            }
-          } else if (event === 'SIGNED_OUT') {
-            setSession(null);
-            setUser(null);
-            setLocalStoredUser(null);
-            setError(null);
-            setLoading(false);
+    async function checkBackgroundSupabaseSession() {
+      // If user is already in demo mode, do not override with Supabase
+      const hasDemoSession = typeof window !== 'undefined' && localStorage.getItem(DEMO_USER_ID_KEY);
+      if (hasDemoSession) return;
+
+      if (isSupabaseConfigured && supabase) {
+        try {
+          const { data } = await supabase.auth.getSession();
+          if (active && data.session?.user) {
+            const u = mapSupabaseUser(data.session.user);
+            setSession(data.session);
+            setUser(u);
+            persistUser(u);
           }
+        } catch (e) {
+          // Never block or show error if background check fails
+          console.debug('[Auth] Optional Supabase background check:', e);
         }
-      );
+      }
+    }
 
-      authUnsubscribe = () => {
+    checkBackgroundSupabaseSession();
+
+    let unsubscribe: (() => void) | null = null;
+    if (isSupabaseConfigured && supabase) {
+      const { data: authListener } = supabase.auth.onAuthStateChange((event, newSession) => {
+        if (!active) return;
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (newSession?.user) {
+            const u = mapSupabaseUser(newSession.user);
+            setSession(newSession);
+            setUser(u);
+            persistUser(u);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setUser(null);
+          persistUser(null);
+        }
+      });
+
+      unsubscribe = () => {
         authListener.subscription.unsubscribe();
       };
     }
 
-    // Run auth initialization immediately
-    initAuth();
-
     return () => {
-      if (authUnsubscribe) {
-        authUnsubscribe();
-      }
+      active = false;
+      if (unsubscribe) unsubscribe();
     };
-  }, [initAuth]);
-
-  const retryAuth = useCallback(async () => {
-    await initAuth();
-  }, [initAuth]);
-
-  const goToLogin = useCallback(() => {
-    setError(null);
-    setLoading(false);
-    setUser(null);
-    setSession(null);
   }, []);
 
+  // 1. Primary Action: Continue as Demo User (instantaneous, random ID)
+  const continueAsDemo = useCallback((): AuthUser => {
+    const randomHex = Math.random().toString(16).substring(2, 10);
+    const demoId = `demo_${randomHex}`;
+    const demoUser: AuthUser = {
+      id: demoId,
+      email: `${demoId}@demo.ruralcred.in`,
+      name: 'Demo Entrepreneur',
+      isDemo: true,
+      authMode: 'demo',
+    };
+
+    setUser(demoUser);
+    persistUser(demoUser);
+    setError(null);
+    setLoading(false);
+    return demoUser;
+  }, []);
+
+  // 2. Exit Demo: Clears demo session and returns to Welcome / Entry Screen
+  const exitDemo = useCallback(() => {
+    setUser(null);
+    setSession(null);
+    persistUser(null);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('ruralcred_demo_profile');
+    }
+  }, []);
+
+  // 3. Pre-configured Evaluator Demo Personas
+  const loginAsDemoUser = async (persona: 'dairy' | 'kirana' | 'weaving' = 'dairy') => {
+    const randomSuffix = Math.random().toString(16).substring(2, 6);
+    const personas: Record<string, AuthUser> = {
+      dairy: {
+        id: `demo_anita_${randomSuffix}`,
+        email: 'anita.dairy@ruralcred.in',
+        name: 'Anita Sharma',
+        isDemo: true,
+        authMode: 'demo',
+      },
+      kirana: {
+        id: `demo_ramesh_${randomSuffix}`,
+        email: 'ramesh.kirana@ruralcred.in',
+        name: 'Ramesh Kumar',
+        isDemo: true,
+        authMode: 'demo',
+      },
+      weaving: {
+        id: `demo_lakshmi_${randomSuffix}`,
+        email: 'lakshmi.handloom@ruralcred.in',
+        name: 'Lakshmi Devi',
+        isDemo: true,
+        authMode: 'demo',
+      },
+    };
+
+    const chosen = personas[persona] || personas.dairy;
+    setUser(chosen);
+    persistUser(chosen);
+    setError(null);
+    setLoading(false);
+  };
+
+  // 4. Optional Supabase Sign In
   const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
     setLoading(true);
     setError(null);
-
     const cleanEmail = email.trim();
 
     if (isSupabaseConfigured && supabase) {
@@ -251,7 +240,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (data.user) {
           const u = mapSupabaseUser(data.user);
           setUser(u);
-          setLocalStoredUser(u);
+          persistUser(u);
           if (data.session) setSession(data.session);
         }
 
@@ -259,23 +248,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: null };
       } catch (err: any) {
         setLoading(false);
-        return { error: err?.message || 'Login failed. Please check network connection.' };
+        return { error: err?.message || 'Login failed' };
       }
     }
 
-    // Resilient local auth fallback
+    // Local fallback for testing
     const mockId = `usr_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
     const newUser: AuthUser = {
       id: mockId,
       email: cleanEmail,
       name: cleanEmail.split('@')[0] || 'Anita Sharma',
+      isDemo: false,
+      authMode: 'authenticated',
     };
     setUser(newUser);
-    setLocalStoredUser(newUser);
+    persistUser(newUser);
     setLoading(false);
     return { error: null };
   };
 
+  // 5. Optional Supabase Sign Up
   const signUp = async (
     email: string,
     password: string,
@@ -283,7 +275,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   ): Promise<{ error: string | null }> => {
     setLoading(true);
     setError(null);
-
     const cleanEmail = email.trim();
 
     if (isSupabaseConfigured && supabase) {
@@ -304,7 +295,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (data.user) {
           const u = mapSupabaseUser(data.user);
           setUser(u);
-          setLocalStoredUser(u);
+          persistUser(u);
           if (data.session) setSession(data.session);
         }
 
@@ -316,19 +307,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // Resilient local auth fallback
+    // Local fallback
     const mockId = `usr_${Date.now()}_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
     const newUser: AuthUser = {
       id: mockId,
       email: cleanEmail,
       name: name || cleanEmail.split('@')[0] || 'Rural Entrepreneur',
+      isDemo: false,
+      authMode: 'authenticated',
     };
     setUser(newUser);
-    setLocalStoredUser(newUser);
+    persistUser(newUser);
     setLoading(false);
     return { error: null };
   };
 
+  // 6. Sign Out
   const signOut = async (): Promise<void> => {
     setLoading(true);
     if (isSupabaseConfigured && supabase) {
@@ -340,39 +334,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setUser(null);
     setSession(null);
-    setLocalStoredUser(null);
+    persistUser(null);
     setError(null);
-    setLoading(false);
-  };
-
-  const loginAsDemoUser = async (persona: 'dairy' | 'kirana' | 'weaving' = 'dairy') => {
-    setLoading(true);
-    setError(null);
-
-    const personas: Record<string, AuthUser> = {
-      dairy: {
-        id: 'usr_anita_warangal_dairy',
-        email: 'anita.dairy@ruralcred.in',
-        name: 'Anita Sharma',
-        isDemo: true,
-      },
-      kirana: {
-        id: 'usr_ramesh_karimnagar_kirana',
-        email: 'ramesh.kirana@ruralcred.in',
-        name: 'Ramesh Kumar',
-        isDemo: true,
-      },
-      weaving: {
-        id: 'usr_lakshmi_nalgonda_handloom',
-        email: 'lakshmi.handloom@ruralcred.in',
-        name: 'Lakshmi Devi',
-        isDemo: true,
-      },
-    };
-
-    const chosen = personas[persona] || personas.dairy;
-    setUser(chosen);
-    setLocalStoredUser(chosen);
     setLoading(false);
   };
 
@@ -384,13 +347,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         error,
         isConfigured: isSupabaseConfigured,
+        isDemo,
         configError: supabaseConfigError,
+        continueAsDemo,
+        exitDemo,
         signIn,
         signUp,
         signOut,
         loginAsDemoUser,
-        retryAuth,
-        goToLogin,
       }}
     >
       {children}

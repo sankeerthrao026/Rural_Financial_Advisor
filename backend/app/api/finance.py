@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Header
-from typing import Optional
+from fastapi import APIRouter, Depends
+from app.auth import get_auth_context, AuthContext
 from app.models.schemas import FinanceCalculateRequest, FinancePlanResponse, FinancialHealthResponse
 from app.services.finance_service import calculate_finance_plan, calculate_financial_health
 from app.services.firestore_service import firestore_service
@@ -16,16 +16,14 @@ def calculate_plan(req: FinanceCalculateRequest):
     return calculate_finance_plan(req.marginCapital)
 
 @router.get("", response_model=FinancePlanResponse)
-def get_user_finance(x_user_id: Optional[str] = Header(None)):
-    user_id = x_user_id or "demo-user"
-    profile_data = firestore_service.get_user_profile(user_id) or {}
+def get_user_finance(auth: AuthContext = Depends(get_auth_context)):
+    profile_data = firestore_service.get_user_profile(auth.user_id) or {}
     margin_capital = float(profile_data.get("marginCapital", 100000.0))
     return calculate_finance_plan(margin_capital)
 
 @router.get("/health-score", response_model=FinancialHealthResponse)
-def get_health_score(x_user_id: Optional[str] = Header(None)):
-    user_id = x_user_id or "demo-user"
-    entries = logbook_service.get_entries(user_id)
+def get_health_score(auth: AuthContext = Depends(get_auth_context)):
+    entries = logbook_service.get_entries(auth.user_id)
     aggs = logbook_service.calculate_aggregates(entries)
     return calculate_financial_health(
         total_income=aggs["totalIncome"],

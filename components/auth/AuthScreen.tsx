@@ -18,7 +18,13 @@ import {
   Building2,
 } from 'lucide-react';
 
-export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }) {
+export function AuthScreen({
+  onAuthenticated,
+  onBack,
+}: {
+  onAuthenticated?: () => void;
+  onBack?: () => void;
+}) {
   const { signIn, signUp, loginAsDemoUser, isConfigured } = useAuth();
   const { language, setLanguage } = useApp();
   const isTe = language === 'te';
@@ -82,6 +88,16 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
       </div>
 
       <div className="w-full max-w-md flex flex-col gap-6">
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="self-start inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground font-medium transition-colors cursor-pointer"
+          >
+            <span>← {isTe ? 'డెమో హోమ్‌కి తిరిగి వెళ్ళండి' : 'Back to Demo Entry'}</span>
+          </button>
+        )}
+
         {/* Brand Header */}
         <div className="text-center flex flex-col items-center">
           <div className="grid size-12 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-md mb-3">
