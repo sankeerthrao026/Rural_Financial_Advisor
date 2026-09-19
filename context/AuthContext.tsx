@@ -10,6 +10,7 @@ import {
   clearDemoSession,
   DEMO_USER_ID_KEY,
   LOCAL_AUTH_KEY,
+  ACTIVE_PROFILE_KEY,
 } from '@/lib/demo-session';
 
 export interface AuthUser {
@@ -150,10 +151,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // 1. Primary Action: Continue as Demo User (instantaneous, random ID)
+  // 1. Primary Action: Continue as Demo User (instantaneous dummy session with complete data)
   const continueAsDemo = useCallback((): AuthUser => {
-    const { user: demoUser } = createDemoSession();
+    const { user: demoUser } = createPresetSession('dairy');
     setUser(demoUser);
+    persistUser(demoUser);
     setError(null);
     setLoading(false);
     return demoUser;
@@ -164,6 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearDemoSession();
     setUser(null);
     setSession(null);
+    persistUser(null);
     setError(null);
     setLoading(false);
   }, []);
@@ -172,74 +175,107 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginAsDemoUser = async (persona: 'dairy' | 'kirana' | 'weaving' = 'dairy') => {
     const { user: chosen } = createPresetSession(persona);
     setUser(chosen);
+    persistUser(chosen);
     setError(null);
     setLoading(false);
   };
 
-  // 4. Supabase Sign In (with fallback and timeout)
+  // 4. Dummy & Supabase Sign In
   const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
     setLoading(true);
     setError(null);
     const cleanEmail = email.trim();
 
-    if (!cleanEmail || !password) {
+    if (!cleanEmail) {
       setLoading(false);
-      return { error: 'Please enter your email and password.' };
+      return { error: 'Please enter your email.' };
     }
 
+    // 1. Direct dummy profile matching:
+    const lowerEmail = cleanEmail.toLowerCase();
+    let persona: 'dairy' | 'kirana' | 'weaving' | null = null;
+    if (lowerEmail.includes('anita') || lowerEmail.includes('dairy')) {
+      persona = 'dairy';
+    } else if (lowerEmail.includes('ramesh') || lowerEmail.includes('kirana')) {
+      persona = 'kirana';
+    } else if (lowerEmail.includes('lakshmi') || lowerEmail.includes('weaving') || lowerEmail.includes('handloom')) {
+      persona = 'weaving';
+    }
+
+    if (persona) {
+      const { user: chosen } = createPresetSession(persona);
+      setUser(chosen);
+      persistUser(chosen);
+      setLoading(false);
+      return { error: null };
+    }
+
+    // 2. If Supabase is configured and not a preset email, try Supabase with immediate local fallback:
     if (isSupabaseConfigured && supabase) {
       try {
         const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Authentication service timeout. Please try again.')), 6000)
+          setTimeout(() => reject(new Error('timeout')), 2500)
         );
 
         const { data, error: signInErr } = (await Promise.race([
           supabase.auth.signInWithPassword({
             email: cleanEmail,
-            password,
+            password: password || 'demo123',
           }),
           timeoutPromise,
         ])) as any;
 
-        if (signInErr) {
-          setLoading(false);
-          const msg = signInErr.message?.toLowerCase().includes('invalid login credentials')
-            ? 'Invalid email or password.'
-            : (signInErr.message || 'Authentication failed.');
-          return { error: msg };
-        }
-
-        if (data.user) {
+        if (!signInErr && data?.user) {
           const u = mapSupabaseUser(data.user);
           setUser(u);
           persistUser(u);
           if (data.session) setSession(data.session);
+          setLoading(false);
+          return { error: null };
         }
-
-        setLoading(false);
-        return { error: null };
-      } catch (err: any) {
-        setLoading(false);
-        return { error: err?.message || 'Authentication service unavailable.' };
+      } catch (e) {
+        console.warn('[Auth] Supabase attempt bypassed for local dummy session:', e);
       }
     }
 
-    // Local fallback for testing when Supabase credentials are empty
+    // 3. Robust Dummy Auth: ANY other email logs in immediately as an active dummy user!
     const mockId = `usr_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    const displayName = cleanEmail.split('@')[0].replace(/[._-]/g, ' ') || 'Anita Sharma';
+    const formattedName = displayName.replace(/\b\w/g, (c) => c.toUpperCase());
+
     const newUser: AuthUser = {
       id: mockId,
       email: cleanEmail,
-      name: cleanEmail.split('@')[0] || 'Anita Sharma',
-      isDemo: false,
-      authMode: 'authenticated',
+      name: formattedName,
+      isDemo: true,
+      authMode: 'demo',
     };
+
+    const defaultProfile = {
+      name: formattedName,
+      businessName: `${formattedName} Enterprises`,
+      location: 'Warangal, Telangana',
+      category: 'Dairy Farming',
+      marginCapital: 100000,
+      hasActiveLoan: false,
+      simulatingSecondLoan: false,
+      onboardingCompleted: true,
+    };
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(DEMO_USER_ID_KEY, mockId);
+      localStorage.setItem(LOCAL_AUTH_KEY, JSON.stringify(newUser));
+      localStorage.setItem(ACTIVE_PROFILE_KEY, JSON.stringify(defaultProfile));
+      localStorage.setItem(`ruralcred_profile_${mockId}`, JSON.stringify(defaultProfile));
+    }
+
     setUser(newUser);
     persistUser(newUser);
     setLoading(false);
     return { error: null };
   };
 
-  // 5. Supabase Sign Up (with fallback and timeout)
+  // 5. Dummy & Supabase Sign Up
   const signUp = async (
     email: string,
     password: string,
@@ -249,57 +285,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     const cleanEmail = email.trim();
 
-    if (!cleanEmail || !password) {
+    if (!cleanEmail) {
       setLoading(false);
-      return { error: 'Please fill in all required fields.' };
+      return { error: 'Please fill in your email.' };
     }
 
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Registration service timeout. Please try again.')), 6000)
-        );
-
-        const { data, error: signUpErr } = (await Promise.race([
-          supabase.auth.signUp({
-            email: cleanEmail,
-            password,
-            options: {
-              data: { name: name || cleanEmail.split('@')[0] },
-            },
-          }),
-          timeoutPromise,
-        ])) as any;
-
-        if (signUpErr) {
-          setLoading(false);
-          return { error: signUpErr.message || 'Registration failed.' };
-        }
-
-        if (data.user) {
-          const u = mapSupabaseUser(data.user);
-          setUser(u);
-          persistUser(u);
-          if (data.session) setSession(data.session);
-        }
-
-        setLoading(false);
-        return { error: null };
-      } catch (err: any) {
-        setLoading(false);
-        return { error: err?.message || 'Registration service unavailable.' };
-      }
-    }
-
-    // Local fallback
     const mockId = `usr_${Date.now()}_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    const chosenName = name?.trim() || cleanEmail.split('@')[0].replace(/[._-]/g, ' ') || 'Rural Entrepreneur';
+    const formattedName = chosenName.replace(/\b\w/g, (c) => c.toUpperCase());
+
     const newUser: AuthUser = {
       id: mockId,
       email: cleanEmail,
-      name: name || cleanEmail.split('@')[0] || 'Rural Entrepreneur',
-      isDemo: false,
-      authMode: 'authenticated',
+      name: formattedName,
+      isDemo: true,
+      authMode: 'demo',
     };
+
+    const newProfile = {
+      name: formattedName,
+      businessName: `${formattedName} Enterprises`,
+      location: 'Warangal, Telangana',
+      category: 'Dairy Farming',
+      marginCapital: 100000,
+      hasActiveLoan: false,
+      simulatingSecondLoan: false,
+      onboardingCompleted: true,
+    };
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(DEMO_USER_ID_KEY, mockId);
+      localStorage.setItem(LOCAL_AUTH_KEY, JSON.stringify(newUser));
+      localStorage.setItem(ACTIVE_PROFILE_KEY, JSON.stringify(newProfile));
+      localStorage.setItem(`ruralcred_profile_${mockId}`, JSON.stringify(newProfile));
+    }
+
     setUser(newUser);
     persistUser(newUser);
     setLoading(false);

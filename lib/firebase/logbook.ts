@@ -68,10 +68,99 @@ export const INITIAL_DEMO_ENTRIES: LogbookEntry[] = [
   },
 ];
 
+export const INITIAL_KIRANA_ENTRIES: LogbookEntry[] = [
+  {
+    id: 'kirana-1',
+    date: '18 Sep 2026',
+    amount: 14200,
+    type: 'income',
+    category: 'Sales',
+    note: 'Daily counter retail sales & groceries',
+    timestamp: Date.now() - 86400000 * 1,
+  },
+  {
+    id: 'kirana-2',
+    date: '17 Sep 2026',
+    amount: 8500,
+    type: 'expense',
+    category: 'Inventory',
+    note: 'Wholesale grains, pulses & edible oil restock',
+    timestamp: Date.now() - 86400000 * 2,
+  },
+  {
+    id: 'kirana-3',
+    date: '15 Sep 2026',
+    amount: 9800,
+    type: 'income',
+    category: 'Sales',
+    note: 'UPI QR settlements & festival snack packages',
+    timestamp: Date.now() - 86400000 * 4,
+  },
+  {
+    id: 'kirana-4',
+    date: '12 Sep 2026',
+    amount: 1200,
+    type: 'expense',
+    category: 'Utilities',
+    note: 'Shop electricity bill & refrigerator maintenance',
+    timestamp: Date.now() - 86400000 * 7,
+  },
+  {
+    id: 'kirana-5',
+    date: '08 Sep 2026',
+    amount: 16500,
+    type: 'income',
+    category: 'Sales',
+    note: 'Weekly mandi bulk supply to village tiffin centers',
+    timestamp: Date.now() - 86400000 * 11,
+  },
+];
+
+export const INITIAL_WEAVING_ENTRIES: LogbookEntry[] = [
+  {
+    id: 'weaving-1',
+    date: '18 Sep 2026',
+    amount: 22000,
+    type: 'income',
+    category: 'Sales',
+    note: 'Handloom Pochampally silk sarees delivered to weavers cooperative',
+    timestamp: Date.now() - 86400000 * 1,
+  },
+  {
+    id: 'weaving-2',
+    date: '16 Sep 2026',
+    amount: 7800,
+    type: 'expense',
+    category: 'Raw Materials',
+    note: 'Mulberry raw silk yarn & natural dyes purchase',
+    timestamp: Date.now() - 86400000 * 3,
+  },
+  {
+    id: 'weaving-3',
+    date: '14 Sep 2026',
+    amount: 15500,
+    type: 'income',
+    category: 'Sales',
+    note: 'Custom bridal border saree delivery to local boutique',
+    timestamp: Date.now() - 86400000 * 5,
+  },
+  {
+    id: 'weaving-4',
+    date: '10 Sep 2026',
+    amount: 1400,
+    type: 'expense',
+    category: 'Equipment',
+    note: 'Pit loom shuttle replacement & reed tuning',
+    timestamp: Date.now() - 86400000 * 9,
+  },
+];
+
 const getStorageKey = (userId: string) => `ruralcred_logbook_${userId}`;
 
 export async function fetchLogbookEntries(userId: string): Promise<LogbookEntry[]> {
-  if (!userId) return [];
+  if (!userId) return INITIAL_DEMO_ENTRIES;
+
+  const lowerId = userId.toLowerCase();
 
   // If Firestore configured and online, attempt to fetch from user's isolated subcollection
   if (isFirebaseConfigured && firestoreInstance) {
@@ -93,19 +182,34 @@ export async function fetchLogbookEntries(userId: string): Promise<LogbookEntry[
     const cached = localStorage.getItem(key);
     if (cached) {
       try {
-        return JSON.parse(cached);
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
       } catch (e) {}
     }
-    // Seed default demo entries only for the Anita Sharma dairy demo persona
-    if (userId.includes('anita') || userId === 'demo-user') {
-      localStorage.setItem(key, JSON.stringify(INITIAL_DEMO_ENTRIES));
-      return INITIAL_DEMO_ENTRIES;
+    
+    // Seed appropriate demo entries for the persona
+    if (lowerId.includes('kirana') || lowerId.includes('ramesh')) {
+      localStorage.setItem(key, JSON.stringify(INITIAL_KIRANA_ENTRIES));
+      return INITIAL_KIRANA_ENTRIES;
     }
-    // New user starts with empty logbook
-    return [];
+    if (lowerId.includes('weaving') || lowerId.includes('lakshmi') || lowerId.includes('handloom')) {
+      localStorage.setItem(key, JSON.stringify(INITIAL_WEAVING_ENTRIES));
+      return INITIAL_WEAVING_ENTRIES;
+    }
+    // Default demo entries for anita or generic demo users
+    localStorage.setItem(key, JSON.stringify(INITIAL_DEMO_ENTRIES));
+    return INITIAL_DEMO_ENTRIES;
   }
 
-  return userId.includes('anita') ? INITIAL_DEMO_ENTRIES : [];
+  if (lowerId.includes('kirana') || lowerId.includes('ramesh')) {
+    return INITIAL_KIRANA_ENTRIES;
+  }
+  if (lowerId.includes('weaving') || lowerId.includes('lakshmi')) {
+    return INITIAL_WEAVING_ENTRIES;
+  }
+  return INITIAL_DEMO_ENTRIES;
 }
 
 export async function addLogbookEntry(

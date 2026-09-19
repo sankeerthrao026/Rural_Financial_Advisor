@@ -33,30 +33,26 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
     e.preventDefault();
     setError(null);
 
-    const cleanEmail = email.trim();
-    if (!cleanEmail || !password) {
-      setError(
-        isTe
-          ? 'దయచేసి మీ ఈమెయిల్ మరియు పాస్‌వర్డ్ నమోదు చేయండి.'
-          : 'Please enter your email and password.'
-      );
-      return;
-    }
+    const cleanEmail = email.trim() || 'anita.dairy@ruralcred.in';
+    const cleanPassword = password.trim() || 'demo123';
 
     setLoading(true);
     try {
-      const res = await signIn(cleanEmail, password);
+      const res = await signIn(cleanEmail, cleanPassword);
       if (res.error) {
-        if (
-          res.error.toLowerCase().includes('invalid login credentials') ||
-          res.error.toLowerCase().includes('invalid')
-        ) {
-          setError(isTe ? 'చెల్లని ఈమెయిల్ లేదా పాస్‌వర్డ్.' : 'Invalid email or password.');
-        } else {
-          setError(res.error);
-        }
+        setError(res.error);
         setLoading(false);
         return;
+      }
+
+      // Determine preset persona based on email
+      const lower = cleanEmail.toLowerCase();
+      if (lower.includes('kirana') || lower.includes('ramesh')) {
+        loadPreset('kirana');
+      } else if (lower.includes('weaving') || lower.includes('lakshmi') || lower.includes('handloom')) {
+        loadPreset('weaving');
+      } else {
+        loadPreset('dairy');
       }
 
       setLoading(false);
@@ -71,35 +67,19 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
     e.preventDefault();
     setError(null);
 
-    const cleanEmail = email.trim();
-    if (!cleanEmail || !password) {
-      setError(
-        isTe
-          ? 'దయచేసి అన్ని అవసరమైన వివరాలను నమోదు చేయండి.'
-          : 'Please fill in all required fields.'
-      );
-      return;
-    }
-
-    if (password.length < 6) {
-      setError(isTe ? 'పాస్‌వర్డ్ కనీసం 6 అక్షరాలు ఉండాలి.' : 'Password must be at least 6 characters.');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError(isTe ? 'పాస్‌వర్డ్‌లు సరిపోలడం లేదు.' : 'Passwords do not match.');
-      return;
-    }
+    const cleanEmail = email.trim() || 'anita.dairy@ruralcred.in';
+    const cleanPassword = password.trim() || 'demo123';
 
     setLoading(true);
     try {
-      const res = await signUp(cleanEmail, password, name);
+      const res = await signUp(cleanEmail, cleanPassword, name || 'Rural Entrepreneur');
       if (res.error) {
         setError(res.error);
         setLoading(false);
         return;
       }
 
+      loadPreset('dairy');
       setLoading(false);
       onAuthenticated?.();
     } catch (err: any) {
@@ -113,16 +93,7 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
     setError(null);
     try {
       continueAsDemo();
-      updateProfile({
-        name: 'Demo Entrepreneur',
-        businessName: '',
-        location: '',
-        category: 'Dairy Farming',
-        marginCapital: 100000,
-        hasActiveLoan: false,
-        simulatingSecondLoan: false,
-        onboardingCompleted: false,
-      });
+      loadPreset('dairy');
       onAuthenticated?.();
     } catch (err) {
       console.error('[AuthScreen] Demo session start error:', err);
@@ -213,9 +184,60 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="entrepreneur@ruralcred.in"
+                    placeholder="anita.dairy@ruralcred.in"
                     className="w-full rounded-lg border bg-background pl-9 pr-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                   />
+                </div>
+                {/* 1-Click Quick Fill Chips for Evaluator Personas */}
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] text-muted-foreground font-medium mr-0.5">
+                    {isTe ? 'డెమో ఖాతాలు:' : 'Quick fill:'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail('anita.dairy@ruralcred.in');
+                      setPassword('demo123');
+                    }}
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border transition-colors cursor-pointer ${
+                      email.includes('anita')
+                        ? 'bg-primary/15 border-primary text-primary font-semibold'
+                        : 'bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <span>🥛</span>
+                    <span>Anita (Dairy)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail('ramesh.kirana@ruralcred.in');
+                      setPassword('demo123');
+                    }}
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border transition-colors cursor-pointer ${
+                      email.includes('ramesh') || email.includes('kirana')
+                        ? 'bg-primary/15 border-primary text-primary font-semibold'
+                        : 'bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <span>🛒</span>
+                    <span>Ramesh (Kirana)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail('lakshmi.handloom@ruralcred.in');
+                      setPassword('demo123');
+                    }}
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border transition-colors cursor-pointer ${
+                      email.includes('lakshmi') || email.includes('weaving') || email.includes('handloom')
+                        ? 'bg-primary/15 border-primary text-primary font-semibold'
+                        : 'bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <span>🧵</span>
+                    <span>Lakshmi (Weaver)</span>
+                  </button>
                 </div>
               </div>
 

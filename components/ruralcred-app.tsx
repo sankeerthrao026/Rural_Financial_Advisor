@@ -570,12 +570,12 @@ function RuralCredAppInner() {
 
 function RuralCredAppGate() {
   const { user } = useAuth();
-  const { hasCompletedOnboarding } = useApp();
+  const { hasCompletedOnboarding, updateProfile } = useApp();
 
   // 1. User session exists (Demo mode or Authenticated)
   if (user) {
     if (!hasCompletedOnboarding) {
-      return <OnboardingScreen />;
+      return <OnboardingScreen onComplete={() => updateProfile({ onboardingCompleted: true })} />;
     }
     return <RuralCredAppInner />;
   }

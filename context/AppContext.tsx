@@ -15,6 +15,8 @@ import {
   addLogbookEntry,
   deleteLogbookEntry,
   INITIAL_DEMO_ENTRIES,
+  INITIAL_KIRANA_ENTRIES,
+  INITIAL_WEAVING_ENTRIES,
 } from '@/lib/firebase/logbook';
 
 import { useAuth } from './AuthContext';
@@ -111,54 +113,70 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Check Firestore profile if configured
+      let profileFound = false;
       if (isFirebaseConfigured && firestoreInstance && userId) {
         try {
           const userDocRef = doc(firestoreInstance, 'users', userId);
           const snap = await getDoc(userDocRef);
           if (snap.exists() && active) {
             setProfile(snap.data() as UserProfile);
+            profileFound = true;
           }
         } catch (e) {
           console.warn('Firestore profile fetch error:', e);
         }
-      } else if (typeof window !== 'undefined' && userId) {
-        const profileKey = `ruralcred_profile_${userId}`;
-        const savedProfile = localStorage.getItem(ACTIVE_PROFILE_KEY) || localStorage.getItem(profileKey);
-        if (savedProfile && active) {
+      }
+
+      if (!profileFound && typeof window !== 'undefined' && userId) {
+        // Priority 1: Check if userId or user.email directly maps to one of our preset personas
+        const lowerId = (userId || '').toLowerCase();
+        const lowerEmail = (user?.email || '').toLowerCase();
+
+        let presetProfile: UserProfile | null = null;
+        if (lowerId.includes('anita') || lowerEmail.includes('anita') || lowerEmail.includes('dairy')) {
+          presetProfile = { ...PRESET_PROFILES.dairy.profile, onboardingCompleted: true };
+        } else if (lowerId.includes('ramesh') || lowerEmail.includes('ramesh') || lowerEmail.includes('kirana')) {
+          presetProfile = { ...PRESET_PROFILES.kirana.profile, onboardingCompleted: true };
+        } else if (lowerId.includes('lakshmi') || lowerEmail.includes('lakshmi') || lowerEmail.includes('weaving') || lowerEmail.includes('handloom')) {
+          presetProfile = { ...PRESET_PROFILES.weaving.profile, onboardingCompleted: true };
+        }
+
+        if (presetProfile && active) {
+          setProfile(presetProfile);
           try {
-            setProfile(JSON.parse(savedProfile));
-          } catch (e) {}
-        } else if (user?.isDemo && active) {
-          if (user.id.includes('anita')) {
-            setProfile(PRESET_PROFILES.dairy.profile);
-          } else if (user.id.includes('ramesh')) {
-            setProfile(PRESET_PROFILES.kirana.profile);
-          } else if (user.id.includes('lakshmi')) {
-            setProfile(PRESET_PROFILES.weaving.profile);
-          } else {
-            setProfile({
-              name: user.name || 'Demo Entrepreneur',
-              businessName: '',
-              location: '',
+            localStorage.setItem(`ruralcred_profile_${userId}`, JSON.stringify(presetProfile));
+            localStorage.setItem(ACTIVE_PROFILE_KEY, JSON.stringify(presetProfile));
+          } catch {}
+        } else {
+          // Priority 2: Check user-specific or active saved profile
+          const profileKey = `ruralcred_profile_${userId}`;
+          const savedProfile = localStorage.getItem(profileKey) || localStorage.getItem(ACTIVE_PROFILE_KEY);
+          if (savedProfile && active) {
+            try {
+              const parsed = JSON.parse(savedProfile);
+              setProfile({
+                ...parsed,
+                location: parsed.location || 'Warangal, Telangana',
+                onboardingCompleted: true,
+              });
+            } catch (e) {}
+          } else if (active) {
+            const fallbackProfile: UserProfile = {
+              name: user?.name || user?.email?.split('@')[0] || 'Anita Sharma',
+              businessName: `${user?.name || 'Sharma'} Enterprises`,
+              location: 'Warangal, Telangana',
               category: 'Dairy Farming',
               marginCapital: 100000,
               hasActiveLoan: false,
               simulatingSecondLoan: false,
-              onboardingCompleted: false,
-            });
+              onboardingCompleted: true,
+            };
+            setProfile(fallbackProfile);
+            try {
+              localStorage.setItem(`ruralcred_profile_${userId}`, JSON.stringify(fallbackProfile));
+              localStorage.setItem(ACTIVE_PROFILE_KEY, JSON.stringify(fallbackProfile));
+            } catch {}
           }
-        } else if (user && !user.isDemo && active) {
-          // New registered user default profile
-          setProfile({
-            name: user.name || user.email.split('@')[0],
-            businessName: `${user.name || 'New'} Enterprise`,
-            location: '',
-            category: 'Dairy Farming',
-            marginCapital: 100000,
-            hasActiveLoan: false,
-            simulatingSecondLoan: false,
-            onboardingCompleted: false,
-          });
         }
       }
 
@@ -252,7 +270,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         simulatingSecondLoan: false,
         onboardingCompleted: true,
       });
-      resetEntriesToDefault();
+      setEntries(INITIAL_DEMO_ENTRIES);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`ruralcred_logbook_${userId}`, JSON.stringify(INITIAL_DEMO_ENTRIES));
+      }
     } else if (presetKey === 'weaving') {
       updateProfile({
         name: 'Lakshmi Devi',
@@ -264,7 +285,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         simulatingSecondLoan: false,
         onboardingCompleted: true,
       });
-      resetEntriesToDefault();
+      setEntries(INITIAL_WEAVING_ENTRIES);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`ruralcred_logbook_${userId}`, JSON.stringify(INITIAL_WEAVING_ENTRIES));
+      }
     } else if (presetKey === 'kirana') {
       updateProfile({
         name: 'Ramesh Kumar',
@@ -276,7 +300,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         simulatingSecondLoan: false,
         onboardingCompleted: true,
       });
-      resetEntriesToDefault();
+      setEntries(INITIAL_KIRANA_ENTRIES);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`ruralcred_logbook_${userId}`, JSON.stringify(INITIAL_KIRANA_ENTRIES));
+      }
     } else if (presetKey === 'risk_case') {
       // Over-leverage and negative cash flow risk simulation
       updateProfile({
