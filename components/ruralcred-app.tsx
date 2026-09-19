@@ -23,6 +23,8 @@ import {
   X,
   Mic,
   LogOut,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
@@ -477,7 +479,7 @@ function RuralCredAppInner() {
 }
 
 function RuralCredAppGate() {
-  const { user, loading } = useAuth();
+  const { user, loading, error, retryAuth, goToLogin } = useAuth();
   const { hasCompletedOnboarding } = useApp();
 
   if (loading) {
@@ -488,6 +490,27 @@ function RuralCredAppGate() {
         </div>
         <p className="text-sm font-bold font-sora text-foreground">RuralCred Advisor</p>
         <p className="text-xs text-muted-foreground mt-1">Connecting to authenticated session...</p>
+      </div>
+    );
+  }
+
+  if (error && !user) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 text-center">
+        <div className="size-12 rounded-2xl bg-destructive/10 text-destructive grid place-items-center shadow-xs mb-3">
+          <AlertCircle className="size-6" />
+        </div>
+        <p className="text-sm font-bold font-sora text-foreground">RuralCred Advisor</p>
+        <p className="text-xs text-destructive mt-1 max-w-sm font-medium">{error}</p>
+        <div className="flex items-center gap-2 mt-5">
+          <Button variant="outline" size="sm" onClick={() => retryAuth()}>
+            <RefreshCw className="size-3.5 mr-1.5" />
+            Retry
+          </Button>
+          <Button size="sm" onClick={() => goToLogin()}>
+            Go to Login
+          </Button>
+        </div>
       </div>
     );
   }
