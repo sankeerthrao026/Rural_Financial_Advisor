@@ -20,6 +20,11 @@ export interface DetectedRisk {
     previousNetCashFlow?: number;
     hasActiveLoan?: boolean;
     simulatingSecondLoan?: boolean;
+    previousNet?: number;
+    currentNet?: number;
+    dropPercentage?: number;
+    deficit?: number;
+    [key: string]: any;
   };
 }
 
@@ -79,23 +84,27 @@ export function evaluateFinancialRisks(input: RiskEvaluationInput): DetectedRisk
     });
   }
 
-  // Rule 3: Net cash flow is trending downward
+  // Rule 3: Downward Net Cash Flow Trend (>30% drop from prior cycle)
   if (
     typeof input.previousNetCashFlow === 'number' &&
-    input.netCashFlow < input.previousNetCashFlow &&
-    input.netCashFlow >= 0
+    input.previousNetCashFlow > 0 &&
+    input.netCashFlow < input.previousNetCashFlow * 0.70
   ) {
+    const dropPct = Math.round(
+      ((input.previousNetCashFlow - input.netCashFlow) / input.previousNetCashFlow) * 100
+    );
     risks.push({
       riskType: 'downward_profit_trend',
       severity: 'warning',
       ruleCode: 'RULE_3',
       title: 'Downward Cash Flow Trend',
-      titleTe: 'తగ్గుతున్న నగదు నిల్వల హెచ్చరిక',
-      reason: `Latest net cash flow (₹${input.netCashFlow.toLocaleString('en-IN')}) is lower than the previous period (₹${input.previousNetCashFlow.toLocaleString('en-IN')}).`,
-      reasonTe: `గత కాలంతో పోలిస్తే ప్రస్తుత కాలంలో నికర లాభాలు తగ్గుముఖం పట్టాయి.`,
+      titleTe: 'నగదు ప్రవాహం క్షీణత (Rule 3)',
+      reason: `Net monthly cash flow dropped by ${dropPct}% compared to prior interval (from ₹${input.previousNetCashFlow.toLocaleString('en-IN')} to ₹${input.netCashFlow.toLocaleString('en-IN')}).`,
+      reasonTe: `గత నెలతో పోలిస్తే నికర నగదు ప్రవాహం ${dropPct}% తగ్గింది.`,
       metrics: {
-        netCashFlow: input.netCashFlow,
-        previousNetCashFlow: input.previousNetCashFlow,
+        previousNet: input.previousNetCashFlow,
+        currentNet: input.netCashFlow,
+        dropPercentage: dropPct,
       },
     });
   }

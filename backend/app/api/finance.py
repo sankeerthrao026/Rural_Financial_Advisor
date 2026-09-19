@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import APIRouter, Depends
 from app.auth import get_auth_context, AuthContext
 from app.models.schemas import FinanceCalculateRequest, FinancePlanResponse, FinancialHealthResponse
@@ -22,12 +23,29 @@ def get_user_finance(auth: AuthContext = Depends(get_auth_context)):
     return calculate_finance_plan(margin_capital)
 
 @router.get("/health-score", response_model=FinancialHealthResponse)
-def get_health_score(auth: AuthContext = Depends(get_auth_context)):
-    entries = logbook_service.get_entries(auth.user_id)
-    aggs = logbook_service.calculate_aggregates(entries)
+def get_health_score(
+    totalIncome: Optional[float] = None,
+    totalExpenses: Optional[float] = None,
+    entryCount: Optional[int] = None,
+    hasDownwardTrend: Optional[bool] = None,
+    auth: AuthContext = Depends(get_auth_context)
+):
+    if totalIncome is not None and totalExpenses is not None:
+        inc = float(totalIncome)
+        exp = float(totalExpenses)
+        count = int(entryCount) if entryCount is not None else 6
+        downward = bool(hasDownwardTrend) if hasDownwardTrend is not None else (inc - exp < 15000 and inc > 0)
+    else:
+        entries = logbook_service.get_entries(auth.user_id)
+        aggs = logbook_service.calculate_aggregates(entries)
+        inc = aggs["totalIncome"]
+        exp = aggs["totalExpenses"]
+        count = len(entries)
+        downward = aggs["netCashFlow"] < 15000 and aggs["totalIncome"] > 0
+
     return calculate_financial_health(
-        total_income=aggs["totalIncome"],
-        total_expenses=aggs["totalExpenses"],
-        entry_count=len(entries),
-        has_downward_trend=aggs["netCashFlow"] < 15000 and aggs["totalIncome"] > 0,
+        total_income=inc,
+        total_expenses=exp,
+        entry_count=count,
+        has_downward_trend=downward,
     )

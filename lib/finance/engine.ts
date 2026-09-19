@@ -201,30 +201,28 @@ export function calculateFinancialHealthScore(params: {
 
   // 1. Logging Consistency (Weight 30%)
   let loggingScore = 40;
-  if (entryCount >= 10) loggingScore = 95;
-  else if (entryCount >= 5) loggingScore = 80;
+  if (entryCount >= 10) loggingScore = 100;
+  else if (entryCount >= 5) loggingScore = 85;
   else if (entryCount >= 2) loggingScore = 65;
 
-  // 2. Profit Trend (Weight 40%)
-  const netCashFlow = totalIncome - totalExpenses;
-  const margin = totalIncome > 0 ? netCashFlow / totalIncome : 0;
-  let profitTrendScore = 50;
-
-  if (margin > 0.25 && !hasDownwardTrend) profitTrendScore = 95;
-  else if (margin > 0.10 && !hasDownwardTrend) profitTrendScore = 85;
-  else if (margin >= 0 && !hasDownwardTrend) profitTrendScore = 70;
-  else if (hasDownwardTrend && margin >= 0) profitTrendScore = 55;
-  else profitTrendScore = 25; // Negative cash flow
-
-  // 3. Expense-to-Income Ratio (Weight 30%)
-  const expenseRatio = totalIncome > 0 ? totalExpenses / totalIncome : 1.0;
+  // 2. Expense-to-Income Ratio (Weight 30%)
   let expenseRatioScore = 30;
+  if (totalIncome > 0) {
+    const ratio = totalExpenses / totalIncome;
+    if (ratio <= 0.40) expenseRatioScore = 100;
+    else if (ratio <= 0.60) expenseRatioScore = 85;
+    else if (ratio <= 0.80) expenseRatioScore = 70;
+    else if (ratio <= 1.00) expenseRatioScore = 50;
+    else expenseRatioScore = 25;
+  }
 
-  if (expenseRatio <= 0.60) expenseRatioScore = 95;
-  else if (expenseRatio <= 0.75) expenseRatioScore = 80;
-  else if (expenseRatio <= 0.90) expenseRatioScore = 65;
-  else if (expenseRatio <= 1.00) expenseRatioScore = 45;
-  else expenseRatioScore = 20;
+  // 3. Profit Trend (Weight 40%)
+  const net = totalIncome - totalExpenses;
+  let profitTrendScore = 25;
+  if (net > 0 && !hasDownwardTrend) profitTrendScore = 95;
+  else if (net > 0 && hasDownwardTrend) profitTrendScore = 70;
+  else if (net === 0) profitTrendScore = 50;
+  else profitTrendScore = 25;
 
   // Weighted aggregate
   const rawScore =
@@ -232,20 +230,20 @@ export function calculateFinancialHealthScore(params: {
   const score = Math.min(100, Math.max(0, Math.round(rawScore)));
 
   let status: 'excellent' | 'steady' | 'needs_attention' = 'steady';
-  let statusTe = 'స్థిరంగా ఉంది';
-  let summary = 'Your business cash flow is stable with positive operating margin.';
-  let summaryTe = 'మీ వ్యాపార నగదు ప్రవాహం సానుకూల లాభాల మార్జిన్‌తో స్థిరంగా ఉంది.';
+  let statusTe = 'స్థిరమైన ఆర్థిక స్థితి (Steady)';
+  let summary = 'Predictable revenue with balanced operating expenses. Capable of debt servicing.';
+  let summaryTe = 'స్థిరమైన రాబడి మరియు నియంత్రిత ఖర్చులు. సాధారణ రుణ వాయిదాలను చెల్లించగలరు.';
 
   if (score >= 80) {
     status = 'excellent';
-    statusTe = 'అత్యుత్తమంగా ఉంది';
-    summary = 'Strong financial discipline. Consistent records and healthy margin qualify you for priority scheme approvals.';
-    summaryTe = 'గొప్ప ఆర్థిక క్రమశిక్షణ. క్రమబద్ధమైన రికార్డులు మరియు ఆరోగ్యకరమైన మార్జిన్ రుణ మంజూరుకు సహాయపడతాయి.';
-  } else if (score < 50) {
+    statusTe = 'ఉత్తమ ఆర్థిక ఆరోగ్యం (Excellent)';
+    summary = 'Strong operating cash buffer with high savings margin. High loan repayment capacity.';
+    summaryTe = 'బలమైన నికర నగదు ప్రవాహం మరియు అద్భుతమైన రుణ చెల్లింపు సామర్థ్యం.';
+  } else if (score < 60) {
     status = 'needs_attention';
-    statusTe = 'శ్రద్ధ వహించాలి';
-    summary = 'High expense ratio or negative cash flow detected. Focus on lowering operating costs before expanding.';
-    summaryTe = 'అధిక ఖర్చులు లేదా ప్రతికూల నగదు ప్రవాహం ఉంది. వ్యాపార విస్తరణకు ముందు ఖర్చులను తగ్గించుకోవడం ముఖ్యం.';
+    statusTe = 'జాగ్రత్త అవసరం (Caution)';
+    summary = 'Operating cash buffer is limited or expenses are near receipts. Tighten liquidity before borrowing.';
+    summaryTe = 'నగదు నిల్వలు తక్కువగా ఉన్నాయి లేదా ఖర్చులు ఎక్కువగా ఉన్నాయి. అప్పు తీసుకునే ముందు జాగ్రత్త పడండి.';
   }
 
   return {
@@ -259,20 +257,20 @@ export function calculateFinancialHealthScore(params: {
     summaryTe,
     breakdown: [
       {
-        label: 'Logging Consistency',
-        labelTe: 'లాగ్‌బుక్ నిర్వహణ క్రమం',
+        label: 'Digital Logging Habit',
+        labelTe: 'లాగ్‌బుక్ నిర్వహణ క్రమబద్ధత (30%)',
         weight: '30%',
         score: loggingScore,
       },
       {
-        label: 'Profit Trend & Margin',
-        labelTe: 'లాభాల వృద్ధి ధోరణి',
+        label: 'Net Operating Profitability',
+        labelTe: 'నికర లాభదాయకత ధోరణి (40%)',
         weight: '40%',
         score: profitTrendScore,
       },
       {
-        label: 'Expense-to-Income Control',
-        labelTe: 'ఖర్చులు-ఆదాయ నియంత్రణ',
+        label: 'Expense-to-Income Discipline',
+        labelTe: 'ఆదాయం-ఖర్చుల నిష్పత్తి (30%)',
         weight: '30%',
         score: expenseRatioScore,
       },

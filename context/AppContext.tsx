@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { Language, getDictionary } from '@/lib/i18n';
 import {
   calculateFinancePlan,
@@ -22,6 +22,9 @@ import { firestoreInstance, isFirebaseConfigured } from '@/lib/firebase/config';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { PRESET_PROFILES, ACTIVE_PROFILE_KEY } from '@/lib/demo-session';
 import { getTodayDisplayDate } from '@/lib/utils/date';
+import { apiClient } from '@/lib/api/client';
+
+export type BackendConnectionMode = 'backend' | 'local_fallback' | 'checking';
 
 export interface UserProfile {
   name: string;
@@ -59,6 +62,13 @@ export interface AppContextType {
   healthScore: FinancialHealthScoreResult;
   detectedRisks: DetectedRisk[];
   dictionary: ReturnType<typeof getDictionary>;
+
+  // Backend Connection Mode (FastAPI vs Local Fallback)
+  backendMode: BackendConnectionMode;
+  isBackendOnline: boolean;
+  backendLoading: boolean;
+  backendError: string | null;
+  refreshBackendData: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -284,11 +294,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Deterministic Financial Calculation
-  const finance = useMemo(() => {
-    return calculateFinancePlan(profile.marginCapital);
-  }, [profile.marginCapital]);
-
   // Aggregate Logbook Totals
   const { totalIncome, totalExpenses, netCashFlow } = useMemo(() => {
     let inc = 0;
@@ -300,8 +305,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return { totalIncome: inc, totalExpenses: exp, netCashFlow: inc - exp };
   }, [entries]);
 
-  // Deterministic Financial Health Score
-  const healthScore = useMemo(() => {
+  // Baseline Local Fallback Calculations (Synchronous & resilient ground-truth mirror)
+  const localFinance = useMemo(() => {
+    return calculateFinancePlan(profile.marginCapital);
+  }, [profile.marginCapital]);
+
+  const localHealthScore = useMemo(() => {
     return calculateFinancialHealthScore({
       totalIncome,
       totalExpenses,
@@ -310,8 +319,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, [totalIncome, totalExpenses, entries.length, netCashFlow]);
 
-  // Deterministic Risk Engine Evaluation
-  const detectedRisks = useMemo(() => {
+  const localDetectedRisks = useMemo(() => {
     return evaluateFinancialRisks({
       hasActiveLoan: profile.hasActiveLoan,
       simulatingSecondLoan: profile.simulatingSecondLoan,
@@ -321,6 +329,155 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       previousNetCashFlow: 35000,
     });
   }, [profile.hasActiveLoan, profile.simulatingSecondLoan, totalIncome, totalExpenses, netCashFlow]);
+
+  // Active States: Source of truth defaults to local fallback on mount, then updates from FastAPI backend
+  const [finance, setFinance] = useState<FinanceAnalysisResult>(localFinance);
+  const [healthScore, setHealthScore] = useState<FinancialHealthScoreResult>(localHealthScore);
+  const [detectedRisks, setDetectedRisks] = useState<DetectedRisk[]>(localDetectedRisks);
+  const [backendMode, setBackendMode] = useState<BackendConnectionMode>('checking');
+  const [backendLoading, setBackendLoading] = useState<boolean>(false);
+  const [backendError, setBackendError] = useState<string | null>(null);
+
+  // Keep local fallback synced if in local_fallback mode
+  useEffect(() => {
+    if (backendMode === 'local_fallback') {
+      setFinance(localFinance);
+      setHealthScore(localHealthScore);
+      setDetectedRisks(localDetectedRisks);
+    }
+  }, [localFinance, localHealthScore, localDetectedRisks, backendMode]);
+
+  // Asynchronously query FastAPI backend
+  const refreshBackendData = useCallback(async () => {
+    setBackendLoading(true);
+    try {
+      // 1. Finance calculation
+      const financePromise = apiClient.calculateFinance(profile.marginCapital);
+
+      // 2. Risk analysis
+      const riskPromise = apiClient.analyzeRisk({
+        hasActiveLoan: profile.hasActiveLoan,
+        simulatingSecondLoan: profile.simulatingSecondLoan,
+        totalIncome,
+        totalExpenses,
+        netCashFlow,
+        previousNetCashFlow: 35000,
+      });
+
+      // 3. Health score
+      const healthPromise = apiClient.getHealthScore(userId, {
+        totalIncome,
+        totalExpenses,
+        entryCount: entries.length,
+        hasDownwardTrend: netCashFlow < 15000 && totalIncome > 0,
+      });
+
+      const [financeRes, riskRes, healthRes] = await Promise.all([
+        financePromise,
+        riskPromise,
+        healthPromise,
+      ]);
+
+      if (financeRes.success && financeRes.data) {
+        // FastAPI Backend is LIVE! Use it as single source of truth
+        const bData = financeRes.data;
+        setFinance({
+          ...bData,
+          marginPercentage: Math.round((bData.marginCapital / bData.projectCost) * 100) || 10,
+          loanPercentage: Math.round((bData.loanAmount / bData.projectCost) * 100) || 90,
+          scheme: {
+            ...bData.scheme,
+            id: bData.scheme.id as 'micro-finance' | 'term-loan',
+          },
+        });
+
+        if (riskRes.success && riskRes.data) {
+          setDetectedRisks(riskRes.data.detectedRisks);
+        } else {
+          setDetectedRisks(localDetectedRisks);
+        }
+
+        if (healthRes.success && healthRes.data) {
+          const bHealth = healthRes.data;
+          setHealthScore({
+            score: bHealth.score,
+            status: bHealth.status === 'caution' ? 'needs_attention' : bHealth.status,
+            statusTe: bHealth.statusTe,
+            summary: bHealth.summary,
+            summaryTe: bHealth.summaryTe,
+            loggingScore: bHealth.breakdown.find((b) => b.metric.includes('Logging'))?.score ?? 80,
+            profitTrendScore: bHealth.breakdown.find((b) => b.metric.includes('Profit'))?.score ?? 85,
+            expenseRatioScore: bHealth.breakdown.find((b) => b.metric.includes('Expense'))?.score ?? 70,
+            breakdown: bHealth.breakdown.map((b) => ({
+              label: b.label,
+              labelTe: b.labelTe,
+              weight: b.weight,
+              score: b.score,
+            })),
+          });
+        } else {
+          setHealthScore(localHealthScore);
+        }
+
+        setBackendMode('backend');
+        setBackendError(null);
+      } else {
+        // Backend returned failure or unreachable -> fallback to local calculation
+        setFinance(localFinance);
+        setHealthScore(localHealthScore);
+        setDetectedRisks(localDetectedRisks);
+        setBackendMode('local_fallback');
+        setBackendError(financeRes.error || 'FastAPI backend server offline');
+      }
+    } catch (err: any) {
+      setFinance(localFinance);
+      setHealthScore(localHealthScore);
+      setDetectedRisks(localDetectedRisks);
+      setBackendMode('local_fallback');
+      setBackendError(err?.message || 'FastAPI backend connection error');
+    } finally {
+      setBackendLoading(false);
+    }
+  }, [
+    profile.marginCapital,
+    profile.hasActiveLoan,
+    profile.simulatingSecondLoan,
+    totalIncome,
+    totalExpenses,
+    netCashFlow,
+    entries.length,
+    userId,
+    localFinance,
+    localHealthScore,
+    localDetectedRisks,
+  ]);
+
+  // Fetch from FastAPI backend whenever calculation inputs change
+  useEffect(() => {
+    let isSubscribed = true;
+    refreshBackendData();
+
+    // Auto-reconnect periodic check: ping health every 15s to switch back to backend if it turns online
+    const interval = setInterval(async () => {
+      if (!isSubscribed) return;
+      const health = await apiClient.checkHealth(2000);
+      if (health.success) {
+        if (backendMode !== 'backend') {
+          refreshBackendData();
+        }
+      } else {
+        if (backendMode === 'backend') {
+          setBackendMode('local_fallback');
+          setBackendError('FastAPI backend became unreachable');
+        }
+      }
+    }, 15000);
+
+    return () => {
+      isSubscribed = false;
+      clearInterval(interval);
+    };
+  }, [refreshBackendData, backendMode]);
 
   const dictionary = useMemo(() => getDictionary(language), [language]);
 
@@ -347,6 +504,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         healthScore,
         detectedRisks,
         dictionary,
+        backendMode,
+        isBackendOnline: backendMode === 'backend',
+        backendLoading,
+        backendError,
+        refreshBackendData,
       }}
     >
       {children}

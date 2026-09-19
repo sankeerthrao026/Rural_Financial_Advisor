@@ -21,10 +21,11 @@ import {
   ArrowRight,
   BadgePercent,
   Wallet,
+  RefreshCw,
 } from 'lucide-react';
 
 export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) => void }) {
-  const { finance, healthScore, language, dictionary, profile } = useApp();
+  const { finance, healthScore, language, dictionary, profile, backendMode, backendLoading } = useApp();
   const t = dictionary.finance;
   const isTe = language === 'te';
 
@@ -53,9 +54,19 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
               {t.workflowSubtitle}
             </p>
           </div>
-          <span className="text-[11px] font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full">
-            {isTe ? 'నియమాధారితం' : '100% Invariant'}
-          </span>
+          <div className="flex items-center gap-2">
+            {backendLoading && (
+              <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                <RefreshCw className="size-2.5 animate-spin text-primary" />
+                <span className="hidden sm:inline">Syncing...</span>
+              </span>
+            )}
+            <span className="text-[11px] font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full">
+              {backendMode === 'backend'
+                ? (isTe ? 'ఫాస్ట్‌ఏపీఐ ఇంజిన్' : 'FastAPI Source of Truth')
+                : (isTe ? 'లోకల్ ఇంజిన్' : 'Local Engine')}
+            </span>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">

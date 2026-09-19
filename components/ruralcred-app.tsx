@@ -380,7 +380,16 @@ function MainContent({ active, setActive }: { active: string; setActive: (value:
 function RuralCredAppInner() {
   const [active, setActive] = useState('Overview');
   const [open, setOpen] = useState(false);
-  const { language, setLanguage, profile, detectedRisks, dictionary } = useApp();
+  const {
+    language,
+    setLanguage,
+    profile,
+    detectedRisks,
+    dictionary,
+    backendMode,
+    backendLoading,
+    refreshBackendData,
+  } = useApp();
   const { signOut, exitDemo, isDemo } = useAuth();
   const isTe = language === 'te';
 
@@ -435,6 +444,36 @@ function RuralCredAppInner() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* FastAPI Backend Connection Mode Indicator */}
+            {backendMode === 'backend' ? (
+              <div
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[11px] font-semibold border border-emerald-500/20 shadow-2xs"
+                title="FastAPI Backend Live: Using Python server as source of truth"
+              >
+                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="hidden md:inline">FastAPI Live</span>
+                <span className="md:hidden">FastAPI</span>
+              </div>
+            ) : (
+              <div
+                className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/10 text-amber-800 dark:text-amber-300 text-[11px] font-semibold border border-amber-500/20 shadow-2xs"
+                title="Offline / Local Calculation Mode: FastAPI server unreachable. Resilient local engine active."
+              >
+                <span className="size-1.5 rounded-full bg-amber-500" />
+                <span className="hidden md:inline">{isTe ? 'ఆఫ్‌లైన్ మోడ్' : 'Offline Mode'}</span>
+                <span className="md:hidden">Local</span>
+                <button
+                  type="button"
+                  onClick={() => refreshBackendData()}
+                  className="ml-0.5 text-amber-700 dark:text-amber-300 hover:text-amber-950 dark:hover:text-amber-100 cursor-pointer p-0.5"
+                  title="Retry FastAPI connection"
+                  disabled={backendLoading}
+                >
+                  <RefreshCw className={`size-2.5 ${backendLoading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+            )}
+
             {/* Demo Mode Indicator (Requirement 10) */}
             {isDemo && (
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[11px] font-semibold border border-amber-500/20 shadow-2xs">

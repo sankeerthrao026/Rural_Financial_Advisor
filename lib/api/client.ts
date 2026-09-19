@@ -1,15 +1,131 @@
 /**
- * RuralCred Advisor — Next.js API Client for Python FastAPI Backend.
+ * RuralCred Advisor — Next.js Typed API Client for Python FastAPI Backend.
+ * Connects frontend views to FastAPI as the primary source of truth.
+ * Handles timeouts, network errors, and offline fallbacks gracefully without unhandled exceptions.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || (typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:8000/api` : 'http://127.0.0.1:8000/api');
+import { DetectedRisk } from '@/lib/risk/engine';
 
-async function fetchJson<T>(
+export interface SchemeDetails {
+  id: string;
+  name: string;
+  nameTe: string;
+  agency: string;
+  interestRateAnnual: number;
+  tenureYears: number;
+  moratoriumMonths: number;
+  maxProjectCost: number;
+  repaymentFrequency?: string;
+}
+
+export interface AmortizationRow {
+  quarter: number;
+  isMoratorium: boolean;
+  startingPrincipal: number;
+  principalPaid: number;
+  interestPaid: number;
+  totalPayment: number;
+  remainingBalance: number;
+}
+
+export interface FinanceCalculateRequest {
+  marginCapital: number;
+}
+
+export interface FinancePlanResponse {
+  marginCapital: number;
+  projectCost: number;
+  loanAmount: number;
+  scheme: SchemeDetails;
+  quarterlyEmi: number;
+  totalQuarters: number;
+  moratoriumQuarters: number;
+  repaymentQuarters: number;
+  totalInterestPaid: number;
+  totalRepayment: number;
+  amortizationSchedule: AmortizationRow[];
+}
+
+export interface MetricBreakdown {
+  metric: string;
+  score: number;
+  weight: string;
+  label: string;
+  labelTe: string;
+}
+
+export interface FinancialHealthResponse {
+  score: number;
+  status: 'excellent' | 'steady' | 'caution';
+  statusTe: string;
+  summary: string;
+  summaryTe: string;
+  breakdown: MetricBreakdown[];
+}
+
+export interface RiskAnalysisRequest {
+  hasActiveLoan: boolean;
+  simulatingSecondLoan: boolean;
+  totalIncome: number;
+  totalExpenses: number;
+  netCashFlow: number;
+  previousNetCashFlow?: number;
+}
+
+export interface RiskAnalysisResponse {
+  detectedRisks: DetectedRisk[];
+  isSafe: boolean;
+  activeCount: number;
+}
+
+export interface HealthResponse {
+  status: string;
+  service: string;
+  version: string;
+  chromadb_connected: boolean;
+  gemini_configured: boolean;
+}
+
+export interface ApiResult<T> {
+  success: boolean;
+  data: T | null;
+  error?: string;
+  statusCode?: number;
+  isOffline?: boolean;
+}
+
+/**
+ * Resolves the backend base URL dynamically from NEXT_PUBLIC_API_BASE_URL
+ * or falls back to port 8000 on the current browser host.
+ */
+export function getApiBaseUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (envUrl && envUrl.trim()) {
+    return envUrl.trim().replace(/\/+$/, '');
+  }
+  if (typeof window !== 'undefined') {
+    return `${window.location.protocol}//${window.location.hostname}:8000/api`;
+  }
+  return 'http://127.0.0.1:8000/api';
+}
+
+/**
+ * Robust fetch wrapper with timeout (default 3500ms) and comprehensive error interception.
+ * Never throws unhandled exceptions; returns a strongly typed ApiResult<T>.
+ */
+async function requestJson<T>(
   endpoint: string,
   options: RequestInit = {},
-  userId?: string
-): Promise<T> {
-  const url = `${API_BASE}${endpoint}`;
+  userId?: string,
+  timeoutMs: number = 3500
+): Promise<ApiResult<T>> {
+  const base = getApiBaseUrl();
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = `${base}${cleanEndpoint}`;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
@@ -20,107 +136,148 @@ async function fetchJson<T>(
     headers['X-Auth-Mode'] = userId.startsWith('demo') ? 'demo' : 'authenticated';
   }
 
-  const res = await fetch(url, {
-    ...options,
-    headers,
-  });
+  try {
+    const res = await fetch(url, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
 
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`API error ${res.status}: ${errorText}`);
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => '');
+      return {
+        success: false,
+        data: null,
+        error: `HTTP ${res.status}: ${errorText || res.statusText}`,
+        statusCode: res.status,
+        isOffline: false,
+      };
+    }
+
+    const data = (await res.json()) as T;
+    return {
+      success: true,
+      data,
+      statusCode: res.status,
+      isOffline: false,
+    };
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    const isTimeout = err?.name === 'AbortError';
+    return {
+      success: false,
+      data: null,
+      error: isTimeout ? 'Request timed out after 3.5s' : (err?.message || 'Network connection failed'),
+      isOffline: true,
+    };
   }
-
-  return res.json();
 }
 
 export const apiClient = {
-  // Health
-  checkHealth: async () => {
-    return fetchJson<{
-      status: string;
-      service: string;
-      version: string;
-      chromadb_connected: boolean;
-      gemini_configured: boolean;
-    }>('/health');
+  // 1. Health & Status
+  checkHealth: async (timeoutMs: number = 2500): Promise<ApiResult<HealthResponse>> => {
+    return requestJson<HealthResponse>('/health', {}, undefined, timeoutMs);
   },
 
-  // Profile
-  getProfile: async (userId: string) => {
-    return fetchJson<any>('/profile', {}, userId);
-  },
-  updateProfile: async (userId: string, data: any) => {
-    return fetchJson<any>('/profile', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }, userId);
-  },
-
-  // Finance Engine
-  calculateFinance: async (marginCapital: number) => {
-    return fetchJson<any>('/finance/calculate', {
+  // 2. Deterministic Finance Engine
+  calculateFinance: async (marginCapital: number): Promise<ApiResult<FinancePlanResponse>> => {
+    return requestJson<FinancePlanResponse>('/finance/calculate', {
       method: 'POST',
       body: JSON.stringify({ marginCapital }),
     });
   },
-  getUserFinance: async (userId: string) => {
-    return fetchJson<any>('/finance', {}, userId);
-  },
-  getHealthScore: async (userId: string) => {
-    return fetchJson<any>('/finance/health-score', {}, userId);
+
+  getUserFinance: async (userId: string): Promise<ApiResult<FinancePlanResponse>> => {
+    return requestJson<FinancePlanResponse>('/finance', {}, userId);
   },
 
-  // Risk Engine
-  analyzeRisk: async (req: {
-    hasActiveLoan: boolean;
-    simulatingSecondLoan: boolean;
-    totalIncome: number;
-    totalExpenses: number;
-    netCashFlow: number;
-    previousNetCashFlow?: number;
-  }) => {
-    return fetchJson<any>('/risk/analyze', {
+  getHealthScore: async (
+    userId?: string,
+    params?: {
+      totalIncome?: number;
+      totalExpenses?: number;
+      entryCount?: number;
+      hasDownwardTrend?: boolean;
+    }
+  ): Promise<ApiResult<FinancialHealthResponse>> => {
+    let endpoint = '/finance/health-score';
+    if (params) {
+      const q = new URLSearchParams();
+      if (params.totalIncome !== undefined) q.set('totalIncome', params.totalIncome.toString());
+      if (params.totalExpenses !== undefined) q.set('totalExpenses', params.totalExpenses.toString());
+      if (params.entryCount !== undefined) q.set('entryCount', params.entryCount.toString());
+      if (params.hasDownwardTrend !== undefined) q.set('hasDownwardTrend', params.hasDownwardTrend.toString());
+      const qs = q.toString();
+      if (qs) endpoint += `?${qs}`;
+    }
+    return requestJson<FinancialHealthResponse>(endpoint, {}, userId);
+  },
+
+  // 3. Deterministic Risk Engine
+  analyzeRisk: async (req: RiskAnalysisRequest): Promise<ApiResult<RiskAnalysisResponse>> => {
+    return requestJson<RiskAnalysisResponse>('/risk/analyze', {
       method: 'POST',
       body: JSON.stringify(req),
     });
   },
 
-  // Dashboard
-  getDashboard: async (userId: string) => {
-    return fetchJson<any>('/dashboard', {}, userId);
+  // 4. User Profile
+  getProfile: async (userId: string): Promise<ApiResult<any>> => {
+    return requestJson<any>('/profile', {}, userId);
   },
 
-  // Logbook
-  getLogbook: async (userId: string) => {
-    return fetchJson<any[]>('/logbook', {}, userId);
+  updateProfile: async (userId: string, data: any): Promise<ApiResult<any>> => {
+    return requestJson<any>('/profile', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, userId);
   },
-  createLogbookEntry: async (userId: string, entry: {
-    date: string;
-    amount: number;
-    type: 'income' | 'expense';
-    category: string;
-    note: string;
-  }) => {
-    return fetchJson<any>('/logbook', {
+
+  // 5. Dashboard Aggregates
+  getDashboard: async (userId: string): Promise<ApiResult<any>> => {
+    return requestJson<any>('/dashboard', {}, userId);
+  },
+
+  // 6. Logbook Transactions
+  getLogbook: async (userId: string): Promise<ApiResult<any[]>> => {
+    return requestJson<any[]>('/logbook', {}, userId);
+  },
+
+  createLogbookEntry: async (
+    userId: string,
+    entry: {
+      date: string;
+      amount: number;
+      type: 'income' | 'expense';
+      category: string;
+      note: string;
+    }
+  ): Promise<ApiResult<any>> => {
+    return requestJson<any>('/logbook', {
       method: 'POST',
       body: JSON.stringify(entry),
     }, userId);
   },
-  deleteLogbookEntry: async (userId: string, entryId: string) => {
-    return fetchJson<{ success: boolean; deletedId: string }>(`/logbook/${entryId}`, {
+
+  deleteLogbookEntry: async (
+    userId: string,
+    entryId: string
+  ): Promise<ApiResult<{ success: boolean; deletedId: string }>> => {
+    return requestJson<{ success: boolean; deletedId: string }>(`/logbook/${entryId}`, {
       method: 'DELETE',
     }, userId);
   },
 
-  // Business Advisor RAG
+  // 7. Business Advisor RAG
   analyzeAdvisor: async (req: {
     location: string;
     category: string;
     marginCapital: number;
     language: string;
     userQuery?: string;
-  }) => {
-    return fetchJson<any>('/advisor/analyze', {
+  }): Promise<ApiResult<any>> => {
+    return requestJson<any>('/advisor/analyze', {
       method: 'POST',
       body: JSON.stringify(req),
     });
