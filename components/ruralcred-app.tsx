@@ -29,7 +29,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { AppProvider, useApp } from '@/context/AppContext';
-import { WelcomeScreen } from './auth/WelcomeScreen';
 import { AuthScreen } from './auth/AuthScreen';
 import { OverviewScreen } from './screens/OverviewScreen';
 import { BusinessProfileScreen } from './screens/BusinessProfileScreen';
@@ -512,7 +511,6 @@ function RuralCredAppInner() {
 function RuralCredAppGate() {
   const { user } = useAuth();
   const { hasCompletedOnboarding } = useApp();
-  const [showAuthModal, setShowAuthModal] = useState(false);
 
   // 1. User session exists (Demo mode or Authenticated)
   if (user) {
@@ -522,18 +520,9 @@ function RuralCredAppGate() {
     return <RuralCredAppInner />;
   }
 
-  // 2. Optional Sign In screen requested
-  if (showAuthModal) {
-    return (
-      <AuthScreen
-        onBack={() => setShowAuthModal(false)}
-        onAuthenticated={() => setShowAuthModal(false)}
-      />
-    );
-  }
-
-  // 3. Default frictionless startup: Welcome / Entry Screen
-  return <WelcomeScreen onOpenAuth={() => setShowAuthModal(true)} />;
+  // 2. REQUIRED FIRST SCREEN: Immediately render Login Interface
+  // Zero loading screens, no "Connecting to authenticated session...", no waiting!
+  return <AuthScreen />;
 }
 
 export function RuralCredApp() {
