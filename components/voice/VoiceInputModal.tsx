@@ -145,7 +145,7 @@ export function VoiceInputModal({
           onProcessing: () => {
             setState('processing');
           },
-          onResult: async (transcribedText, structured) => {
+          onResult: async (transcribedText: string, structured?: any) => {
             stopTimer();
             setTranscript(transcribedText);
             setState('processing');
@@ -165,7 +165,7 @@ export function VoiceInputModal({
               setState('success');
             }
           },
-          onError: (err) => {
+          onError: (err: any) => {
             stopTimer();
             setErrorMessage(err?.message || 'Fallback audio recording failed.');
             setState('error');

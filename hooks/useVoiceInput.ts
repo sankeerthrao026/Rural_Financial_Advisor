@@ -7,6 +7,7 @@ import {
   startSpeechListening,
   stopActiveSpeechRecognition,
   SpeechController,
+  VoiceLanguage,
 } from '@/lib/voice/speech';
 
 export type VoiceStatus = 'idle' | 'listening' | 'processing' | 'success' | 'error';
@@ -15,12 +16,12 @@ export interface UseVoiceInputOptions {
   onResult?: (transcript: string, isFinal: boolean) => void;
   onError?: (error: string) => void;
   onEnd?: () => void;
-  targetLanguage?: 'en' | 'te';
+  targetLanguage?: VoiceLanguage;
 }
 
 export function useVoiceInput(options?: UseVoiceInputOptions) {
   const { language: appLanguage } = useApp();
-  const currentLanguage = options?.targetLanguage || appLanguage || 'en';
+  const currentLanguage = (options?.targetLanguage || appLanguage || 'en') as VoiceLanguage;
 
   const [isSupported, setIsSupported] = useState(false);
   const [status, setStatus] = useState<VoiceStatus>('idle');
