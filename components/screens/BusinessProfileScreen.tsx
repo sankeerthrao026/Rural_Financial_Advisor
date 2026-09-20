@@ -171,15 +171,6 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
               >
                 తెలుగు
               </button>
-              <button
-                type="button"
-                onClick={() => setLanguage('hi')}
-                className={`flex-1 rounded-lg border py-2 text-xs font-medium transition-colors cursor-pointer ${
-                  language === 'hi' ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-muted'
-                }`}
-              >
-                हिन्दी
-              </button>
             </div>
           </div>
 

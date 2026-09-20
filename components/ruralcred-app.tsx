@@ -506,9 +506,9 @@ function RuralCredAppInner() {
               </div>
             )}
 
-            {/* Multilingual Selector (English, Telugu, Hindi) */}
+            {/* Multilingual Selector (English, Telugu) */}
             <div className="flex items-center rounded-lg border bg-card p-0.5 text-xs font-semibold shadow-xs">
-              {(['en', 'te', 'hi'] as const).map((l) => (
+              {(['en', 'te'] as const).map((l) => (
                 <button
                   key={l}
                   type="button"
@@ -518,9 +518,9 @@ function RuralCredAppInner() {
                       ? 'bg-primary text-primary-foreground shadow-2xs font-bold'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                   }`}
-                  title={l === 'en' ? 'English' : l === 'te' ? 'Telugu (తెలుగు)' : 'Hindi (हिन्दी)'}
+                  title={l === 'en' ? 'English' : 'Telugu (తెలుగు)'}
                 >
-                  {l === 'en' ? 'EN' : l === 'te' ? 'తె' : 'हि'}
+                  {l === 'en' ? 'EN' : 'తె'}
                 </button>
               ))}
             </div>

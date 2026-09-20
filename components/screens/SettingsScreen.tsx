@@ -142,7 +142,7 @@ export function SettingsScreen({ setActive }: { setActive?: (value: string) => v
             : 'Select your preferred language. The user interface, voice recognition, and advisory outputs will match your choice.'}
         </p>
 
-        <div className="grid sm:grid-cols-3 gap-3 mt-4">
+        <div className="grid sm:grid-cols-2 gap-3 mt-4">
           {/* English */}
           <button
             type="button"
@@ -175,23 +175,6 @@ export function SettingsScreen({ setActive }: { setActive?: (value: string) => v
               <p className="text-[11px] text-muted-foreground mt-0.5">Telangana & AP (te-IN)</p>
             </div>
             {language === 'te' && <Check className="size-4 text-primary" />}
-          </button>
-
-          {/* Hindi */}
-          <button
-            type="button"
-            onClick={() => setLanguage('hi')}
-            className={`p-4 rounded-xl border text-left flex items-center justify-between cursor-pointer transition-all ${
-              language === 'hi'
-                ? 'bg-primary/10 border-primary text-primary font-bold shadow-xs'
-                : 'bg-muted/30 hover:bg-muted text-muted-foreground border-border'
-            }`}
-          >
-            <div>
-              <p className="text-sm font-semibold font-sora">हिन्दी</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Hindi (hi-IN)</p>
-            </div>
-            {language === 'hi' && <Check className="size-4 text-primary" />}
           </button>
         </div>
 

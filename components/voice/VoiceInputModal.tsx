@@ -261,7 +261,7 @@ export function VoiceInputModal({
             Language:
           </span>
           <div className="flex items-center gap-1">
-            {(['en', 'te', 'hi'] as VoiceLanguage[]).map((lang) => (
+            {(['en', 'te'] as VoiceLanguage[]).map((lang) => (
               <button
                 key={lang}
                 type="button"
@@ -276,7 +276,7 @@ export function VoiceInputModal({
                     : 'bg-background hover:bg-muted text-muted-foreground'
                 }`}
               >
-                {lang === 'en' ? 'English' : lang === 'te' ? 'తెలుగు' : 'हिन्दी'}
+                {lang === 'en' ? 'English' : 'తెలుగు'}
               </button>
             ))}
           </div>

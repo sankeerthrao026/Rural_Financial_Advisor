@@ -129,7 +129,7 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
     <div className="min-h-screen bg-background flex flex-col justify-center items-center px-4 py-12">
       {/* Top Language Selector */}
       <div className="absolute top-6 right-6 flex items-center rounded-lg border bg-card p-0.5 text-xs font-semibold shadow-xs">
-        {(['en', 'te', 'hi'] as const).map((l) => (
+        {(['en', 'te'] as const).map((l) => (
           <button
             key={l}
             type="button"
@@ -139,9 +139,9 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
                 ? 'bg-primary text-primary-foreground shadow-2xs font-bold'
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted'
             }`}
-            title={l === 'en' ? 'English' : l === 'te' ? 'Telugu' : 'Hindi'}
+            title={l === 'en' ? 'English' : 'Telugu'}
           >
-            {l === 'en' ? 'EN' : l === 'te' ? 'తె' : 'हि'}
+            {l === 'en' ? 'EN' : 'తె'}
           </button>
         ))}
       </div>
@@ -226,15 +226,6 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
                     }`}
                   >
                     తెలుగు
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLanguage('hi')}
-                    className={`flex-1 rounded-lg border py-2 text-xs font-semibold transition-colors cursor-pointer ${
-                      language === 'hi' ? 'bg-primary text-primary-foreground border-primary shadow-xs' : 'bg-background hover:bg-muted'
-                    }`}
-                  >
-                    हिन्दी
                   </button>
                 </div>
               </div>
