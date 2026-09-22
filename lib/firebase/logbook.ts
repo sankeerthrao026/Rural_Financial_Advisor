@@ -1,5 +1,5 @@
 import { firestoreInstance, isFirebaseConfigured } from './config';
-import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, updateDoc, doc, query, orderBy } from 'firebase/firestore';
 
 export interface LogbookEntry {
   id: string;
@@ -337,6 +337,15 @@ export async function deleteLogbookEntry(id: string, userId: string): Promise<vo
 
 export async function updateLogbookEntry(entry: LogbookEntry, userId: string): Promise<LogbookEntry> {
   if (!userId) return entry;
+
+  if (isFirebaseConfigured && firestoreInstance) {
+    try {
+      const { id, ...fields } = entry;
+      await updateDoc(doc(firestoreInstance, `users/${userId}/logbook`, id), fields);
+    } catch (e) {
+      console.warn('Firestore update failed, preserving to local storage:', e);
+    }
+  }
 
   if (typeof window !== 'undefined') {
     const key = getStorageKey(userId);
