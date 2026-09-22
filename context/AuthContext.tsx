@@ -38,10 +38,10 @@ export interface AuthContextType {
   loginAsDemoUser: (persona?: 'dairy' | 'kirana' | 'weaving') => Promise<void>;
 }
 
-// When true, the app keeps its lenient hackathon demo auth: any email logs in as a
-// dummy user and empty credentials silently default to a demo account. When false or
-// unset, the dummy fallbacks are disabled and valid credentials are required.
-const DEMO_MODE_ENABLED = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+// When true or unset, the app keeps its convenient demo auth: preset personas,
+// demo user session creation, and local persona switching. When explicitly set to 'false',
+// the dummy fallbacks are disabled and real authentication is required.
+const DEMO_MODE_ENABLED = process.env.NEXT_PUBLIC_DEMO_MODE !== 'false';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 

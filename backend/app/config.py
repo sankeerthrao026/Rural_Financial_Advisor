@@ -24,15 +24,14 @@ class Settings(BaseSettings):
     SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY", ""))
 
     # Demo mode: when enabled, header-based pseudo-auth (x-user-id / x-auth-mode) is trusted.
-    # When disabled (default), ALL authenticated requests are rejected with 401 because there
-    # is no real token verification yet. Set DEMO_MODE=true ONLY for local evaluation.
-    DEMO_MODE: bool = os.getenv("DEMO_MODE", "false").lower() in ("1", "true", "yes", "on")
+    # When disabled, ALL authenticated requests are rejected with 401. Defaults to true for local/demo evaluation.
+    DEMO_MODE: bool = os.getenv("DEMO_MODE", "true").lower() in ("1", "true", "yes", "on")
 
     # CORS allow-list (comma-separated string). Applied explicitly instead of "*" so
     # cross-origin browsers are limited to known frontend origins.
     ALLOWED_ORIGINS: str = os.getenv(
         "ALLOWED_ORIGINS",
-        "http://localhost:3000,http://127.0.0.1:3000",
+        "http://localhost:3000,http://127.0.0.1:3000,http://192.168.29.117:3000",
     )
 
     @property

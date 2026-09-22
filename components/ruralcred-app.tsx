@@ -246,8 +246,8 @@ function Sidebar({
               {initials}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-semibold text-foreground">{profile.name}</p>
-              <p className="truncate text-[11px] text-muted-foreground">{profile.businessName}</p>
+              <p className="truncate text-xs font-semibold text-foreground">{profile?.name || 'Anita Sharma'}</p>
+              <p className="truncate text-[11px] text-muted-foreground">{profile?.businessName || 'Rural Enterprise'}</p>
             </div>
             <ChevronRight className="size-4 text-muted-foreground shrink-0 transition-transform duration-150 group-hover:translate-x-0.5" />
           </button>
@@ -289,7 +289,7 @@ function MainContent({ active, setActive }: { active: string; setActive: (value:
         month: 'long',
         year: 'numeric',
       }),
-      title: isTe ? `నమస్కారం, ${profile.name}` : `Good morning, ${profile.name}`,
+      title: isTe ? `నమస్కారం, ${profile?.name || 'Anita Sharma'}` : `Good morning, ${profile?.name || 'Anita Sharma'}`,
       description: isTe
         ? 'మీ గ్రామీణ వ్యాపారం యొక్క సమగ్ర ఆర్థిక స్థితి మరియు మార్కెట్ అవకాశాల సమాచారం.'
         : "Here's a clear, grounded view of how your rural enterprise is performing today.",
@@ -455,7 +455,7 @@ function RuralCredAppInner() {
               <span className="font-medium text-foreground">{getGreeting()}, {(profile?.name || 'Anita Sharma').split(' ')[0]}</span>
               <span className="text-muted-foreground/50">•</span>
               <span className="truncate max-w-44 text-muted-foreground">{profile?.businessName || 'Rural Enterprise'}</span>
-              {profile.location && (
+              {profile?.location && (
                 <span className="hidden md:inline-flex items-center text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium border border-border/60">
                   {profile.location}
                 </span>
