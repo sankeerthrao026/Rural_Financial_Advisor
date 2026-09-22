@@ -46,7 +46,7 @@ export async function callGeminiApi(params: GeminiCallParams): Promise<GeminiCal
   // Try candidate models in order of priority
   for (const model of CANDIDATE_MODELS) {
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cleanKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
       const parts: any[] = [];
       if (params.audioInline) {
@@ -93,6 +93,7 @@ export async function callGeminiApi(params: GeminiCallParams): Promise<GeminiCal
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-goog-api-key': cleanKey,
         },
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(8000),
