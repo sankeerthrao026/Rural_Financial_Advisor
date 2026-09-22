@@ -2,6 +2,7 @@ import re
 from typing import Optional, Literal
 from fastapi import Header, HTTPException
 from pydantic import BaseModel
+from app.config import settings
 
 class AuthContext(BaseModel):
     mode: Literal["demo", "authenticated"]
@@ -15,9 +16,19 @@ def get_auth_context(
     x_auth_mode: Optional[str] = Header(None)
 ) -> AuthContext:
     """
-    Validates request context distinguishing demo users from authenticated users.
-    Accepts validated temporary demo sessions (demo_<id>) without requiring Supabase JWT.
+    DEMO-ONLY pseudo-auth. Client-supplied x-user-id / x-auth-mode headers are NEVER
+    a substitute for real identity verification and this code is unsafe for production.
+
+    When DEMO_MODE is not enabled, every request is rejected with 401 because there is
+    no real token verification in place. When DEMO_MODE=true, the historical lenient
+    header-trust behavior is preserved for local evaluation only.
     """
+    if not settings.DEMO_MODE:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication is disabled. Set DEMO_MODE=true to enable demo-only header auth.",
+        )
+
     if not x_user_id:
         return AuthContext(mode="demo", user_id="demo_default")
 

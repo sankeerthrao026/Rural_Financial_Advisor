@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     # Supabase Auth
     SUPABASE_URL: str = os.getenv("SUPABASE_URL", os.getenv("NEXT_PUBLIC_SUPABASE_URL", ""))
     SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY", ""))
+
+    # Demo mode: when enabled, header-based pseudo-auth (x-user-id / x-auth-mode) is trusted.
+    # When disabled (default), ALL authenticated requests are rejected with 401 because there
+    # is no real token verification yet. Set DEMO_MODE=true ONLY for local evaluation.
+    DEMO_MODE: bool = os.getenv("DEMO_MODE", "false").lower() in ("1", "true", "yes", "on")
     
     # Firebase Firestore
     FIREBASE_PROJECT_ID: str = os.getenv("FIREBASE_PROJECT_ID", os.getenv("NEXT_PUBLIC_FIREBASE_PROJECT_ID", ""))
