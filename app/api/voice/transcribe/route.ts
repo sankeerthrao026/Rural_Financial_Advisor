@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { callGeminiApi } from '@/lib/ai/gemini';
 
 async function transcribeWithBase64(audioBase64: string, mimeType: string, language: string) {
-  const backendBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+  const backendBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/api$/, '') || 'http://127.0.0.1:8000';
 
   // 1. Try FastAPI STT Backend first
   try {

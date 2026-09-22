@@ -91,12 +91,13 @@ function Sidebar({
       current.includes(label) ? current.filter((item) => item !== label) : [...current, label]
     );
 
-  const initials = profile.name
+  const initials = (profile?.name || 'Anita Sharma')
     .split(' ')
+    .filter(Boolean)
     .map((w) => w[0])
     .join('')
     .slice(0, 2)
-    .toUpperCase();
+    .toUpperCase() || 'AS';
 
   // Map label to localized label if Telugu
   const getNavLabel = (label: string) => {
@@ -418,12 +419,13 @@ function RuralCredAppInner() {
   const { signOut, exitDemo, isDemo } = useAuth();
   const isTe = language === 'te';
 
-  const initials = profile.name
+  const initials = (profile?.name || 'Anita Sharma')
     .split(' ')
+    .filter(Boolean)
     .map((w) => w[0])
     .join('')
     .slice(0, 2)
-    .toUpperCase();
+    .toUpperCase() || 'AS';
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -450,9 +452,9 @@ function RuralCredAppInner() {
               <Menu className="size-5" />
             </Button>
             <div className="hidden text-xs text-muted-foreground sm:flex items-center gap-2">
-              <span className="font-medium text-foreground">{getGreeting()}, {profile.name.split(' ')[0]}</span>
+              <span className="font-medium text-foreground">{getGreeting()}, {(profile?.name || 'Anita Sharma').split(' ')[0]}</span>
               <span className="text-muted-foreground/50">•</span>
-              <span className="truncate max-w-44 text-muted-foreground">{profile.businessName || 'Rural Enterprise'}</span>
+              <span className="truncate max-w-44 text-muted-foreground">{profile?.businessName || 'Rural Enterprise'}</span>
               {profile.location && (
                 <span className="hidden md:inline-flex items-center text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium border border-border/60">
                   {profile.location}
@@ -563,10 +565,10 @@ function RuralCredAppInner() {
               </div>
               <div className="text-left">
                 <span className="text-xs font-semibold text-foreground block leading-tight">
-                  {profile.name}
+                  {profile?.name || 'Anita Sharma'}
                 </span>
                 <span className="text-[10px] text-muted-foreground block truncate max-w-28">
-                  {profile.businessName}
+                  {profile?.businessName || 'Sharma Dairy Farm'}
                 </span>
               </div>
             </button>

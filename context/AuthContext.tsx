@@ -50,14 +50,17 @@ function getInitialUser(): AuthUser | null {
   try {
     // 1. Check active demo session first
     const demo = getDemoSession();
-    if (demo) {
+    if (demo && demo.user?.id) {
       return demo.user;
     }
 
     // 2. Check stored authenticated/mock user
     const stored = localStorage.getItem(LOCAL_AUTH_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      if (parsed && typeof parsed === 'object' && parsed.id) {
+        return parsed;
+      }
     }
   } catch {}
   return null;
@@ -140,9 +143,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             persistUser(u);
           }
         } else if (event === 'SIGNED_OUT') {
-          setSession(null);
-          setUser(null);
-          persistUser(null);
+          // Do not wipe session if user is in demo mode
+          const inDemo = typeof window !== 'undefined' && Boolean(localStorage.getItem(DEMO_USER_ID_KEY));
+          if (!inDemo) {
+            setSession(null);
+            setUser(null);
+            persistUser(null);
+          }
         }
       });
 
