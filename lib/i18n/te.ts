@@ -17,8 +17,8 @@ export const te: typeof en = {
   aiEstimateBadge: 'AI అంచనా',
   aiEstimateDisclaimer: 'ఈ అంచనాలు స్థానిక నమూనా డేటాపై ఆధారపడినవి. ఇది హామీ ఇవ్వబడిన రాబడి కాదు.',
   offlineSimulationStatus: 'ఆఫ్‌లైన్ మోడ్ సిద్ధం • లోకల్ కాష్ యాక్టివ్',
-  syncedStatus: 'క్లౌడ్ రికార్డులతో సరిపోలింది',
-  waitingToSync: 'సింక్ కోసం వేచి ఉంది (1 రికార్డు పెండింగ్)',
+  syncedStatus: 'లోకల్గా సేవ్ చేయబడింది',
+  waitingToSync: 'సేవ్ అవుతోంది… (1 రికార్డు పెండింగ్)',
 
   categories: {
     dairy: 'డైరీ పశుపోషణ',

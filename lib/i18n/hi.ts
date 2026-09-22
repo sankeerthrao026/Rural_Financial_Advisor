@@ -17,8 +17,8 @@ export const hi: typeof en = {
   aiEstimateBadge: 'AI अनुमान',
   aiEstimateDisclaimer: 'स्थानीय मंडी बेंचमार्क पर आधारित अनुमान। यह गारंटीड वित्तीय रिटर्न नहीं है।',
   offlineSimulationStatus: 'स्थानीय कैश सक्रिय • ऑफलाइन तैयार',
-  syncedStatus: 'क्लाउड रजिस्ट्री के साथ सिंक हुआ',
-  waitingToSync: 'सिंक की प्रतीक्षा में (1 प्रविष्टि कतार में)',
+  syncedStatus: 'स्थानीय रूप से सहेजा गया',
+  waitingToSync: 'सहेजा जा रहा है… (1 प्रविष्टि लंबित)',
 
   categories: {
     dairy: 'डेयरी फार्मिंग (पशुपालन)',

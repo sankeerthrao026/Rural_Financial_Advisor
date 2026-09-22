@@ -269,9 +269,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       userId
     );
     setEntries((prev) => [newEntry, ...prev]);
-    setTimeout(() => {
-      setSyncStatus('synced');
-    }, 600);
+    setSyncStatus('synced');
   };
 
   const removeEntry = async (id: string) => {
@@ -283,9 +281,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSyncStatus('syncing');
     await updateLogbookEntry(entry, userId);
     setEntries((prev) => prev.map((e) => (e.id === entry.id ? entry : e)));
-    setTimeout(() => {
-      setSyncStatus('synced');
-    }, 400);
+    setSyncStatus('synced');
   };
 
   const addKhataEntry = async (

@@ -15,8 +15,8 @@ export const en = {
   aiEstimateBadge: 'AI-Estimated',
   aiEstimateDisclaimer: 'Estimates based on grounded local benchmark data. Not a guaranteed financial return.',
   offlineSimulationStatus: 'Local cache active • Offline ready',
-  syncedStatus: 'Synced with cloud registry',
-  waitingToSync: 'Waiting to sync (1 entry queued)',
+  syncedStatus: 'Saved locally',
+  waitingToSync: 'Saving… (1 entry pending)',
 
   categories: {
     dairy: 'Dairy Farming',
@@ -144,7 +144,7 @@ export const en = {
     amount: 'Amount (₹)',
     category: 'Category',
     note: 'Description / Note',
-    saveEntry: 'Save Entry to Cloud Ledger',
+    saveEntry: 'Save Entry to Ledger',
     voiceQuickAdd: 'Voice Record: Say e.g. "Sold 20 litres milk for 1200 rupees"',
     addIncome: '+ Add Income',
     addExpense: '− Add Expense',
