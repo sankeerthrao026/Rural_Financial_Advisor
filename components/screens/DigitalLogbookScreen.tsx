@@ -423,11 +423,7 @@ export function DigitalLogbookScreen() {
   });
 
   const handleToggleVoice = () => {
-    if (voiceInput.isListening) {
-      voiceInput.stopListening();
-    } else {
-      voiceInput.startListening();
-    }
+    setShowVoiceModal(true);
   };
 
   return (
