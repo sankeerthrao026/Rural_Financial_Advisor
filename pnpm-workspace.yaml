@@ -1,3 +1,5 @@
+nodeLinker: hoisted
+
 pmOnFail: ignore
 
 minimumReleaseAgeExclude:
