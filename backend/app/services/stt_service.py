@@ -108,18 +108,20 @@ class STTService:
 
         # Fallback to local whisper if installed (model is cached process-wide)
         try:
+            import os
             import tempfile
-            with tempfile.NamedTemporaryFile(suffix=_audio_suffix(content_type), delete=False) as tmp:
-                tmp.write(audio_bytes)
-                tmp_path = tmp.name
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                tmp_path = os.path.join(tmp_dir, f"audio{_audio_suffix(content_type)}")
+                with open(tmp_path, "wb") as tmp:
+                    tmp.write(audio_bytes)
 
-            model = _get_whisper_model()
-            result = model.transcribe(tmp_path, language=language if language in ["te", "hi", "en"] else None)
-            return {
-                "success": True,
-                "transcript": result.get("text", "").strip(),
-                "provider": "Local Whisper Base",
-            }
+                model = _get_whisper_model()
+                result = model.transcribe(tmp_path, language=language if language in ["te", "hi", "en"] else None)
+                return {
+                    "success": True,
+                    "transcript": result.get("text", "").strip(),
+                    "provider": "Local Whisper Base",
+                }
         except Exception:
             pass
 
