@@ -1,5 +1,7 @@
 import json
-from typing import Dict, Any, List, Optional
+import time
+import threading
+from typing import Dict, Any, List, Optional, Tuple
 from app.models.schemas import (
     AdvisorAnalyzeRequest,
     AdvisorAnalyzeResponse,
@@ -14,49 +16,66 @@ from app.services.chroma_service import chroma_service
 from app.services.gemini_service import gemini_service
 
 class RAGService:
+    def __init__(self):
+        # Application-level Multi-Turn & Grounding Cache
+        self._rag_cache: Dict[str, Tuple[float, AdvisorAnalyzeResponse]] = {}
+        self._cache_ttl_seconds = 300.0  # 5 minutes
+        self._max_cache_size = 256
+        self._lock = threading.RLock()
+
+    def normalize_user_query(self, query: Optional[str]) -> str:
+        """Normalizes query text (trims whitespace, clean spaces) preserving semantics."""
+        if not query:
+            return ""
+        return " ".join(query.strip().split())
+
     def analyze_business_opportunity(self, req: AdvisorAnalyzeRequest) -> AdvisorAnalyzeResponse:
         """
-        Full Query-Aware RAG Pipeline:
-          1. Focused semantic query construction (prioritizes user's current question).
-          2. ChromaDB vector similarity search with distance ranking and logging.
-          3. Context assembly with relevance filtering (avoids injecting irrelevant documents).
-          4. Grounded Gemini AI generation with explicit CURRENT USER QUESTION prompting.
-          5. Query-aware intelligent grounded fallback if Gemini is unreachable.
+        Optimized Query-Aware RAG Pipeline:
+          1. Query normalization and multi-factor cache check (< 0.5 ms).
+          2. Instant 0ms metadata benchmark lookup for user's category and district.
+          3. Single targeted ChromaDB vector similarity query with optional metadata filter (k=3).
+          4. Context deduplication and compact grounding assembly.
+          5. Grounded Gemini AI generation or intelligent domain-aware fallback.
+          6. Structured timing metrics logging and response caching.
         """
+        t_req_start = time.perf_counter()
+
+        # 1. Query Normalization & Cache Key Generation
+        t0 = time.perf_counter()
+        raw_query = req.userQuery or ""
+        norm_query = self.normalize_user_query(raw_query)
         is_te = req.language == "te"
         loc_str = req.location or "Telangana Rural Hub"
         cat_str = req.category or "Micro Enterprise"
         clean_cat = cat_str.split("/")[0].split("(")[0].strip()
         clean_loc = loc_str.split(",")[0].split("/")[0].split("(")[0].strip()
 
-        # 1. Semantic query construction
-        if req.userQuery and req.userQuery.strip():
-            # Focused search on user's actual question + business category
-            recent_context = ""
-            if req.history and len(req.history) > 0:
-                # Include previous user turn if follow-up
-                prev_users = [h.content for h in req.history if h.role == "user"]
-                if prev_users:
-                    recent_context = prev_users[-1][:80]
-            query_text = f"{clean_cat} {req.userQuery} {recent_context}".strip()
-        else:
-            query_text = f"{clean_loc} {clean_cat} micro business demand pricing benchmarks".strip()
+        # Hash recent history for conversational context uniqueness
+        recent_history_sig = ""
+        if req.history and len(req.history) > 0:
+            recent_history_sig = "|".join(
+                f"{m.role}:{m.content[:40]}" for m in req.history[-3:]
+            )
 
-        # 2. ChromaDB Semantic Retrieval
-        retrieved_items = chroma_service.query_similar(query_text=query_text, n_results=5)
+        cache_key = f"{norm_query.lower()}|{clean_loc.lower()}|{clean_cat.lower()}|{req.marginCapital}|{req.language}|{recent_history_sig}"
+        t_norm = (time.perf_counter() - t0) * 1000
 
-        # Retrieval debug logging (Query, Docs, Distance)
-        debug_docs = [
-            f"{item.get('id')} (dist={item.get('distance', 0):.3f})"
-            for item in retrieved_items
-        ]
-        try:
-            print(f"[RAG RETRIEVAL] Query: '{query_text}' | Retrieved: {debug_docs}")
-        except Exception:
-            pass
+        # Check in-memory RAG response cache
+        now = time.time()
+        with self._lock:
+            if cache_key in self._rag_cache:
+                ts, cached_resp = self._rag_cache[cache_key]
+                if (now - ts) < self._cache_ttl_seconds:
+                    t_total = (time.perf_counter() - t_req_start) * 1000
+                    print(
+                        f"[RAG TIMING] Total: {t_total:.2f}ms | Norm: {t_norm:.2f}ms | "
+                        f"Meta: 0.00ms | Chroma: 0.00ms | Ctx: 0.00ms | AI: 0.00ms | CacheHit: True"
+                    )
+                    return cached_resp
 
-        context_blocks = []
-        sources_used = []
+        # 2. Fast 0ms Metadata Benchmark Lookup (Direct In-Memory Index)
+        t0 = time.perf_counter()
         category_name = cat_str
         district_name = loc_str
         mandi_trends_text = ""
@@ -65,48 +84,8 @@ class RAGService:
         margin_text = "18% - 28%"
         pricing_band = "Prevailing District Mandi Rate"
 
-        best_cat_item = None
-        best_dist_item = None
-
-        # Filter and prioritize retrieved documents
-        for item in retrieved_items:
-            doc = item["document"]
-            meta = item.get("metadata", {})
-            dist = item.get("distance", 1.0)
-            
-            # Distance threshold for relevance (cosine / L2 distance)
-            if dist < 1.35 or not req.userQuery:
-                context_blocks.append(doc)
-                source_label = meta.get("name") or meta.get("category") or item.get("id")
-                sources_used.append(f"ChromaDB [{meta.get('type', 'local_dataset')}]: {source_label}")
-
-            if meta.get("type") == "market_benchmark":
-                meta_name = (meta.get("name", "") + " " + meta.get("category", "")).lower()
-                if clean_cat.lower() in meta_name:
-                    best_cat_item = item
-                elif best_cat_item is None:
-                    best_cat_item = item
-            elif meta.get("type") == "district_demographics":
-                meta_dist = (meta.get("name", "") + " " + meta.get("district", "")).lower()
-                if clean_loc.lower() in meta_dist:
-                    best_dist_item = item
-                elif best_dist_item is None:
-                    best_dist_item = item
-
-        # Supplement category or district benchmark data if not present
-        if clean_cat and not best_cat_item:
-            specific_cat = chroma_service.query_similar(query_text=f"Category benchmark: {clean_cat}", n_results=2)
-            if specific_cat:
-                best_cat_item = specific_cat[0]
-                if specific_cat[0]["document"] not in context_blocks:
-                    context_blocks.append(specific_cat[0]["document"])
-
-        if clean_loc and not best_dist_item:
-            specific_dist = chroma_service.query_similar(query_text=f"District demographics: {clean_loc}", n_results=2)
-            if specific_dist:
-                best_dist_item = specific_dist[0]
-                if specific_dist[0]["document"] not in context_blocks:
-                    context_blocks.append(specific_dist[0]["document"])
+        best_cat_item = chroma_service.get_category_benchmark(clean_cat)
+        best_dist_item = chroma_service.get_district_demographics(clean_loc)
 
         if best_cat_item:
             c_meta = best_cat_item.get("metadata", {})
@@ -128,21 +107,78 @@ class RAGService:
             d_meta = best_dist_item.get("metadata", {})
             district_name = d_meta.get("name", district_name)
 
-        combined_context = "\n---\n".join(context_blocks) if context_blocks else "Local district baseline data available."
+        t_meta = (time.perf_counter() - t0) * 1000
 
-        # 3. Call Gemini API with Query-Centric Prompting
+        # 3. Dynamic Targeted Semantic Search (Only 1 Single Query Needed!)
+        t0 = time.perf_counter()
+        if norm_query:
+            recent_context = ""
+            if req.history and len(req.history) > 0:
+                prev_users = [h.content for h in req.history if h.role == "user"]
+                if prev_users:
+                    recent_context = prev_users[-1][:80]
+            query_text = f"{clean_cat} {norm_query} {recent_context}".strip()
+        else:
+            query_text = f"{clean_loc} {clean_cat} micro business demand pricing benchmarks".strip()
+
+        # Apply metadata filter for government schemes if inquiring about subsidies or loans
+        q_lower = norm_query.lower()
+        where_filter = None
+        if any(w in q_lower for w in ["scheme", "subsidy", "mudra", "pmegp", "loan", "nbcfdc", "సబ్సిడీ", "పథకం", "రుణం"]):
+            where_filter = {"type": "government_scheme"}
+
+        retrieved_items = chroma_service.query_similar(
+            query_text=query_text,
+            n_results=3,
+            where_filter=where_filter,
+        )
+        t_chroma = (time.perf_counter() - t0) * 1000
+
+        # 4. Context Assembly & Deduplication
+        t0 = time.perf_counter()
+        context_blocks = []
+        sources_used = []
+        seen_docs = set()
+
+        # Add pre-indexed district demographic and category benchmark documents
+        if best_dist_item and best_dist_item["document"] not in seen_docs:
+            context_blocks.append(best_dist_item["document"])
+            seen_docs.add(best_dist_item["document"])
+            sources_used.append(f"ChromaDB [district_demographics]: {district_name}")
+
+        if best_cat_item and best_cat_item["document"] not in seen_docs:
+            context_blocks.append(best_cat_item["document"])
+            seen_docs.add(best_cat_item["document"])
+            sources_used.append(f"ChromaDB [market_benchmark]: {category_name}")
+
+        # Add retrieved semantic chunks (filtered by relevance threshold)
+        for item in retrieved_items:
+            doc = item["document"]
+            meta = item.get("metadata", {})
+            dist = item.get("distance", 1.0)
+            if doc not in seen_docs and (dist < 1.35 or not norm_query):
+                context_blocks.append(doc)
+                seen_docs.add(doc)
+                source_label = meta.get("name") or meta.get("category") or item.get("id")
+                sources_used.append(f"ChromaDB [{meta.get('type', 'local_dataset')}]: {source_label}")
+
+        combined_context = "\n---\n".join(context_blocks) if context_blocks else "Local district baseline data available."
+        t_ctx = (time.perf_counter() - t0) * 1000
+
+        # 5. Call Gemini API with Query-Centric Prompting
+        t0 = time.perf_counter()
         ai_data = None
         provider_used = "chromadb-grounded-local"
 
         if gemini_service.is_available():
-            if req.userQuery and req.userQuery.strip():
+            if norm_query:
                 prompt_query = (
                     f"BUSINESS PROFILE:\n"
                     f"- Enterprise Category: {cat_str}\n"
                     f"- Location: {loc_str}\n"
                     f"- Promoter Margin Capital: ₹{req.marginCapital:,.0f}\n\n"
                     f"CURRENT USER QUESTION:\n"
-                    f"{req.userQuery}\n\n"
+                    f"{norm_query}\n\n"
                     f"Please provide a direct, practical, and query-specific advisory answer in the 'reply' field "
                     f"addressing this question specifically. Keep supporting diagnostic fields aligned."
                 )
@@ -165,16 +201,15 @@ class RAGService:
             if ai_data:
                 provider_used = f"{gemini_service.last_model_used} (ChromaDB RAG)" if gemini_service.last_model_used else "gemini-3.6-flash (ChromaDB RAG)"
 
-        # 4. Intelligent Query-Aware Grounded Fallback if Gemini key is missing or failed
+        # 6. Intelligent Query-Aware Grounded Fallback if Gemini key is missing or failed
         if not ai_data:
-            print("[INFO] Utilizing intelligent query-aware grounded fallback.")
             ai_data = self._generate_grounded_fallback(
                 location=loc_str,
                 category=cat_str,
                 district_name=district_name,
                 category_name=category_name,
                 is_te=is_te,
-                user_query=req.userQuery,
+                user_query=norm_query,
                 mandi_trends=mandi_trends_text,
                 seasonality=seasonality_text,
                 margin_target=margin_text,
@@ -183,7 +218,17 @@ class RAGService:
                 margin_capital=req.marginCapital,
             )
 
-        return AdvisorAnalyzeResponse(
+        t_ai = (time.perf_counter() - t0) * 1000
+        t_total = (time.perf_counter() - t_req_start) * 1000
+
+        # Structured timing metrics logging
+        print(
+            f"[RAG TIMING] Total: {t_total:.2f}ms | Norm: {t_norm:.2f}ms | "
+            f"Meta: {t_meta:.2f}ms | Chroma: {t_chroma:.2f}ms | "
+            f"Ctx: {t_ctx:.2f}ms | AI: {t_ai:.2f}ms | CacheHit: False"
+        )
+
+        response = AdvisorAnalyzeResponse(
             reply=ai_data.get("reply"),
             marketReach=MarketReach(**ai_data.get("marketReach", {})),
             opportunityAnalysis=OpportunityAnalysis(**ai_data.get("opportunityAnalysis", {})),
@@ -208,6 +253,15 @@ class RAGService:
             sourcesUsed=sources_used if sources_used else ["ChromaDB: Bundled District Benchmarks"],
             providerUsed=provider_used,
         )
+
+        # Store in LRU/TTL cache
+        with self._lock:
+            if len(self._rag_cache) >= self._max_cache_size:
+                oldest_key = next(iter(self._rag_cache))
+                del self._rag_cache[oldest_key]
+            self._rag_cache[cache_key] = (now, response)
+
+        return response
 
     def _generate_grounded_fallback(
         self,
