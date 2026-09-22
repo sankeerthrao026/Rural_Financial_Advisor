@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { formatINR } from '@/lib/utils/currency';
+import { formatDisplayDateToIso } from '@/lib/utils/date';
+import { calculateFinancialHealthScore } from '@/lib/finance/engine';
 import { AnimatedNumber } from '@/components/ui/animated-number';
 import {
   ArrowDownRight,
@@ -32,6 +34,14 @@ import {
   Legend,
 } from 'recharts';
 
+const DAY_MS = 86400000;
+
+function startOfDayPreserving(ts: number): number {
+  const d = new Date(ts);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
 export function OverviewScreen({ setActive }: { setActive: (value: string) => void }) {
   const {
     profile,
@@ -49,29 +59,91 @@ export function OverviewScreen({ setActive }: { setActive: (value: string) => vo
   const [timeframe, setTimeframe] = useState<'7d' | '30d' | '3m'>('30d');
   const [expandedRisk, setExpandedRisk] = useState(false);
 
-  // Dynamic datasets for interactive timeframe switcher
-  const chartDatasets = {
-    '7d': [
-      { period: 'Mon', Income: Math.round(totalIncome * 0.12), Expense: Math.round(totalExpenses * 0.08), Net: Math.round(totalIncome * 0.12 - totalExpenses * 0.08) },
-      { period: 'Tue', Income: Math.round(totalIncome * 0.15), Expense: Math.round(totalExpenses * 0.11), Net: Math.round(totalIncome * 0.15 - totalExpenses * 0.11) },
-      { period: 'Wed', Income: Math.round(totalIncome * 0.11), Expense: Math.round(totalExpenses * 0.14), Net: Math.round(totalIncome * 0.11 - totalExpenses * 0.14) },
-      { period: 'Thu', Income: Math.round(totalIncome * 0.18), Expense: Math.round(totalExpenses * 0.10), Net: Math.round(totalIncome * 0.18 - totalExpenses * 0.10) },
-      { period: 'Fri', Income: Math.round(totalIncome * 0.14), Expense: Math.round(totalExpenses * 0.13), Net: Math.round(totalIncome * 0.14 - totalExpenses * 0.13) },
-      { period: 'Sat', Income: Math.round(totalIncome * 0.19), Expense: Math.round(totalExpenses * 0.18), Net: Math.round(totalIncome * 0.19 - totalExpenses * 0.18) },
-      { period: 'Sun', Income: Math.round(totalIncome * 0.11), Expense: Math.round(totalExpenses * 0.06), Net: Math.round(totalIncome * 0.11 - totalExpenses * 0.06) },
-    ],
-    '30d': [
-      { period: 'Week 1', Income: Math.round(totalIncome * 0.22), Expense: Math.round(totalExpenses * 0.20), Net: Math.round(totalIncome * 0.22 - totalExpenses * 0.20) },
-      { period: 'Week 2', Income: Math.round(totalIncome * 0.28), Expense: Math.round(totalExpenses * 0.25), Net: Math.round(totalIncome * 0.28 - totalExpenses * 0.25) },
-      { period: 'Week 3', Income: Math.round(totalIncome * 0.24), Expense: Math.round(totalExpenses * 0.22), Net: Math.round(totalIncome * 0.24 - totalExpenses * 0.22) },
-      { period: 'Week 4', Income: Math.round(totalIncome * 0.26), Expense: Math.round(totalExpenses * 0.23), Net: Math.round(totalIncome * 0.26 - totalExpenses * 0.23) },
-    ],
-    '3m': [
-      { period: 'Jul', Income: 38000, Expense: 15500, Net: 22500 },
-      { period: 'Aug', Income: 42500, Expense: 16800, Net: 25700 },
-      { period: 'Sep', Income: Math.max(30000, totalIncome), Expense: Math.max(12000, totalExpenses), Net: Math.max(18000, netCashFlow) },
-    ],
-  };
+  // Real chart data bucketed from logged entries (7d = last 7 days, 30d = last 4 weeks, 3m = last 3 calendar months)
+  const chartDatasets = useMemo(() => {
+    const today = startOfDayPreserving(Date.now());
+    const empty = () => ({ Income: 0, Expense: 0, Net: 0 });
+
+    const dayBuckets = Array.from({ length: 7 }, (_, i) => ({
+      period: new Date(today - (6 - i) * DAY_MS).toLocaleDateString('en-US', { weekday: 'short' }),
+      start: today - (6 - i) * DAY_MS,
+    }));
+
+    const weekBuckets = Array.from({ length: 4 }, (_, i) => ({
+      period: `Week ${i + 1}`,
+      start: today - (3 - i) * 7 * DAY_MS - 6 * DAY_MS,
+    }));
+
+    const monthBuckets = Array.from({ length: 3 }, (_, i) => {
+      const d = new Date(today);
+      const monthStart = new Date(d.getFullYear(), d.getMonth() - (2 - i), 1).getTime();
+      return {
+        period: new Date(monthStart).toLocaleDateString('en-US', { month: 'short' }),
+        start: monthStart,
+      };
+    });
+
+    const datasets = {
+      '7d': dayBuckets.map((b) => ({ period: b.period, ...empty() })),
+      '30d': weekBuckets.map((b) => ({ period: b.period, ...empty() })),
+      '3m': monthBuckets.map((b) => ({ period: b.period, ...empty() })),
+    };
+
+    for (const e of entries) {
+      const dayStart = startOfDayPreserving(e.timestamp || Date.now());
+      const dayOffset = (today - dayStart) / DAY_MS;
+      if (dayOffset >= 0 && dayOffset < 7) {
+        const b = datasets['7d'][6 - Math.floor(dayOffset)];
+        if (e.type === 'income') b.Income += e.amount;
+        else b.Expense += e.amount;
+      }
+      if (dayOffset >= 0 && dayOffset < 28) {
+        const weekIdx = Math.floor(dayOffset / 7);
+        if (weekIdx >= 0 && weekIdx < 4) {
+          const b = datasets['30d'][3 - weekIdx];
+          if (e.type === 'income') b.Income += e.amount;
+          else b.Expense += e.amount;
+        }
+      }
+      const d = new Date(dayStart);
+      const now = new Date(today);
+      const monthIdx = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+      if (monthIdx >= 0 && monthIdx < 3) {
+        const b = datasets['3m'][2 - monthIdx];
+        if (e.type === 'income') b.Income += e.amount;
+        else b.Expense += e.amount;
+      }
+    }
+
+    for (const arr of Object.values(datasets)) {
+      for (const p of arr) p.Net = p.Income - p.Expense;
+    }
+
+    return datasets;
+  }, [entries]);
+
+  // Real health-score delta: recompute the rule-based score over the earlier vs later half of logged entries
+  const healthDelta = useMemo(() => {
+    if (entries.length < 2) return null;
+    const sorted = [...entries].sort((a, b) => a.timestamp - b.timestamp);
+    if (sorted[sorted.length - 1].timestamp === sorted[0].timestamp) return null;
+    const mid = Math.floor(sorted.length / 2);
+    const scoreHalf = (group: typeof sorted) => {
+      let income = 0;
+      let expense = 0;
+      for (const e of group) {
+        if (e.type === 'income') income += e.amount;
+        else expense += e.amount;
+      }
+      return calculateFinancialHealthScore({
+        totalIncome: income,
+        totalExpenses: expense,
+        entryCount: group.length,
+        hasDownwardTrend: income - expense < 15000 && income > 0,
+      }).score;
+    };
+    return scoreHalf(sorted.slice(mid)) - scoreHalf(sorted.slice(0, mid));
+  }, [entries]);
 
   const activeChartData = chartDatasets[timeframe];
 
@@ -147,7 +219,7 @@ export function OverviewScreen({ setActive }: { setActive: (value: string) => vo
             </span>
             <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
               <ArrowUpRight className="size-3.5" />
-              <span>+6 pts</span>
+              <span>{healthDelta === null ? '—' : `${healthDelta > 0 ? '+' : ''}${healthDelta} pts`}</span>
             </div>
           </div>
           <div className="mt-3">
@@ -159,7 +231,13 @@ export function OverviewScreen({ setActive }: { setActive: (value: string) => vo
             </div>
             <p className="mt-1 text-[11px] text-muted-foreground flex items-center gap-1.5">
               <span className="size-2 rounded-full bg-emerald-600 animate-pulse" />
-              <span>{isTe ? healthScore.statusTe : healthScore.status} — {isTe ? 'మెరుగుపడుతోంది' : 'Improving this month'}</span>
+              <span>{isTe ? healthScore.statusTe : healthScore.status} — {healthDelta === null
+                ? (isTe ? 'కొత్తగా' : 'New')
+                : healthDelta > 0
+                  ? (isTe ? 'మెరుగుపడుతోంది' : 'Improving')
+                  : healthDelta < 0
+                    ? (isTe ? 'క్షీణిస్తోంది' : 'Declining')
+                    : (isTe ? 'స్థిరంగా ఉంది' : 'Steady')}</span>
             </p>
           </div>
         </div>
@@ -292,30 +370,30 @@ export function OverviewScreen({ setActive }: { setActive: (value: string) => vo
               <div>
                 <div className="flex justify-between text-xs mb-1">
                   <span className="font-medium text-muted-foreground">{isTe ? 'లాగ్‌బుక్ స్థిరత్వం' : 'Logging Consistency'}</span>
-                  <span className="font-semibold text-foreground">80%</span>
+                  <span className="font-semibold text-foreground">{healthScore.loggingScore}%</span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                  <div className="h-full rounded-full bg-primary transition-all duration-700 ease-out" style={{ width: '80%' }} />
+                  <div className="h-full rounded-full bg-primary transition-all duration-700 ease-out" style={{ width: `${healthScore.loggingScore}%` }} />
                 </div>
               </div>
 
               <div>
                 <div className="flex justify-between text-xs mb-1">
                   <span className="font-medium text-muted-foreground">{isTe ? 'లాభాల సరళి' : 'Profit Trend'}</span>
-                  <span className="font-semibold text-foreground">75%</span>
+                  <span className="font-semibold text-foreground">{healthScore.profitTrendScore}%</span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                  <div className="h-full rounded-full bg-emerald-600 transition-all duration-700 ease-out" style={{ width: '75%' }} />
+                  <div className="h-full rounded-full bg-emerald-600 transition-all duration-700 ease-out" style={{ width: `${healthScore.profitTrendScore}%` }} />
                 </div>
               </div>
 
               <div>
                 <div className="flex justify-between text-xs mb-1">
                   <span className="font-medium text-muted-foreground">{isTe ? 'వ్యయ నియంత్రణ' : 'Expense Control'}</span>
-                  <span className="font-semibold text-foreground">85%</span>
+                  <span className="font-semibold text-foreground">{healthScore.expenseRatioScore}%</span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                  <div className="h-full rounded-full bg-amber-500 transition-all duration-700 ease-out" style={{ width: '85%' }} />
+                  <div className="h-full rounded-full bg-amber-500 transition-all duration-700 ease-out" style={{ width: `${healthScore.expenseRatioScore}%` }} />
                 </div>
               </div>
             </div>
@@ -432,15 +510,15 @@ export function OverviewScreen({ setActive }: { setActive: (value: string) => vo
             <div className="my-4 rounded-xl border bg-background/80 p-4 transition-colors hover:bg-background">
               <div className="flex items-center justify-between text-xs mb-1.5">
                 <span className="font-semibold text-foreground">{profile.category} in {profile.location || 'Telangana'}</span>
-                <span className="text-emerald-700 font-bold text-[11px]">{isTe ? 'అధిక గిరాకీ' : 'High Demand'}</span>
+                <span className="text-emerald-700 font-bold text-[11px]">{isTe ? 'నమూనా' : 'Sample'}</span>
               </div>
               <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                <div className="h-full rounded-full bg-gradient-to-r from-primary to-amber-500 transition-all duration-700 ease-out" style={{ width: '84%' }} />
+                <div className="h-full rounded-full bg-gradient-to-r from-primary to-amber-500 transition-all duration-700 ease-out" style={{ width: '0%' }} />
               </div>
               <p className="mt-2 text-[11px] text-muted-foreground line-clamp-2">
                 {isTe
-                  ? 'ప్రాధాన్యతా రంగ సబ్సిడీలు మరియు స్థానిక కొనుగోలుదారులు మీ వ్యాపారానికి బలమైన వాణిజ్య అవకాశాలను అందిస్తున్నాయి.'
-                  : 'Priority-sector subsidies and local off-take aggregators present strong commercial viability for your capital tier.'}
+                  ? 'ఇది ఉదాహరణ సూచిక; వర్గం ఆధారిత డిమాండ్ విశ్లేషణ కోసం వ్యాపార సలహాదారుని చూడండి.'
+                  : 'Sample indicator only — view the Business Advisor for a category-specific demand analysis.'}
               </p>
             </div>
           </div>
