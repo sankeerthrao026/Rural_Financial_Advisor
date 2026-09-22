@@ -20,6 +20,7 @@ node_modules
 .DS_Store
 AGENTS.md
 CLAUDE.md
+opencode.json
 *.tsbuildinfo
 
 # Python & Backend
