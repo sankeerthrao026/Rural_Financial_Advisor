@@ -36,11 +36,13 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Enable CORS for Next.js and frontend consumers
+# Enable CORS for Next.js and frontend consumers.
+# Explicit allow-list (from ALLOWED_ORIGINS) — never "*" — and credentials are not
+# used by any caller, so allow_credentials stays False.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=settings.allowed_origins,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

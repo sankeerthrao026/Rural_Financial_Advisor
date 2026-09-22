@@ -27,6 +27,17 @@ class Settings(BaseSettings):
     # When disabled (default), ALL authenticated requests are rejected with 401 because there
     # is no real token verification yet. Set DEMO_MODE=true ONLY for local evaluation.
     DEMO_MODE: bool = os.getenv("DEMO_MODE", "false").lower() in ("1", "true", "yes", "on")
+
+    # CORS allow-list (comma-separated string). Applied explicitly instead of "*" so
+    # cross-origin browsers are limited to known frontend origins.
+    ALLOWED_ORIGINS: str = os.getenv(
+        "ALLOWED_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000",
+    )
+
+    @property
+    def allowed_origins(self) -> list[str]:
+        return [o.strip() for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
     
     # Firebase Firestore
     FIREBASE_PROJECT_ID: str = os.getenv("FIREBASE_PROJECT_ID", os.getenv("NEXT_PUBLIC_FIREBASE_PROJECT_ID", ""))
