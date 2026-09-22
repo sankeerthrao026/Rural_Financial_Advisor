@@ -8,8 +8,8 @@ export function CustomCursor() {
   const [isHoveringInteractive, setIsHoveringInteractive] = useState(false);
   const [isMouseDown, setIsMouseDown] = useState(false);
 
-  const dotRef = useRef<HTMLDivElement>(null);
-  const ringRef = useRef<HTMLDivElement>(null);
+  const dotWrapperRef = useRef<HTMLDivElement>(null);
+  const ringWrapperRef = useRef<HTMLDivElement>(null);
 
   const mousePos = useRef({ x: -100, y: -100 });
   const ringPos = useRef({ x: -100, y: -100 });
@@ -27,30 +27,36 @@ export function CustomCursor() {
 
     setMounted(true);
 
+    // Hide the native OS cursor only while the custom cursor system is
+    // active for this device (not tied to momentary visibility).
+    document.documentElement.classList.add('custom-cursor-active');
+
     const handleMouseMove = (e: MouseEvent) => {
       mousePos.current = { x: e.clientX, y: e.clientY };
-      if (!visible) setVisible(true);
+      setVisible(true);
 
       // Check if hovering interactive elements
-      const target = e.target as HTMLElement | null;
-      if (target) {
-        const isInteractive = Boolean(
-          target.closest('button, a, input, select, textarea, [role="button"], .hover-lift, .cursor-pointer')
-        );
-        setIsHoveringInteractive(isInteractive);
+      const target = e.target instanceof Element ? e.target : null;
+      const isInteractive = Boolean(
+        target?.closest(
+          'button, a, input, select, textarea, [role="button"], .hover-lift, .cursor-pointer'
+        )
+      );
+      setIsHoveringInteractive(isInteractive);
+    };
+
+    // relatedTarget is null exactly when the mouse leaves the window/viewport.
+    const handleMouseOut = (e: MouseEvent) => {
+      if (!e.relatedTarget) {
+        setVisible(false);
       }
     };
 
-    const handleMouseEnter = () => setVisible(true);
-    const handleMouseLeave = () => setVisible(false);
     const handleMouseDown = () => setIsMouseDown(true);
     const handleMouseUp = () => setIsMouseDown(false);
-
-    window.addEventListener('mousemove', handleMouseMove, { passive: true });
-    document.addEventListener('mouseenter', handleMouseEnter);
-    document.addEventListener('mouseleave', handleMouseLeave);
-    window.addEventListener('mousedown', handleMouseDown);
-    window.addEventListener('mouseup', handleMouseUp);
+    // Reset the pressed state if the window loses focus mid-press (e.g. a
+    // drag that ends outside the window, or an alert stealing focus).
+    const handleBlur = () => setIsMouseDown(false);
 
     // Smooth trailing ring animation loop
     const animateRing = () => {
@@ -58,11 +64,11 @@ export function CustomCursor() {
       ringPos.current.x += (mousePos.current.x - ringPos.current.x) * 0.22;
       ringPos.current.y += (mousePos.current.y - ringPos.current.y) * 0.22;
 
-      if (dotRef.current) {
-        dotRef.current.style.transform = `translate3d(${mousePos.current.x}px, ${mousePos.current.y}px, 0) translate(-50%, -50%)`;
+      if (dotWrapperRef.current) {
+        dotWrapperRef.current.style.transform = `translate3d(${mousePos.current.x}px, ${mousePos.current.y}px, 0) translate(-50%, -50%)`;
       }
-      if (ringRef.current) {
-        ringRef.current.style.transform = `translate3d(${ringPos.current.x}px, ${ringPos.current.y}px, 0) translate(-50%, -50%)`;
+      if (ringWrapperRef.current) {
+        ringWrapperRef.current.style.transform = `translate3d(${ringPos.current.x}px, ${ringPos.current.y}px, 0) translate(-50%, -50%)`;
       }
 
       rafId.current = requestAnimationFrame(animateRing);
@@ -70,37 +76,54 @@ export function CustomCursor() {
 
     rafId.current = requestAnimationFrame(animateRing);
 
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    window.addEventListener('mouseout', handleMouseOut);
+    window.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('blur', handleBlur);
+
     return () => {
+      if (rafId.current) cancelAnimationFrame(rafId.current);
       window.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseenter', handleMouseEnter);
-      document.removeEventListener('mouseleave', handleMouseLeave);
+      window.removeEventListener('mouseout', handleMouseOut);
       window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mouseup', handleMouseUp);
-      if (rafId.current) cancelAnimationFrame(rafId.current);
+      window.removeEventListener('blur', handleBlur);
+      document.documentElement.classList.remove('custom-cursor-active');
     };
-  }, [visible]);
+  }, []);
 
   if (!mounted || !visible) return null;
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden" aria-hidden="true">
-      {/* Inner Dot */}
+    <div className="pointer-events-none fixed inset-0 z-[70] overflow-hidden" aria-hidden="true">
+      {/* Inner Dot: outer wrapper is positioned by the RAF loop, inner element handles scale */}
       <div
-        ref={dotRef}
-        className={`fixed top-0 left-0 size-2 rounded-full bg-primary transition-opacity duration-150 will-change-transform ${
-          isHoveringInteractive ? 'opacity-80 scale-125' : 'opacity-90 scale-100'
-        } ${isMouseDown ? 'scale-75' : ''}`}
-      />
+        ref={dotWrapperRef}
+        className="fixed top-0 left-0 will-change-transform"
+        style={{ transform: 'translate3d(-100px, -100px, 0) translate(-50%, -50%)' }}
+      >
+        <div
+          className={`size-2 rounded-full bg-primary transition-opacity duration-150 ${
+            isHoveringInteractive ? 'opacity-80 scale-125' : 'opacity-90 scale-100'
+          } ${isMouseDown ? 'scale-75' : ''}`}
+        />
+      </div>
 
-      {/* Trailing Ring */}
+      {/* Trailing Ring: outer wrapper is positioned by the RAF loop, inner element handles scale */}
       <div
-        ref={ringRef}
-        className={`fixed top-0 left-0 rounded-full border border-primary/40 will-change-transform transition-all duration-200 ease-out ${
-          isHoveringInteractive
-            ? 'size-9 bg-primary/10 border-primary/60 scale-110 shadow-xs'
-            : 'size-6 bg-transparent border-primary/30 scale-100'
-        } ${isMouseDown ? 'scale-90 bg-primary/20' : ''}`}
-      />
+        ref={ringWrapperRef}
+        className="fixed top-0 left-0 will-change-transform"
+        style={{ transform: 'translate3d(-100px, -100px, 0) translate(-50%, -50%)' }}
+      >
+        <div
+          className={`rounded-full border transition-[width,height,background-color,border-color,box-shadow] duration-200 ease-out ${
+            isHoveringInteractive
+              ? 'size-9 bg-primary/10 border-primary/60 scale-110 shadow-xs'
+              : 'size-6 bg-transparent border-primary/30 scale-100'
+          } ${isMouseDown ? 'scale-90 bg-primary/20' : ''}`}
+        />
+      </div>
     </div>
   );
 }

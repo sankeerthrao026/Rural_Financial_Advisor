@@ -360,3 +360,14 @@
     transform: none !important;
   }
 }
+
+/* Custom Cursor: hide the native OS cursor only while the custom cursor
+   system is active on a fine-pointer device (class toggled by the
+   CustomCursor component). Touch devices and reduced-motion users are
+   unaffected because the class is never added in those cases. */
+@media (pointer: fine) {
+  html.custom-cursor-active,
+  html.custom-cursor-active * {
+    cursor: none;
+  }
+}
