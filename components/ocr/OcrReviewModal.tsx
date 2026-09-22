@@ -167,7 +167,7 @@ export function OcrReviewModal({
     if (!singleData) return;
     onSaveSingle({
       date: singleData.date || new Date().toISOString().split('T')[0],
-      amount: singleData.totalAmount || 100,
+      amount: singleData.totalAmount || 0,
       type: singleData.type,
       category: singleData.category || 'Sales',
       note: singleData.note || singleData.vendor,

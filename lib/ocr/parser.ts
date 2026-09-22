@@ -404,7 +404,7 @@ export async function parseReceiptOrLedgerWithAiFallback(
             id: `ai-row-${Date.now()}-${idx}`,
             date: r.date ? normalizeDate(r.date) : singleSlip.date,
             note: r.note || `Ledger item ${idx + 1}`,
-            amount: Number(r.amount) || 100,
+            amount: Number(r.amount) || 0,
             type: r.type === 'income' ? 'income' : 'expense',
             category: r.category || 'General',
           }));
