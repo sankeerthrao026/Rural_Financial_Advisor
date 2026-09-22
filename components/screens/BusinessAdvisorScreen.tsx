@@ -175,7 +175,7 @@ export function BusinessAdvisorScreen() {
     }
     const interval = setInterval(() => {
       setActiveStep((prev) => (prev < 2 ? prev + 1 : prev));
-    }, 1200);
+    }, 600);
     return () => clearInterval(interval);
   }, [loading]);
 

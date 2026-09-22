@@ -23,11 +23,8 @@ export interface GeminiCallResult {
 }
 
 const CANDIDATE_MODELS = [
-  'gemini-3.6-flash',
-  'gemini-3.7-flash',
-  'gemini-3.8-flash',
-  'gemini-3.5-flash',
   'gemini-3.1-flash-lite',
+  'gemini-3.6-flash',
   'gemini-flash-latest',
 ];
 
@@ -77,6 +74,10 @@ export async function callGeminiApi(params: GeminiCallParams): Promise<GeminiCal
         ],
         generationConfig: {
           temperature: params.temperature ?? 0.2,
+          maxOutputTokens: 1024,
+          thinkingConfig: {
+            thinkingBudget: 0,
+          },
         },
       };
 
@@ -96,6 +97,7 @@ export async function callGeminiApi(params: GeminiCallParams): Promise<GeminiCal
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(8000),
       });
 
       if (!res.ok) {

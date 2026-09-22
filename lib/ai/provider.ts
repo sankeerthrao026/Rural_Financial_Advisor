@@ -290,11 +290,26 @@ function synthesizeGroundedLocalAdvisor(
   };
 }
 
+// In-memory cache for fast repeated advisory responses
+const advisorCache = new Map<string, { timestamp: number; data: BusinessAdvisorOutput }>();
+const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+
+function getAdvisorCacheKey(input: BusinessAnalysisInput): string {
+  const histSummary = (input.history || []).slice(-4).map((h) => `${h.role}:${h.content}`).join('|');
+  return `${input.location}|${input.category}|${input.marginCapital}|${input.language}|${input.userQuery || ''}|${histSummary}`;
+}
+
 /**
  * Grounded AI Business Advisor Generator.
  * Routes to FastAPI ChromaDB RAG backend when online; uses Gemini with local grounding when standalone.
  */
 export async function generateBusinessAnalysis(input: BusinessAnalysisInput): Promise<BusinessAdvisorOutput> {
+  const cacheKey = getAdvisorCacheKey(input);
+  const cached = advisorCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
+  }
+
   // 1. Primary AI Path: Try FastAPI backend endpoint (Persistent ChromaDB Vector Store + Gemini)
   try {
     const backendRes = await apiClient.analyzeAdvisor({
@@ -307,7 +322,9 @@ export async function generateBusinessAnalysis(input: BusinessAnalysisInput): Pr
     });
 
     if (backendRes.success && backendRes.data) {
-      return backendRes.data as BusinessAdvisorOutput;
+      const output = backendRes.data as BusinessAdvisorOutput;
+      advisorCache.set(cacheKey, { timestamp: Date.now(), data: output });
+      return output;
     }
   } catch (backendErr) {
     console.warn('[AI Pipeline] FastAPI advisor endpoint unreachable; falling back to direct Next.js Gemini engine:', backendErr);
@@ -318,7 +335,7 @@ export async function generateBusinessAnalysis(input: BusinessAnalysisInput): Pr
   const isTe = input.language === 'te';
 
   const system = `You are the RuralCred Advisor AI Engine.
-Your task is to provide realistic, grounded, and cautious business advisory for rural Indian micro-entrepreneurs.
+Your task is to provide realistic, grounded, and concise business advisory for rural Indian micro-entrepreneurs.
 STRICT SAFETY & FACT RULES:
 1. Ground all recommendations strictly on the provided district profile, mandi price trends, and category benchmarks.
 2. NEVER calculate critical loan amounts, interest rates, or loan approval odds (these are deterministic).
@@ -328,7 +345,7 @@ STRICT SAFETY & FACT RULES:
 6. Language requested: ${isTe ? 'Telugu (తెలుగు) with standard business loan terms' : 'English with clear Indian terminology'}.`;
 
   const historyBlock = input.history && input.history.length > 0
-    ? `CONVERSATION HISTORY (RECENT TURNS):\n${input.history.slice(-8).map(m => `${m.role === 'user' ? 'Entrepreneur' : 'Advisor'}: ${m.content}`).join('\n')}\n\n`
+    ? `CONVERSATION HISTORY (RECENT TURNS):\n${input.history.slice(-6).map(m => `${m.role === 'user' ? 'Entrepreneur' : 'Advisor'}: ${m.content}`).join('\n')}\n\n`
     : '';
 
   const userPrompt = `${historyBlock}BUSINESS PROFILE:
@@ -345,11 +362,11 @@ Return pure JSON with keys:
 {
   "reply": "Clear, direct, and conversational 2-4 sentence explanation addressing the user's specific inquiry or follow-up question directly.",
   "marketReach": { "headline": "string", "details": "string", "targetSegment": "string", "estimatedLocalDemand": "string" },
-  "opportunityAnalysis": { "overview": "string", "primaryDrivers": ["string"], "seasonalOpportunity": "string" },
-  "swot": { "strengths": ["string"], "weaknesses": ["string"], "opportunities": ["string"], "threats": ["string"] },
+  "opportunityAnalysis": { "overview": "string", "primaryDrivers": ["string", "string"], "seasonalOpportunity": "string" },
+  "swot": { "strengths": ["string", "string"], "weaknesses": ["string", "string"], "opportunities": ["string", "string"], "threats": ["string", "string"] },
   "competitorDensity": { "densityLevel": "Low|Moderate|High", "description": "string", "mitigationStrategy": "string" },
   "pricingSuggestion": { "recommendedBand": "string", "benchmarkComparison": "string", "marginTarget": "string" },
-  "risks": ["string"],
+  "risks": ["string", "string"],
   "assumptions": ["string"]
 }`;
 
@@ -361,7 +378,7 @@ Return pure JSON with keys:
       const rawJson = (jsonMatch[1] || response.text).trim();
       const parsed = JSON.parse(rawJson);
 
-      return {
+      const result: BusinessAdvisorOutput = {
         ...parsed,
         groundedFacts: {
           district: grounded.districtData.name,
@@ -374,13 +391,17 @@ Return pure JSON with keys:
         sourcesUsed: ['Local District Profile', 'NBCFDC Category Benchmarks'],
         providerUsed: response.provider,
       };
+      advisorCache.set(cacheKey, { timestamp: Date.now(), data: result });
+      return result;
     } catch (e) {
       console.warn('[AI Pipeline Warning] Failed to parse Gemini response JSON, using grounded local synthesis:', e);
     }
   }
 
   // 3. Fallback: Grounded local dataset synthesis
-  return synthesizeGroundedLocalAdvisor(input, grounded);
+  const fallbackResult = synthesizeGroundedLocalAdvisor(input, grounded);
+  advisorCache.set(cacheKey, { timestamp: Date.now(), data: fallbackResult });
+  return fallbackResult;
 }
 
 /**

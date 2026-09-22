@@ -14,8 +14,12 @@ class GeminiService:
         if self.api_key:
             try:
                 from google import genai
-                self.client = genai.Client(api_key=self.api_key)
-                print("[INFO] Gemini AI Client initialized successfully with Google GenAI SDK.")
+                from google.genai import types
+                self.client = genai.Client(
+                    api_key=self.api_key,
+                    http_options=types.HttpOptions(timeout=10000)
+                )
+                print("[INFO] Gemini AI Client initialized successfully with Google GenAI SDK (timeout=10s).")
             except Exception as e:
                 print(f"[WARN] Failed to initialize Gemini client: {e}")
                 self.client = None
@@ -35,29 +39,30 @@ class GeminiService:
         """
         Calls Gemini API with strict grounding on the retrieved ChromaDB context.
         Incorporates conversational history for multi-turn dialogue.
-        Enforces structured JSON response with automatic fallback across Flash models.
+        Enforces structured JSON response with thinking_budget=0 and max_output_tokens=1024 for minimal latency.
         """
         if not self.is_available():
             return None
 
+        import time
         from google.genai import types
 
         is_te = language == "te"
         system_prompt = f"""You are the RuralCred Advisor AI Engine.
-You provide realistic, grounded, and cautious business advisory for rural Indian micro-entrepreneurs.
+You provide realistic, grounded, and concise business advisory for rural Indian micro-entrepreneurs.
 STRICT SAFETY & GROUNDING RULES:
 1. Ground all factual claims strictly in the provided RETRIEVED LOCAL CONTEXT.
 2. NEVER calculate critical loan amounts, EMI, interest rates, or financial health scores (handled deterministically by the Python engine).
 3. NEVER invent fictitious competitors, fake government schemes, or arbitrary prices.
 4. If context is insufficient for a reliable estimate, state "Insufficient local data for a reliable estimate."
 5. Address follow-up questions directly by maintaining continuity with earlier turns in the conversation.
-6. Output valid JSON matching the exact schema requested.
+6. Output valid, concise JSON matching the exact schema requested.
 7. Language: {"Telugu (తెలుగు) with standard business loan terms" if is_te else "English with clear Indian rural business terminology"}."""
 
         history_text = ""
         if history and len(history) > 0:
             formatted_turns = []
-            for item in history[-8:]:
+            for item in history[-6:]:
                 role_val = item.get("role") if isinstance(item, dict) else getattr(item, "role", "user")
                 content_val = item.get("content") if isinstance(item, dict) else getattr(item, "content", "")
                 speaker = "Entrepreneur" if role_val == "user" else "Advisor"
@@ -81,14 +86,14 @@ Return a valid JSON object with the following structure:
   }},
   "opportunityAnalysis": {{
     "overview": "string",
-    "primaryDrivers": ["string", "string", "string"],
+    "primaryDrivers": ["string", "string"],
     "seasonalOpportunity": "string"
   }},
   "swot": {{
-    "strengths": ["string", "string", "string"],
-    "weaknesses": ["string", "string", "string"],
-    "opportunities": ["string", "string", "string"],
-    "threats": ["string", "string", "string"]
+    "strengths": ["string", "string"],
+    "weaknesses": ["string", "string"],
+    "opportunities": ["string", "string"],
+    "threats": ["string", "string"]
   }},
   "competitorDensity": {{
     "densityLevel": "Low|Moderate|High",
@@ -101,18 +106,16 @@ Return a valid JSON object with the following structure:
     "marginTarget": "string"
   }},
   "risks": ["string", "string"],
-  "assumptions": ["string", "string"]
+  "assumptions": ["string"]
 }}"""
 
         candidate_models = [
-            "gemini-3.6-flash",
-            "gemini-3.7-flash",
-            "gemini-3.8-flash",
-            "gemini-3.5-flash",
             "gemini-3.1-flash-lite",
+            "gemini-3.6-flash",
             "gemini-flash-latest",
         ]
         for model in candidate_models:
+            t_model_start = time.time()
             try:
                 response = self.client.models.generate_content(
                     model=model,
@@ -121,8 +124,11 @@ Return a valid JSON object with the following structure:
                         system_instruction=system_prompt,
                         response_mime_type="application/json",
                         temperature=0.2,
+                        max_output_tokens=1024,
+                        thinking_config=types.ThinkingConfig(thinking_budget=0),
                     ),
                 )
+                t_model_duration = (time.time() - t_model_start) * 1000
 
                 raw_text = response.text or ""
                 json_text = raw_text.strip()
@@ -136,10 +142,11 @@ Return a valid JSON object with the following structure:
 
                 parsed = json.loads(json_text)
                 self.last_model_used = model
-                print(f"[INFO] Gemini advisory generated successfully via {model} with ChromaDB RAG context.")
+                print(f"[INFO] Gemini advisory generated successfully via {model} in {t_model_duration:.1f}ms.")
                 return parsed
             except Exception as e:
-                print(f"[WARN] Gemini generation with {model} failed: {e}")
+                t_model_duration = (time.time() - t_model_start) * 1000
+                print(f"[WARN] Gemini generation with {model} failed after {t_model_duration:.1f}ms: {e}")
 
         print("[WARN] All Gemini candidate models failed. Reverting to grounded local fallback.")
         return None
@@ -198,11 +205,8 @@ CURRENT ENTREPRENEUR INQUIRY:
 Provide a helpful, warm, and professional conversational response (2 to 4 paragraphs) addressing the entrepreneur's question with specific references to their profile and numbers."""
 
         candidate_models = [
-            "gemini-3.6-flash",
-            "gemini-3.7-flash",
-            "gemini-3.8-flash",
-            "gemini-3.5-flash",
             "gemini-3.1-flash-lite",
+            "gemini-3.6-flash",
             "gemini-flash-latest",
         ]
         for model in candidate_models:
@@ -213,6 +217,8 @@ Provide a helpful, warm, and professional conversational response (2 to 4 paragr
                     config=types.GenerateContentConfig(
                         system_instruction=system_prompt,
                         temperature=0.3,
+                        max_output_tokens=1024,
+                        thinking_config=types.ThinkingConfig(thinking_budget=0),
                     ),
                 )
                 text = response.text or ""
