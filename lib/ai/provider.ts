@@ -334,15 +334,29 @@ export async function generateBusinessAnalysis(input: BusinessAnalysisInput): Pr
   const grounded = lookupGroundedContext(input.location, input.category);
   const isTe = input.language === 'te';
 
-  const system = `You are the RuralCred Advisor AI Engine.
-Your task is to provide realistic, grounded, and concise business advisory for rural Indian micro-entrepreneurs.
-STRICT SAFETY & FACT RULES:
-1. Ground all recommendations strictly on the provided district profile, mandi price trends, and category benchmarks.
-2. NEVER calculate critical loan amounts, interest rates, or loan approval odds (these are deterministic).
-3. NEVER invent fake government schemes or fictitious competitors.
-4. If local data is insufficient, state "Insufficient local data for a reliable estimate."
-5. Output ONLY valid JSON matching the exact schema requested.
-6. Language requested: ${isTe ? 'Telugu (తెలుగు) with standard business loan terms' : 'English with clear Indian terminology'}.`;
+  const system = isTe
+    ? `You are the RuralCred Advisor AI Engine.
+You provide realistic, grounded, and concise business advisory for rural Indian micro-entrepreneurs.
+CRITICAL MANDATORY LANGUAGE RULE:
+The selected active application language is TELUGU (తెలుగు).
+You MUST generate EVERY user-facing string value in the output JSON exclusively in natural, fluent Telugu (తెలుగు) script.
+This applies unconditionally to all keys: 'reply', 'marketReach' ('headline', 'details', 'targetSegment', 'estimatedLocalDemand'), 'opportunityAnalysis' ('overview', 'primaryDrivers', 'seasonalOpportunity'), 'swot' ('strengths', 'weaknesses', 'opportunities', 'threats'), 'competitorDensity' ('description', 'mitigationStrategy'), 'pricingSuggestion' ('recommendedBand', 'benchmarkComparison', 'marginTarget'), 'risks', and 'assumptions'.
+STRICT RULES:
+1. Do NOT write in English. Do NOT return bilingual or mixed English-Telugu text.
+2. Even if the user question is in English, output pure Telugu.
+3. Ground all factual claims strictly on the provided district profile, mandi price trends, and category benchmarks.
+4. NEVER calculate critical loan amounts, interest rates, or loan approval odds.
+5. Output ONLY valid JSON matching the exact schema requested.`
+    : `You are the RuralCred Advisor AI Engine.
+You provide realistic, grounded, and concise business advisory for rural Indian micro-entrepreneurs.
+CRITICAL MANDATORY LANGUAGE RULE:
+The selected active application language is ENGLISH.
+You MUST generate EVERY user-facing string value in the output JSON in clear, simple Indian English.
+STRICT RULES:
+1. Output pure English with clear rural business terminology.
+2. Even if the user question is written in Telugu script, translate and respond completely in English.
+3. Ground all factual claims strictly on the provided district profile, mandi price trends, and category benchmarks.
+4. Output ONLY valid JSON matching the exact schema requested.`;
 
   const historyBlock = input.history && input.history.length > 0
     ? `CONVERSATION HISTORY (RECENT TURNS):\n${input.history.slice(-6).map(m => `${m.role === 'user' ? 'Entrepreneur' : 'Advisor'}: ${m.content}`).join('\n')}\n\n`
@@ -358,6 +372,7 @@ ${input.userQuery ? `CURRENT USER QUESTION:\n${input.userQuery}\n\nINSTRUCTION: 
 GROUNDING CONTEXT (Local Market Data, Mandi Price Trends & District Demographics):
 ${grounded.summaryContext}
 
+${isTe ? 'MANDATORY: Output all text values in Telugu (తెలుగు) script.' : 'MANDATORY: Output all text values in English.'}
 Return pure JSON with keys:
 {
   "reply": "Clear, direct, and conversational 2-4 sentence explanation addressing the user's specific inquiry or follow-up question directly.",
@@ -411,11 +426,24 @@ export async function generateRiskExplanation(input: RiskExplanationInput): Prom
   const isTe = input.language === 'te';
   const risk = input.risk;
 
-  const system = `You are the RuralCred Advisor empathetic financial coach.
+  const system = isTe
+    ? `You are the RuralCred Advisor empathetic financial coach.
 A deterministic financial rule has flagged a risk for a rural entrepreneur.
-Explain this risk in simple, respectful, and reassuring ${isTe ? 'Telugu' : 'English'}.
+CRITICAL MANDATORY LANGUAGE RULE:
+The selected active application language is TELUGU (తెలుగు).
+You MUST explain this risk completely in simple, respectful, and reassuring Telugu (తెలుగు) script for all JSON fields ('title', 'explanation', 'practicalActionSteps', 'cashFlowPreservationTip').
+Do NOT output English.
+Return JSON with:
+{
+  "title": "friendly title in Telugu",
+  "explanation": "clear 2-3 sentence explanation in Telugu",
+  "practicalActionSteps": ["step 1 in Telugu", "step 2 in Telugu"],
+  "cashFlowPreservationTip": "one crisp tip in Telugu"
+}`
+    : `You are the RuralCred Advisor empathetic financial coach.
+A deterministic financial rule has flagged a risk for a rural entrepreneur.
+Explain this risk in simple, respectful, and reassuring English.
 Do NOT use intimidating jargon like "liquidity deterioration" or "debt service insolvency".
-Use practical terms like "నగదు కొరత / cash flow is decreasing" and "వాయిదాల చెల్లింపు / quarterly repayments".
 Return JSON with:
 {
   "title": "friendly title",
@@ -501,7 +529,31 @@ export async function generateBusinessPlan(input: BusinessPlanInput): Promise<Bu
   const isTe = input.language === 'te';
   const f = input.finance;
 
-  const system = `You are a Senior Rural Banking Credit Officer.
+  const system = isTe
+    ? `You are a Senior Rural Banking Credit Officer.
+Synthesize a concise, bank-ready Project Proposal & Business Plan for a rural entrepreneur.
+CRITICAL MANDATORY LANGUAGE RULE:
+The selected active application language is TELUGU (తెలుగు).
+You MUST generate all descriptive text ('executiveSummary', 'operationalPlan', 'riskMitigation') in fluent Telugu (తెలుగు) script.
+Return JSON with:
+{
+  "executiveSummary": "string in Telugu",
+  "capitalDeploymentPlan": {
+    "ownContribution": number,
+    "schemeLoan": number,
+    "totalProjectOutlay": number,
+    "allocationBreakdown": [{ "item": "string", "amount": number, "percentage": number }]
+  },
+  "operationalPlan": "string in Telugu",
+  "financialProjections": {
+    "expectedMonthlyRevenue": "string in Telugu",
+    "expectedMonthlyExpense": "string in Telugu",
+    "netMonthlySurplus": "string in Telugu",
+    "quarterlyEmiCoverageRatio": "string in Telugu"
+  },
+  "riskMitigation": ["string in Telugu"]
+}`
+    : `You are a Senior Rural Banking Credit Officer.
 Synthesize a concise, bank-ready Project Proposal & Business Plan for a rural entrepreneur.
 Combine the deterministic loan values with market advisory.
 Return JSON with:

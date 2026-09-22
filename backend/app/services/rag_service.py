@@ -272,12 +272,22 @@ class RAGService:
             swot=SWOTAnalysis(**ai_data.get("swot", {})),
             competitorDensity=CompetitorDensity(**ai_data.get("competitorDensity", {})),
             pricingSuggestion=PricingSuggestion(**ai_data.get("pricingSuggestion", {})),
-            risks=ai_data.get("risks", risks_list if risks_list else ["Seasonal demand variations", "Raw material price volatility"]),
-            assumptions=ai_data.get("assumptions", [
-                "Margin capital represents 10% of total project outlay under standard priority-sector schemes.",
-                f"Market data grounded on {district_name} district mandi benchmarks and APMC records.",
-                "AI estimates provide strategic guidance and do not guarantee loan sanction.",
-            ]),
+            risks=ai_data.get(
+                "risks",
+                ["కాలానుగుణ వాతావరణ మార్పులు", "ముడిసరుకుల ధరల హెచ్చుతగ్గులు"] if is_te else ["Seasonal climate impact", "Raw material price volatility"]
+            ),
+            assumptions=ai_data.get(
+                "assumptions",
+                [
+                    f"మార్జిన్ మూలధనం ₹{req.marginCapital:,.0f} ప్రాజెక్ట్ వ్యయంలో 10% సూచిస్తుంది.",
+                    f"{district_name} అధికారిక మండి బెంచ్‌మార్క్‌ల ఆధారంగా విశ్లేషణ చేయబడింది.",
+                    "ఈ అంచనాలు కేవలం వ్యూహాత్మక మార్గదర్శకత్వం కోసం మాత్రమే.",
+                ] if is_te else [
+                    f"Margin capital of ₹{req.marginCapital:,.0f} represents 10% of total project outlay under standard priority-sector schemes.",
+                    f"Market data grounded on {district_name} district mandi benchmarks and APMC records.",
+                    "AI estimates provide strategic guidance and do not guarantee loan sanction.",
+                ]
+            ),
             groundedFacts=GroundedFacts(
                 district=district_name,
                 category=category_name,

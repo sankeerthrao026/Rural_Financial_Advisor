@@ -663,34 +663,68 @@ def generate_finance_advice(req: FinanceAdviceRequest) -> FinanceAdviceResponse:
         if not reply_text:
             q_lower = req.userQuery.lower()
             if "why" in q_lower or "scheme" in q_lower or "stand-up" in q_lower or "pmegp" in q_lower or "mudra" in q_lower:
-                reply_text = (
-                    f"We recommended {top_scheme.name if top_scheme else 'this scheme'} because: {top_scheme.whyRecommended if top_scheme else ''} "
-                    f"It provides {top_scheme.subsidyOrConcession if top_scheme else ''}, keeping your quarterly repayment at ₹{req.quarterlyEmi:,.0f}."
-                )
+                if is_te:
+                    reply_text = (
+                        f"మీకు '{top_scheme.nameTe if top_scheme else scheme_name}' పథకం సిఫార్సు చేయబడింది ఎందుకంటే: "
+                        f"{top_scheme.whyRecommendedTe if top_scheme else ''} "
+                        f"ఇది {top_scheme.subsidyOrConcessionTe if top_scheme else ''} అందిస్తుంది, మీ త్రైమాసిక వాయిదా ₹{req.quarterlyEmi:,.0f} గా ఉంటుంది."
+                    )
+                else:
+                    reply_text = (
+                        f"We recommended {top_scheme.name if top_scheme else 'this scheme'} because: {top_scheme.whyRecommended if top_scheme else ''} "
+                        f"It provides {top_scheme.subsidyOrConcession if top_scheme else ''}, keeping your quarterly repayment at ₹{req.quarterlyEmi:,.0f}."
+                    )
             elif "moratorium" in q_lower or "summer" in q_lower or "lean" in q_lower or "skip" in q_lower or "pause" in q_lower:
-                reply_text = (
-                    f"{moratorium_advice.guidance} "
-                    f"During the initial {moratorium_advice.moratoriumQuartersRecommended * 3} months, you only need to service accrued interest, giving your cash flows time to stabilize."
-                )
+                if is_te:
+                    reply_text = (
+                        f"{moratorium_advice.guidanceTe or moratorium_advice.guidance} "
+                        f"ప్రారంభ {moratorium_advice.moratoriumQuartersRecommended * 3} నెలల పాటు మీరు అసలు చెల్లించాల్సిన అవసరం లేదు, కేవలం వడ్డీ మాత్రమే చెల్లించవచ్చు."
+                    )
+                else:
+                    reply_text = (
+                        f"{moratorium_advice.guidance} "
+                        f"During the initial {moratorium_advice.moratoriumQuartersRecommended * 3} months, you only need to service accrued interest, giving your cash flows time to stabilize."
+                    )
             elif "working capital" in q_lower or "capex" in q_lower or "equipment" in q_lower or "stock" in q_lower or "split" in q_lower:
-                reply_text = (
-                    f"Of your ₹{req.loanAmount:,.0f} loan, we allocate ₹{wc_breakdown.workingCapitalAmount:,.0f} ({wc_breakdown.workingCapitalPercent}%) "
-                    f"to day-to-day working capital ({', '.join(wc_breakdown.workingCapitalUses[:2])}) and ₹{wc_breakdown.capexAmount:,.0f} "
-                    f"({wc_breakdown.capexPercent}%) to one-time equipment/capex ({', '.join(wc_breakdown.capexUses[:2])}). "
-                    f"This separation gives lenders confidence that funds won't be diverted."
-                )
+                if is_te:
+                    reply_text = (
+                        f"మీ మొత్తం ₹{req.loanAmount:,.0f} రుణంలో, రోజువారీ వర్కింగ్ క్యాపిటల్ కోసం ₹{wc_breakdown.workingCapitalAmount:,.0f} ({wc_breakdown.workingCapitalPercent}%) "
+                        f"మరియు యంత్రాలు/పరికరాల కొనుగోలు (Capex) కోసం ₹{wc_breakdown.capexAmount:,.0f} ({wc_breakdown.capexPercent}%) కేటాయించబడింది. "
+                        f"ఈ విభజన బ్యాంకర్లకు రుణ వినియోగంపై పూర్తి నమ్మకాన్ని ఇస్తుంది."
+                    )
+                else:
+                    reply_text = (
+                        f"Of your ₹{req.loanAmount:,.0f} loan, we allocate ₹{wc_breakdown.workingCapitalAmount:,.0f} ({wc_breakdown.workingCapitalPercent}%) "
+                        f"to day-to-day working capital ({', '.join(wc_breakdown.workingCapitalUses[:2])}) and ₹{wc_breakdown.capexAmount:,.0f} "
+                        f"({wc_breakdown.capexPercent}%) to one-time equipment/capex ({', '.join(wc_breakdown.capexUses[:2])}). "
+                        f"This separation gives lenders confidence that funds won't be diverted."
+                    )
             elif "document" in q_lower or "bank" in q_lower or "apply" in q_lower or "approval" in q_lower:
-                reply_text = (
-                    f"To apply for your ₹{req.loanAmount:,.0f} loan under {top_scheme.name if top_scheme else 'the scheme'}, lenders will require: "
-                    f"1) Aadhaar & PAN, 2) Residence & Caste certificate (if SC/ST/OBC), 3) Quotations for capex equipment (₹{wc_breakdown.capexAmount:,.0f}), "
-                    f"and 4) 6 months of bank account or logbook cash flow statements showing your ₹{req.marginCapital:,.0f} margin capital readiness."
-                )
+                if is_te:
+                    reply_text = (
+                        f"{top_scheme.nameTe if top_scheme else 'ఈ పథకం'} కింద ₹{req.loanAmount:,.0f} రుణం కోసం దరఖాస్తు చేయడానికి అవసరమైన పత్రాలు: "
+                        f"1) ఆధార్ & పాన్ కార్డ్, 2) నివాస & కుల ధృవీకరణ పత్రం (SC/ST/OBC అయితే), 3) యంత్రాల కొటేషన్లు (₹{wc_breakdown.capexAmount:,.0f}), "
+                        f"మరియు 4) మీ ₹{req.marginCapital:,.0f} మూలధన సంసిద్ధతను చూపే 6 నెలల బ్యాంక్ ఖాతా లేదా లాగ్‌బుక్ రికార్డులు."
+                    )
+                else:
+                    reply_text = (
+                        f"To apply for your ₹{req.loanAmount:,.0f} loan under {top_scheme.name if top_scheme else 'the scheme'}, lenders will require: "
+                        f"1) Aadhaar & PAN, 2) Residence & Caste certificate (if SC/ST/OBC), 3) Quotations for capex equipment (₹{wc_breakdown.capexAmount:,.0f}), "
+                        f"and 4) 6 months of bank account or logbook cash flow statements showing your ₹{req.marginCapital:,.0f} margin capital readiness."
+                    )
             else:
-                reply_text = (
-                    f"Based on your {req.category} profile in {req.location}, your loan of ₹{req.loanAmount:,.0f} requires a quarterly payment of ₹{req.quarterlyEmi:,.0f}. "
-                    f"We have structured ₹{wc_breakdown.workingCapitalAmount:,.0f} for working capital and ₹{wc_breakdown.capexAmount:,.0f} for equipment. "
-                    f"Feel free to ask about scheme eligibility, seasonal grace periods, or required bank paperwork."
-                )
+                if is_te:
+                    reply_text = (
+                        f"{req.location} లోని మీ {req.category} వ్యాపార విశ్లేషణ ప్రకారం, మీ ₹{req.loanAmount:,.0f} రుణానికి త్రైమాసిక వాయిదా ₹{req.quarterlyEmi:,.0f}. "
+                        f"మేము వర్కింగ్ క్యాపిటల్ కోసం ₹{wc_breakdown.workingCapitalAmount:,.0f} మరియు పరికరాల కోసం ₹{wc_breakdown.capexAmount:,.0f} కేటాయించాము. "
+                        f"పథకం వివరాలు లేదా బ్యాంక్ పత్రాల గురించి ఏవైనా సందేహాలుంటే అడగండి."
+                    )
+                else:
+                    reply_text = (
+                        f"Based on your {req.category} profile in {req.location}, your loan of ₹{req.loanAmount:,.0f} requires a quarterly payment of ₹{req.quarterlyEmi:,.0f}. "
+                        f"We have structured ₹{wc_breakdown.workingCapitalAmount:,.0f} for working capital and ₹{wc_breakdown.capexAmount:,.0f} for equipment. "
+                        f"Feel free to ask about scheme eligibility, seasonal grace periods, or required bank paperwork."
+                    )
     else:
         # Default greeting / executive advisor overview
         if is_te:
