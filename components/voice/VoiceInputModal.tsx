@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Mic,
-  MicOff,
   Square,
   Sparkles,
   AlertCircle,
@@ -11,7 +10,6 @@ import {
   Languages,
   X,
   RefreshCw,
-  Volume2,
 } from 'lucide-react';
 import {
   VoiceLanguage,
@@ -22,6 +20,7 @@ import {
   parseSpokenTransactionWithFallback,
   SpokenTransactionResult,
 } from '@/lib/voice/speech';
+import { en as enDict, te as teDict, hi as hiDict } from '@/lib/i18n';
 import { formatINR } from '@/lib/utils/currency';
 
 interface VoiceInputModalProps {
@@ -33,6 +32,15 @@ interface VoiceInputModalProps {
 }
 
 type RecordingState = 'idle' | 'recording' | 'processing' | 'success' | 'error';
+
+// Maximum recording duration guard (prevents the mic running forever).
+const MAX_RECORDING_SECONDS = 60;
+
+const LANGUAGE_LABELS: Record<VoiceLanguage, string> = {
+  en: 'English',
+  te: 'తెలుగు',
+  hi: 'हिन्दी',
+};
 
 export function VoiceInputModal({
   isOpen,
@@ -48,18 +56,23 @@ export function VoiceInputModal({
   const [extractedResult, setExtractedResult] = useState<SpokenTransactionResult | null>(null);
   const [recordingSeconds, setRecordingSeconds] = useState<number>(0);
 
-  const activeListenerRef = useRef<{ stop: () => void } | null>(null);
+  const activeListenerRef = useRef<{ stop: () => void; abort?: () => void } | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const isClosedRef = useRef(!isOpen);
   const hasWebSpeech = isSpeechRecognitionSupported();
 
+  const dict = activeLang === 'te' ? teDict : activeLang === 'hi' ? hiDict : enDict;
+  const t = dict.voice;
+
+  // Mirror the prop language into the modal whenever it changes externally.
   useEffect(() => {
     setActiveLang(language);
   }, [language]);
 
-  // Clean up on unmount or close
+  // Reset session state whenever the modal opens.
   useEffect(() => {
-    if (!isOpen) {
-      stopRecording();
+    if (isOpen) {
+      isClosedRef.current = false;
       setState('idle');
       setTranscript('');
       setErrorMessage('');
@@ -68,11 +81,59 @@ export function VoiceInputModal({
     }
   }, [isOpen]);
 
+  // Clean up on close and on unmount. Closing must ABORT rather than gracefully
+  // stop so recognition/MediaRecorder sessions are torn down immediately and
+  // any pending microphone stream is released (no background mic leak).
+  useEffect(() => {
+    if (!isOpen) {
+      isClosedRef.current = true;
+      stopTimer();
+      const listener = activeListenerRef.current;
+      activeListenerRef.current = null;
+      if (listener) {
+        if (listener.abort) {
+          listener.abort();
+        } else {
+          listener.stop();
+        }
+      }
+      setState('idle');
+      setTranscript('');
+      setErrorMessage('');
+      setExtractedResult(null);
+      setRecordingSeconds(0);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    return () => {
+      isClosedRef.current = true;
+      stopTimer();
+      const listener = activeListenerRef.current;
+      activeListenerRef.current = null;
+      if (listener) {
+        if (listener.abort) {
+          listener.abort();
+        } else {
+          listener.stop();
+        }
+      }
+    };
+  }, []);
+
   const startTimer = () => {
     setRecordingSeconds(0);
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
-      setRecordingSeconds((prev) => prev + 1);
+      setRecordingSeconds((prev) => {
+        const next = prev + 1;
+        // Hard maximum recording duration — auto-stop so the mic can never
+        // stay hot indefinitely.
+        if (next >= MAX_RECORDING_SECONDS) {
+          stopRecording();
+        }
+        return next;
+      });
     }, 1000);
   };
 
@@ -84,6 +145,7 @@ export function VoiceInputModal({
   };
 
   const handleStartListening = async () => {
+    if (isClosedRef.current) return;
     setErrorMessage('');
     setTranscript('');
     setExtractedResult(null);
@@ -95,34 +157,34 @@ export function VoiceInputModal({
       const listener = startSpeechListening({
         language: activeLang,
         onInterim: (interim) => {
+          if (isClosedRef.current) return;
           setTranscript(interim);
         },
         onResult: async (finalText) => {
+          if (isClosedRef.current) return;
           stopTimer();
           setTranscript(finalText);
           setState('processing');
           try {
             const parsed = await parseSpokenTransactionWithFallback(finalText, activeLang);
+            if (isClosedRef.current) return;
             setExtractedResult(parsed);
             setState('success');
           } catch (err: any) {
+            if (isClosedRef.current) return;
             setErrorMessage(err?.message || 'Failed to analyze speech with AI.');
             setState('error');
           }
         },
-        onError: (err: any) => {
+        onError: (_code, message) => {
+          if (isClosedRef.current) return;
           stopTimer();
-          const errStr = typeof err === 'string' ? err : err?.error || err?.message || 'Microphone error';
-          if (errStr === 'not-allowed') {
-            setErrorMessage('Microphone access was denied. Please allow microphone permissions in browser settings.');
-          } else if (errStr === 'no-speech') {
-            setErrorMessage('No speech detected. Please speak clearly into the microphone.');
-          } else {
-            setErrorMessage(`Speech recognition error: ${errStr}`);
-          }
+          // Message is already fully localized via getSpeechErrorMessage.
+          setErrorMessage(message);
           setState('error');
         },
         onEnd: () => {
+          if (isClosedRef.current) return;
           // If ended without final result and still in recording state
           setState((prev) => (prev === 'recording' ? 'idle' : prev));
           stopTimer();
@@ -142,10 +204,15 @@ export function VoiceInputModal({
       try {
         const fallbackRecorder = await startAudioRecordingFallback({
           language: activeLang,
+          // If the modal closes while getUserMedia() is still pending, the
+          // fallback tears the fresh stream down instead of recording silently.
+          isCancelled: () => isClosedRef.current,
           onProcessing: () => {
+            if (isClosedRef.current) return;
             setState('processing');
           },
           onResult: async (transcribedText: string, structured?: any) => {
+            if (isClosedRef.current) return;
             stopTimer();
             setTranscript(transcribedText);
             setState('processing');
@@ -161,11 +228,13 @@ export function VoiceInputModal({
               setState('success');
             } else {
               const parsed = await parseSpokenTransactionWithFallback(transcribedText, activeLang);
+              if (isClosedRef.current) return;
               setExtractedResult(parsed);
               setState('success');
             }
           },
           onError: (err: any) => {
+            if (isClosedRef.current) return;
             stopTimer();
             setErrorMessage(err?.message || 'Fallback audio recording failed.');
             setState('error');
@@ -174,6 +243,7 @@ export function VoiceInputModal({
 
         activeListenerRef.current = fallbackRecorder;
       } catch (err: any) {
+        if (isClosedRef.current) return;
         stopTimer();
         setErrorMessage(err?.message || 'Failed to initialize microphone.');
         setState('error');
@@ -181,11 +251,14 @@ export function VoiceInputModal({
     }
   };
 
+  // Graceful stop is only used when the user intentionally finishes speaking.
+  // Closing the modal always goes through the abort path (see effect above).
   const stopRecording = () => {
     stopTimer();
     if (activeListenerRef.current) {
-      activeListenerRef.current.stop();
+      const listener = activeListenerRef.current;
       activeListenerRef.current = null;
+      listener.stop();
     }
   };
 
@@ -204,24 +277,6 @@ export function VoiceInputModal({
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const examplePhrases = {
-    en: [
-      '"Sold 20 litres of milk for 900 rupees"',
-      '"Bought 2 bags of cattle feed for 1400"',
-      '"Paid shop electricity bill 650 rupees"',
-    ],
-    te: [
-      '"పాల అమ్మకం ద్వారా 1200 రూపాయలు ఆదాయం వచ్చింది"',
-      '"పశువుల దాణా కోసం 800 రూపాయలు ఖర్చు చేశాను"',
-      '"కూలీల వేతనం 1500 రూపాయలు చెల్లించాను"',
-    ],
-    hi: [
-      '"दूध बिक्री से 1500 रुपये की कमाई हुई"',
-      '"पशु आहार (चारा) खरीदा 850 रुपये का"',
-      '"दुकान का किराया दिया 2000 रुपये"',
-    ],
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="relative w-full max-w-lg rounded-2xl border bg-card p-6 shadow-2xl modal-enter">
@@ -232,13 +287,7 @@ export function VoiceInputModal({
               <Mic className="size-5" />
             </div>
             <div>
-              <h3 className="font-semibold text-base">
-                {activeLang === 'te'
-                  ? 'స్మార్ట్ వాయిస్ డేటా ఎంట్రీ'
-                  : activeLang === 'hi'
-                  ? 'स्मार्ट वॉइस डेटा एंट्री'
-                  : 'Smart Voice Data Entry'}
-              </h3>
+              <h3 className="font-semibold text-base">{t.title}</h3>
               <p className="text-xs text-muted-foreground">
                 {hasWebSpeech
                   ? 'Web Speech API • Real-Time STT'
@@ -258,10 +307,10 @@ export function VoiceInputModal({
         <div className="mt-4 flex items-center justify-between gap-2 p-2 rounded-xl bg-muted/50 border">
           <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground pl-1">
             <Languages className="size-3.5 text-primary" />
-            Language:
+            {t.languageLabel}
           </span>
           <div className="flex items-center gap-1">
-            {(['en', 'te'] as VoiceLanguage[]).map((lang) => (
+            {(Object.keys(LANGUAGE_LABELS) as VoiceLanguage[]).map((lang) => (
               <button
                 key={lang}
                 type="button"
@@ -276,7 +325,7 @@ export function VoiceInputModal({
                     : 'bg-background hover:bg-muted text-muted-foreground'
                 }`}
               >
-                {lang === 'en' ? 'English' : 'తెలుగు'}
+                {LANGUAGE_LABELS[lang]}
               </button>
             ))}
           </div>
@@ -338,40 +387,24 @@ export function VoiceInputModal({
           {/* Status Message */}
           <div className="mt-4">
             {state === 'idle' && (
-              <p className="text-sm font-medium text-muted-foreground">
-                {activeLang === 'te'
-                  ? 'మైక్రోఫోన్ నొక్కి లావాదేవీని మాట్లాడండి'
-                  : activeLang === 'hi'
-                  ? 'माइक दबाकर लेन-देन का विवरण बोलें'
-                  : 'Tap microphone and speak your transaction naturally'}
-              </p>
+              <p className="text-sm font-medium text-muted-foreground">{t.idleStatus}</p>
             )}
             {state === 'recording' && (
               <div>
                 <p className="text-sm font-semibold text-rose-600 dark:text-rose-400 flex items-center justify-center gap-2">
                   <span className="size-2 rounded-full bg-rose-600 animate-pulse" />
-                  {activeLang === 'te'
-                    ? 'వింటున్నాము... మాట్లాడండి'
-                    : activeLang === 'hi'
-                    ? 'सुन रहे हैं... बोलिए'
-                    : 'Listening... Speak naturally'}
+                  {t.listeningStatus}
                   <span className="text-xs font-mono font-normal opacity-80">
                     ({formatSeconds(recordingSeconds)})
                   </span>
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Click the square button when finished speaking
-                </p>
+                <p className="text-xs text-muted-foreground mt-1">{t.stopHint}</p>
               </div>
             )}
             {state === 'processing' && (
               <p className="text-sm font-medium text-primary flex items-center justify-center gap-2">
                 <Sparkles className="size-4 animate-spin text-amber-500" />
-                {activeLang === 'te'
-                  ? 'జెమిని AI విశ్లేషిస్తోంది...'
-                  : activeLang === 'hi'
-                  ? 'Gemini AI द्वारा विश्लेषण जारी...'
-                  : 'Extracting transaction with Gemini AI...'}
+                {t.processingStatus}
               </p>
             )}
           </div>
@@ -381,7 +414,7 @@ export function VoiceInputModal({
         {transcript && (
           <div className="mb-4 rounded-xl border bg-muted/30 p-3 text-left">
             <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-              Spoken Transcript:
+              {t.transcriptLabel}
             </p>
             <p className="text-sm font-medium italic text-foreground">
               "{transcript}"
@@ -394,7 +427,7 @@ export function VoiceInputModal({
           <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-rose-300 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/40 p-3 text-left">
             <AlertCircle className="size-4.5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
             <div className="flex-1 text-xs">
-              <p className="font-semibold text-rose-800 dark:text-rose-300">Voice Input Notice</p>
+              <p className="font-semibold text-rose-800 dark:text-rose-300">{t.errorTitle}</p>
               <p className="mt-0.5 text-rose-700 dark:text-rose-400">{errorMessage}</p>
             </div>
           </div>
@@ -406,35 +439,41 @@ export function VoiceInputModal({
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
                 <CheckCircle2 className="size-4 text-emerald-600" />
-                <span>Extracted Transaction</span>
+                <span>{t.extractedTitle}</span>
               </div>
               <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full uppercase ${
                 extractedResult.type === 'income'
                   ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
                   : 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300'
               }`}>
-                {extractedResult.type === 'income' ? '+ Income' : '− Expense'}
+                {extractedResult.type === 'income' ? t.income : t.expense}
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-3 text-xs mt-3">
               <div className="rounded-lg bg-card p-2.5 border">
-                <span className="text-muted-foreground">Amount:</span>
+                <span className="text-muted-foreground">{t.amountLabel}</span>
                 <p className="text-base font-bold font-sora text-foreground mt-0.5">
-                  {extractedResult.amount ? formatINR(extractedResult.amount) : 'Not specified'}
+                  {extractedResult.amount ? formatINR(extractedResult.amount) : t.notSpecified}
                 </p>
               </div>
               <div className="rounded-lg bg-card p-2.5 border">
-                <span className="text-muted-foreground">Category:</span>
+                <span className="text-muted-foreground">{t.categoryLabel}</span>
                 <p className="font-semibold text-foreground mt-0.5 truncate">
-                  {extractedResult.category || 'General'}
+                  {extractedResult.category || t.general}
                 </p>
               </div>
             </div>
 
+            {extractedResult.parseMessage && !extractedResult.amount && (
+              <p className="mt-2.5 text-xs text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 rounded-lg p-2.5">
+                {extractedResult.parseMessage}
+              </p>
+            )}
+
             {extractedResult.note && (
               <p className="mt-2.5 text-xs text-muted-foreground truncate">
-                <span className="font-medium text-foreground">Note:</span> {extractedResult.note}
+                <span className="font-medium text-foreground">{t.noteLabel}</span> {extractedResult.note}
               </p>
             )}
 
@@ -444,7 +483,7 @@ export function VoiceInputModal({
               className="mt-3.5 w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-colors shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
             >
               <CheckCircle2 className="size-3.5" />
-              Apply to Logbook Entry Form
+              {t.applyBtn}
             </button>
           </div>
         )}
@@ -453,13 +492,13 @@ export function VoiceInputModal({
         {state === 'idle' && (
           <div className="mt-2 rounded-xl bg-muted/40 p-3 text-left">
             <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-              Natural speech examples:
+              {t.examplesLabel}
             </p>
             <ul className="space-y-1 text-xs text-muted-foreground">
-              {examplePhrases[activeLang].map((phrase, idx) => (
+              {t.examplePhrases.map((phrase, idx) => (
                 <li key={idx} className="flex items-center gap-1.5">
                   <span className="size-1 rounded-full bg-primary/60" />
-                  <span>{phrase}</span>
+                  <span className="italic">"{phrase}"</span>
                 </li>
               ))}
             </ul>

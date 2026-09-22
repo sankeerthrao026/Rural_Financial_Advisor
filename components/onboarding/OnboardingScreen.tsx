@@ -33,6 +33,10 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
   const voiceInput = useVoiceInput({
     targetLanguage: language,
     onResult: (transcript, isFinal) => {
+      // Only final transcripts should update the form — interim results would
+      // otherwise flicker partial text into the fields.
+      if (!isFinal) return;
+
       // Numbers extraction for margin capital
       const cleanStr = transcript.replace(/₹/g, '').replace(/,/g, '');
       const numbers = cleanStr.match(/\d+/g);

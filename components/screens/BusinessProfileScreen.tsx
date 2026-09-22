@@ -31,6 +31,10 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
   const voiceInput = useVoiceInput({
     targetLanguage: language,
     onResult: (transcript, isFinal) => {
+      // Only final transcripts should update the form — interim results would
+      // otherwise flicker partial text into the fields.
+      if (!isFinal) return;
+
       const cleanStr = transcript.replace(/₹/g, '').replace(/,/g, '');
       const numbers = cleanStr.match(/\d+/g);
       if (numbers && numbers.length > 0) {

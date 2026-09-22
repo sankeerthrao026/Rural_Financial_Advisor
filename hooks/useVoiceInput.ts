@@ -31,7 +31,15 @@ export function useVoiceInput(options?: UseVoiceInputOptions) {
 
   const controllerRef = useRef<SpeechController | null>(null);
   const optionsRef = useRef(options);
+  const statusResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   optionsRef.current = options;
+
+  const clearStatusResetTimer = useCallback(() => {
+    if (statusResetTimerRef.current) {
+      clearTimeout(statusResetTimerRef.current);
+      statusResetTimerRef.current = null;
+    }
+  }, []);
 
   // Safe client-side check for SSR compatibility
   useEffect(() => {
@@ -41,13 +49,14 @@ export function useVoiceInput(options?: UseVoiceInputOptions) {
   // Safe cleanup on unmount
   useEffect(() => {
     return () => {
+      clearStatusResetTimer();
       if (controllerRef.current) {
         controllerRef.current.abort();
         controllerRef.current = null;
       }
       stopActiveSpeechRecognition();
     };
-  }, []);
+  }, [clearStatusResetTimer]);
 
   const stopListening = useCallback(() => {
     if (controllerRef.current) {
@@ -57,9 +66,18 @@ export function useVoiceInput(options?: UseVoiceInputOptions) {
       stopActiveSpeechRecognition();
     }
     setStatus((prev) => (prev === 'listening' ? 'processing' : prev));
-  }, []);
+
+    // Safety net: never allow a stuck "processing" state if recognition.onEnd
+    // never fires after a manual stop.
+    clearStatusResetTimer();
+    statusResetTimerRef.current = setTimeout(() => {
+      setStatus((prev) => (prev === 'processing' ? 'idle' : prev));
+      statusResetTimerRef.current = null;
+    }, 5000);
+  }, [clearStatusResetTimer]);
 
   const reset = useCallback(() => {
+    clearStatusResetTimer();
     if (controllerRef.current) {
       controllerRef.current.abort();
       controllerRef.current = null;
@@ -69,9 +87,10 @@ export function useVoiceInput(options?: UseVoiceInputOptions) {
     setTranscript('');
     setIsFinal(false);
     setError(null);
-  }, []);
+  }, [clearStatusResetTimer]);
 
   const startListening = useCallback(() => {
+    clearStatusResetTimer();
     setError(null);
     setTranscript('');
     setIsFinal(false);
@@ -80,6 +99,8 @@ export function useVoiceInput(options?: UseVoiceInputOptions) {
       const unsupportedMsg =
         currentLanguage === 'te'
           ? 'ఈ బ్రౌజర్‌లో వాయిస్ ఇన్‌పుట్ సపోర్ట్ లేదు. దయచేసి Chrome లేదా Edge ఉపయోగించండి.'
+          : currentLanguage === 'hi'
+          ? 'इस ब्राउज़र में वॉइस इनपुट समर्थित नहीं है। कृपया Chrome या Edge का उपयोग करें।'
           : 'Voice input is not supported in this browser. Please use Chrome or Edge.';
       setError(unsupportedMsg);
       setStatus('error');
@@ -100,13 +121,15 @@ export function useVoiceInput(options?: UseVoiceInputOptions) {
         setIsFinal(final);
         if (final) {
           setStatus('success');
-          setTimeout(() => {
+          clearStatusResetTimer();
+          statusResetTimerRef.current = setTimeout(() => {
             setStatus('idle');
+            statusResetTimerRef.current = null;
           }, 1500);
         }
         optionsRef.current?.onResult?.(text, final);
       },
-      onError: (errMsg) => {
+      onError: (_code, errMsg) => {
         setError(errMsg);
         setStatus('error');
         controllerRef.current = null;
@@ -114,13 +137,16 @@ export function useVoiceInput(options?: UseVoiceInputOptions) {
       },
       onEnd: () => {
         controllerRef.current = null;
-        setStatus((prev) => (prev === 'listening' ? 'idle' : prev));
+        // Recover to "idle" whether the session ended from "listening" (error /
+        // silence) or from a manual stop that left us in "processing" with no
+        // final result yet.
+        setStatus((prev) => (prev === 'listening' || prev === 'processing' ? 'idle' : prev));
         optionsRef.current?.onEnd?.();
       },
     });
 
     controllerRef.current = controller;
-  }, [currentLanguage]);
+  }, [currentLanguage, clearStatusResetTimer]);
 
   return {
     isListening: status === 'listening',

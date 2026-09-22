@@ -409,7 +409,10 @@ export function DigitalLogbookScreen() {
   // Voice handler
   const voiceInput = useVoiceInput({
     targetLanguage: language as 'en' | 'te',
-    onResult: (transcript) => {
+    onResult: (transcript, isFinal) => {
+      // Only final transcripts should populate the form — interim results would
+      // otherwise flicker partial entries into the fields.
+      if (!isFinal) return;
       const parsed = parseSpokenTransaction(transcript);
       if (parsed.amount) setAmount(parsed.amount.toString());
       setType(parsed.type);

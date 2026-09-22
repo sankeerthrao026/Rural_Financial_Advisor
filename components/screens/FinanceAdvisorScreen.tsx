@@ -12,7 +12,7 @@ import {
   SeasonalMoratoriumAdvice,
 } from '@/lib/api/client';
 import { calculateAllEligibleSchemes, SchemeCalculationResult } from '@/lib/finance/schemes';
-import { isSpeechRecognitionSupported, startSpeechListening } from '@/lib/voice/speech';
+import { isSpeechRecognitionSupported, startSpeechListening, stopActiveSpeechRecognition, SpeechController } from '@/lib/voice/speech';
 import {
   Calculator,
   ShieldCheck,
@@ -103,6 +103,19 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
   const [isChatLoading, setIsChatLoading] = useState<boolean>(false);
   const [isListening, setIsListening] = useState<boolean>(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const voiceControllerRef = useRef<SpeechController | null>(null);
+
+  // Abort any active voice session when the screen unmounts so the microphone
+  // is never left running in the background.
+  useEffect(() => {
+    return () => {
+      if (voiceControllerRef.current) {
+        voiceControllerRef.current.abort();
+        voiceControllerRef.current = null;
+      }
+      stopActiveSpeechRecognition();
+    };
+  }, []);
 
   // Schedule table toggle
   const [showFullSchedule, setShowFullSchedule] = useState(false);
@@ -253,23 +266,31 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
       return;
     }
 
-    if (isListening) return;
+    if (isListening) {
+      voiceControllerRef.current?.stop();
+      voiceControllerRef.current = null;
+      setIsListening(false);
+      return;
+    }
 
     setIsListening(true);
-    startSpeechListening({
+    voiceControllerRef.current = startSpeechListening({
       language,
       onResult: (transcript: string, isFinal: boolean) => {
         if (isFinal && transcript && transcript.trim()) {
           setIsListening(false);
+          voiceControllerRef.current = null;
           setInputText(transcript.trim());
           handleSendMessage(transcript.trim());
         }
       },
       onEnd: () => {
         setIsListening(false);
+        voiceControllerRef.current = null;
       },
       onError: () => {
         setIsListening(false);
+        voiceControllerRef.current = null;
       },
     });
   };

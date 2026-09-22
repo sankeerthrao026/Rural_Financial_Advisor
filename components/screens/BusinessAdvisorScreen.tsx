@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
 import { BusinessAdvisorOutput } from '@/lib/ai/provider';
 import { Button } from '@/components/ui/button';
-import { isSpeechRecognitionSupported, startSpeechListening } from '@/lib/voice/speech';
+import { isSpeechRecognitionSupported, startSpeechListening, stopActiveSpeechRecognition, SpeechController } from '@/lib/voice/speech';
 import {
   Sparkles,
   TrendingUp,
@@ -147,6 +147,19 @@ export function BusinessAdvisorScreen() {
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const voiceControllerRef = useRef<SpeechController | null>(null);
+
+  // Abort any active voice session when the screen unmounts so the microphone
+  // is never left running in the background.
+  useEffect(() => {
+    return () => {
+      if (voiceControllerRef.current) {
+        voiceControllerRef.current.abort();
+        voiceControllerRef.current = null;
+      }
+      stopActiveSpeechRecognition();
+    };
+  }, []);
 
   // Sync with profile initially if profile changes
   useEffect(() => {
@@ -357,6 +370,8 @@ export function BusinessAdvisorScreen() {
   // Voice Input handler
   const handleToggleVoice = () => {
     if (isListening) {
+      voiceControllerRef.current?.stop();
+      voiceControllerRef.current = null;
       setIsListening(false);
       return;
     }
@@ -371,15 +386,22 @@ export function BusinessAdvisorScreen() {
     }
 
     setIsListening(true);
-    startSpeechListening({
+    voiceControllerRef.current = startSpeechListening({
       language,
       onResult: (transcript) => {
         setInputText(transcript);
         setIsListening(false);
+        voiceControllerRef.current = null;
         inputRef.current?.focus();
       },
-      onError: () => setIsListening(false),
-      onEnd: () => setIsListening(false),
+      onError: () => {
+        setIsListening(false);
+        voiceControllerRef.current = null;
+      },
+      onEnd: () => {
+        setIsListening(false);
+        voiceControllerRef.current = null;
+      },
     });
   };
 

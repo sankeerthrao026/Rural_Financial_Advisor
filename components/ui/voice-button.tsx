@@ -1,9 +1,10 @@
 'use client';
 
 import React from 'react';
-import { Mic, MicOff, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Mic, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { VoiceStatus } from '@/hooks/useVoiceInput';
+import { VoiceLanguage } from '@/lib/voice/speech';
 
 export interface VoiceButtonProps {
   status: VoiceStatus;
@@ -15,6 +16,8 @@ export interface VoiceButtonProps {
   disabled?: boolean;
   errorMessage?: string | null;
   onRetry?: () => void;
+  /** Explicit voice language; falls back to the app-wide language. */
+  targetLanguage?: VoiceLanguage;
 }
 
 export function VoiceButton({
@@ -27,12 +30,15 @@ export function VoiceButton({
   disabled = false,
   errorMessage,
   onRetry,
+  targetLanguage,
 }: VoiceButtonProps) {
-  const { language } = useApp();
-  const isTe = language === 'te';
+  const { language: appLanguage } = useApp();
+  const lang = (targetLanguage || appLanguage || 'en') as VoiceLanguage;
+  const isHi = lang === 'hi';
+  const isTe = lang === 'te';
 
-  const defaultIdleLabel = label || (isTe ? 'వాయిస్ ఇన్‌పుట్' : 'Voice Input');
-  const defaultListeningLabel = listeningLabel || (isTe ? 'వింటున్నాము...' : 'Listening...');
+  const defaultIdleLabel = label || (isTe ? 'వాయిస్ ఇన్‌పుట్' : isHi ? 'वॉइस इनपुट' : 'Voice Input');
+  const defaultListeningLabel = listeningLabel || (isTe ? 'వింటున్నాము...' : isHi ? 'सुन रहे हैं...' : 'Listening...');
   const isListening = status === 'listening';
   const isProcessing = status === 'processing';
   const isSuccess = status === 'success';
@@ -54,8 +60,16 @@ export function VoiceButton({
         onClick={onToggle}
         title={
           isListening
-            ? isTe ? 'వాయిస్ రికార్డింగ్ ఆపండి' : 'Click to stop listening'
-            : isTe ? 'వాయిస్ ద్వారా మాట్లాడండి' : 'Click to speak'
+            ? isTe
+              ? 'వాయిస్ రికార్డింగ్ ఆపండి'
+              : isHi
+              ? 'वॉइस रिकॉर्डिंग बंद करें'
+              : 'Click to stop listening'
+            : isTe
+            ? 'వాయిస్ ద్వారా మాట్లాడండి'
+            : isHi
+            ? 'वॉइस से बोलें'
+            : 'Click to speak'
         }
         className={`inline-flex items-center justify-center gap-1.5 font-semibold transition-all shadow-xs cursor-pointer select-none ${sizeClasses} ${
           isListening
@@ -77,17 +91,25 @@ export function VoiceButton({
         ) : isProcessing ? (
           <>
             <RefreshCw className="size-3.5 animate-spin text-white shrink-0" />
-            {size !== 'icon' && <span>{isTe ? 'ప్రాసెస్ చేస్తున్నాము...' : 'Processing...'}</span>}
+            {size !== 'icon' && (
+              <span>
+                {isTe ? 'ప్రాసెస్ చేస్తున్నాము...' : isHi ? 'प्रोसेस किया जा रहा है...' : 'Processing...'}
+              </span>
+            )}
           </>
         ) : isSuccess ? (
           <>
             <CheckCircle2 className="size-3.5 text-white shrink-0" />
-            {size !== 'icon' && <span>{isTe ? 'నమోదైంది' : 'Captured'}</span>}
+            {size !== 'icon' && (
+              <span>{isTe ? 'నమోదైంది' : isHi ? 'रिकॉर्ड हुआ' : 'Captured'}</span>
+            )}
           </>
         ) : isError ? (
           <>
             <AlertCircle className="size-3.5 shrink-0" />
-            {size !== 'icon' && <span>{isTe ? 'మళ్ళీ ప్రయత్నించండి' : 'Try Again'}</span>}
+            {size !== 'icon' && (
+              <span>{isTe ? 'మళ్ళీ ప్రయత్నించండి' : isHi ? 'फिर से कोशिश करें' : 'Try Again'}</span>
+            )}
           </>
         ) : (
           <>
@@ -108,7 +130,7 @@ export function VoiceButton({
               onClick={onRetry}
               className="ml-1 underline font-semibold cursor-pointer shrink-0"
             >
-              {isTe ? 'మళ్ళీ' : 'Retry'}
+              {isTe ? 'మళ్ళీ' : isHi ? 'फिर से' : 'Retry'}
             </button>
           )}
         </div>

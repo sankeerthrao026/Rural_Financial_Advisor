@@ -4,6 +4,34 @@ from typing import Dict, Any, Optional
 from app.config import settings
 from app.services.gemini_service import gemini_service
 
+# Whisper models are expensive to load (hundreds of MB). Cache the singleton
+# process-wide instead of re-loading it on every transcription request.
+_whisper_model_cache: Any = None
+
+_MIME_TO_SUFFIX = {
+    "audio/webm": ".webm",
+    "audio/wav": ".wav",
+    "audio/wave": ".wav",
+    "audio/mpeg": ".mp3",
+    "audio/mp4": ".m4a",
+    "audio/x-m4a": ".m4a",
+    "audio/ogg": ".ogg",
+    "audio/x-wav": ".wav",
+}
+
+def _get_whisper_model():
+    """Lazily load the Whisper model once and reuse it across requests."""
+    global _whisper_model_cache
+    if _whisper_model_cache is None:
+        import whisper
+        _whisper_model_cache = whisper.load_model("base")
+    return _whisper_model_cache
+
+def _audio_suffix(content_type: str) -> str:
+    """Derive a temp-file suffix from the real MIME type instead of hardcoding .webm."""
+    base = (content_type or "").split(";")[0].strip().lower()
+    return _MIME_TO_SUFFIX.get(base, ".bin")
+
 class STTService:
     def transcribe_audio(
         self,
@@ -78,15 +106,14 @@ class STTService:
             except Exception as e:
                 print(f"[WARN] Gemini audio STT transcription failed: {e}")
 
-        # Fallback to local whisper if installed
+        # Fallback to local whisper if installed (model is cached process-wide)
         try:
-            import whisper
             import tempfile
-            with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as tmp:
+            with tempfile.NamedTemporaryFile(suffix=_audio_suffix(content_type), delete=False) as tmp:
                 tmp.write(audio_bytes)
                 tmp_path = tmp.name
-            
-            model = whisper.load_model("base")
+
+            model = _get_whisper_model()
             result = model.transcribe(tmp_path, language=language if language in ["te", "hi", "en"] else None)
             return {
                 "success": True,
