@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 
 export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }) {
-  const { signIn, signUp, continueAsDemo, loginAsDemoUser, isConfigured } = useAuth();
+  const { signIn, signUp, continueAsDemo, loginAsDemoUser, isConfigured, demoModeEnabled } = useAuth();
   const { language, setLanguage, updateProfile, loadPreset } = useApp();
   const isTe = language === 'te';
 
@@ -36,8 +36,21 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
     e.preventDefault();
     setError(null);
 
-    const cleanEmail = email.trim() || 'anita.dairy@ruralcred.in';
-    const cleanPassword = password.trim() || 'demo123';
+    const rawEmail = email.trim();
+    const rawPassword = password.trim();
+    if (!demoModeEnabled) {
+      if (!rawEmail) {
+        setError(isTe ? 'ఈమెయిల్ నమోదు చేయండి.' : 'Please enter your email.');
+        return;
+      }
+      if (!rawPassword) {
+        setError(isTe ? 'పాస్‌వర్డ్ నమోదు చేయండి.' : 'Please enter your password.');
+        return;
+      }
+    }
+
+    const cleanEmail = rawEmail || 'anita.dairy@ruralcred.in';
+    const cleanPassword = rawPassword || 'demo123';
 
     setLoading(true);
     try {
@@ -70,8 +83,26 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
     e.preventDefault();
     setError(null);
 
-    const cleanEmail = email.trim() || 'anita.dairy@ruralcred.in';
-    const cleanPassword = password.trim() || 'demo123';
+    const rawEmail = email.trim();
+    const rawPassword = password.trim();
+    if (!demoModeEnabled) {
+      if (!rawEmail) {
+        setError(isTe ? 'ఈమెయిల్ నమోదు చేయండి.' : 'Please enter your email.');
+        return;
+      }
+      if (!rawPassword) {
+        setError(isTe ? 'పాస్‌వర్డ్ నమోదు చేయండి.' : 'Please enter your password.');
+        return;
+      }
+    }
+
+    const cleanEmail = rawEmail || 'anita.dairy@ruralcred.in';
+    const cleanPassword = rawPassword || 'demo123';
+
+    if (confirmPassword.trim() !== cleanPassword) {
+      setError(isTe ? 'పాస్‌వర్డ్‌లు సరిపోలలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.' : 'Passwords do not match. Please try again.');
+      return;
+    }
 
     setLoading(true);
     try {

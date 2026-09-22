@@ -28,6 +28,7 @@ export interface AuthContextType {
   error: string | null;
   isConfigured: boolean;
   isDemo: boolean;
+  demoModeEnabled: boolean;
   configError: string | null;
   continueAsDemo: () => AuthUser;
   exitDemo: () => void;
@@ -36,6 +37,11 @@ export interface AuthContextType {
   signOut: () => Promise<void>;
   loginAsDemoUser: (persona?: 'dairy' | 'kirana' | 'weaving') => Promise<void>;
 }
+
+// When true, the app keeps its lenient hackathon demo auth: any email logs in as a
+// dummy user and empty credentials silently default to a demo account. When false or
+// unset, the dummy fallbacks are disabled and valid credentials are required.
+const DEMO_MODE_ENABLED = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -186,20 +192,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     const cleanEmail = email.trim();
 
-    if (!cleanEmail) {
-      setLoading(false);
-      return { error: 'Please enter your email.' };
+    if (!DEMO_MODE_ENABLED) {
+      if (!cleanEmail || !password.trim()) {
+        setLoading(false);
+        return { error: 'Please enter your email and password.' };
+      }
     }
 
-    // 1. Direct dummy profile matching:
+    // 1. Direct dummy profile matching (demo mode only):
     const lowerEmail = cleanEmail.toLowerCase();
     let persona: 'dairy' | 'kirana' | 'weaving' | null = null;
-    if (lowerEmail.includes('anita') || lowerEmail.includes('dairy')) {
-      persona = 'dairy';
-    } else if (lowerEmail.includes('ramesh') || lowerEmail.includes('kirana')) {
-      persona = 'kirana';
-    } else if (lowerEmail.includes('lakshmi') || lowerEmail.includes('weaving') || lowerEmail.includes('handloom')) {
-      persona = 'weaving';
+    if (DEMO_MODE_ENABLED) {
+      if (lowerEmail.includes('anita') || lowerEmail.includes('dairy')) {
+        persona = 'dairy';
+      } else if (lowerEmail.includes('ramesh') || lowerEmail.includes('kirana')) {
+        persona = 'kirana';
+      } else if (lowerEmail.includes('lakshmi') || lowerEmail.includes('weaving') || lowerEmail.includes('handloom')) {
+        persona = 'weaving';
+      }
     }
 
     if (persona) {
@@ -239,6 +249,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // 3. Robust Dummy Auth: ANY other email logs in immediately as an active dummy user!
+    //    (Demo mode only — outside demo mode the dummy fallback is disabled.)
+    if (!DEMO_MODE_ENABLED) {
+      setLoading(false);
+      return { error: 'Sign-in is unavailable. Enable NEXT_PUBLIC_DEMO_MODE=true for demo auth or configure a real auth provider.' };
+    }
+
     const mockId = `usr_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
     const displayName = cleanEmail.split('@')[0].replace(/[._-]/g, ' ') || 'Anita Sharma';
     const formattedName = displayName.replace(/\b\w/g, (c) => c.toUpperCase());
@@ -288,6 +304,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!cleanEmail) {
       setLoading(false);
       return { error: 'Please fill in your email.' };
+    }
+
+    if (!DEMO_MODE_ENABLED && !password.trim()) {
+      setLoading(false);
+      return { error: 'Please enter a password.' };
+    }
+
+    if (!DEMO_MODE_ENABLED) {
+      setLoading(false);
+      return { error: 'Account creation is unavailable. Enable NEXT_PUBLIC_DEMO_MODE=true for demo registration or configure a real auth provider.' };
     }
 
     const mockId = `usr_${Date.now()}_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
@@ -353,6 +379,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         error,
         isConfigured: isSupabaseConfigured,
         isDemo,
+        demoModeEnabled: DEMO_MODE_ENABLED,
         configError: supabaseConfigError,
         continueAsDemo,
         exitDemo,
