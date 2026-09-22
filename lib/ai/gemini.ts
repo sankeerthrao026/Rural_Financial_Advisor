@@ -23,9 +23,7 @@ export interface GeminiCallResult {
 }
 
 const CANDIDATE_MODELS = [
-  'gemini-3.1-flash-lite',
-  'gemini-3.6-flash',
-  'gemini-flash-latest',
+  'gemini-2.5-flash',
 ];
 
 /**

@@ -243,7 +243,7 @@ class RAGService:
                 history=[{"role": m.role, "content": m.content} for m in req.history] if req.history else None,
             )
             if ai_data:
-                provider_used = f"{gemini_service.last_model_used} (ChromaDB RAG)" if gemini_service.last_model_used else "gemini-3.1-flash-lite (ChromaDB RAG)"
+                provider_used = f"{gemini_service.last_model_used} (ChromaDB RAG)" if gemini_service.last_model_used else "gemini-2.5-flash (ChromaDB RAG)"
 
         t_gemini_ms = (time.time() - t_gemini_start) * 1000
 

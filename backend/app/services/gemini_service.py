@@ -132,9 +132,7 @@ Return a valid JSON object with the following structure:
 }}"""
 
         candidate_models = [
-            "gemini-3.1-flash-lite",
-            "gemini-3.6-flash",
-            "gemini-flash-latest",
+            "gemini-2.5-flash",
         ]
         for model in candidate_models:
             t_model_start = time.time()
@@ -243,9 +241,7 @@ CURRENT ENTREPRENEUR INQUIRY:
 Provide a helpful, warm, and professional conversational response (2 to 4 paragraphs) addressing the entrepreneur's question with specific references to their profile and numbers."""
 
         candidate_models = [
-            "gemini-3.1-flash-lite",
-            "gemini-3.6-flash",
-            "gemini-flash-latest",
+            "gemini-2.5-flash",
         ]
         for model in candidate_models:
             try:
