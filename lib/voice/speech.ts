@@ -650,12 +650,13 @@ export async function parseSpokenTransactionWithFallback(
 
     if (response.ok) {
       const data = await response.json();
-      if (data && data.amount) {
+      const extracted = data?.extracted;
+      if (data && extracted && extracted.amount) {
         return {
-          amount: data.amount,
-          type: data.type === 'expense' ? 'expense' : 'income',
-          category: data.category || localParsed.category || 'Sales',
-          note: data.note || transcript,
+          amount: extracted.amount,
+          type: extracted.type === 'expense' ? 'expense' : 'income',
+          category: extracted.category || localParsed.category || 'Sales',
+          note: extracted.note || transcript,
           confidence: 0.9,
           parseMessage: undefined,
         };
