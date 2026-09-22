@@ -362,11 +362,11 @@ def calculate_pmegp(inp: SchemeEligibilityInput) -> SchemeCalculationResult:
         * Service / Business: ₹20,00,000
     - Subsidy (Margin Money) Matrix:
         * General Category:
-            - Rural: 25% subsidy, 10% own equity, 90% loan
-            - Urban: 15% subsidy, 10% own equity, 90% loan
+            - Rural: 25% subsidy, 10% own equity, 65% loan
+            - Urban: 15% subsidy, 10% own equity, 75% loan
         * Special Category (Women, SC, ST, OBC, Minorities, Ex-Servicemen):
-            - Rural: 35% subsidy, 5% own equity, 95% loan
-            - Urban: 25% subsidy, 5% own equity, 95% loan
+            - Rural: 35% subsidy, 5% own equity, 60% loan
+            - Urban: 25% subsidy, 5% own equity, 70% loan
     - Tenure: 5 years (60 months) with 6 months moratorium.
     - Guarantee: CGTMSE coverage (up to 85% for women/special categories).
     """
@@ -389,13 +389,15 @@ def calculate_pmegp(inp: SchemeEligibilityInput) -> SchemeCalculationResult:
         subsidy_percent = 25.0 if is_rural else 15.0
         promoter_percent = 10.0
 
-    loan_share_percent = 100.0 - promoter_percent  # 95% or 90%
+    # Bank loan covers only what remains after promoter equity AND the capital subsidy:
+    # promoter + loan + subsidy must equal 100% of project cost (within rounding).
+    loan_share_percent = 100.0 - promoter_percent - subsidy_percent
     max_loan = max_project_cost * (loan_share_percent / 100.0)
 
     sanctioned = min(amount, max_loan)
     project_cost = round(sanctioned / (loan_share_percent / 100.0))
-    promoter_contrib = project_cost - sanctioned
     subsidy_amount = round(project_cost * (subsidy_percent / 100.0))
+    promoter_contrib = project_cost - sanctioned - subsidy_amount
 
     interest_rate = 9.0  # Commercial bank priority-sector rate
     tenure_years = 5.0

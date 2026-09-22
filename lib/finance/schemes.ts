@@ -345,13 +345,15 @@ export function calculatePmegp(inp: SchemeEligibilityInput): SchemeCalculationRe
 
   const subsidyPercent = isSpecialCategory ? (isRural ? 35 : 25) : (isRural ? 25 : 15);
   const promoterPercent = isSpecialCategory ? 5 : 10;
-  const loanSharePercent = 100 - promoterPercent;
+  // Bank loan covers only what remains after promoter equity AND the capital subsidy:
+  // promoter + loan + subsidy must equal 100% of project cost (within rounding).
+  const loanSharePercent = 100 - promoterPercent - subsidyPercent;
   const maxLoan = maxProjectCost * (loanSharePercent / 100);
 
   const sanctioned = Math.min(amount, maxLoan);
   const projectCost = Math.round(sanctioned / (loanSharePercent / 100));
-  const promoterContrib = projectCost - sanctioned;
   const subsidyAmount = Math.round(projectCost * (subsidyPercent / 100));
+  const promoterContrib = projectCost - sanctioned - subsidyAmount;
 
   const interestRate = 9.0;
   const tenureYears = 5;
