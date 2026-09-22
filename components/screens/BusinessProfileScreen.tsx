@@ -99,7 +99,7 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
       {/* Quick Persona Presets for Evaluators */}
-      <div className="rounded-2xl border bg-accent/40 p-4 sm:p-5 border-amber-200/60">
+      <div className="rounded-2xl border bg-accent/40 p-4 sm:p-5 border-amber-200/60 hover-lift transition-all">
         <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-800">
           <Sparkles className="size-4 text-amber-700" />
           <span>{t.loadPresetLabel}</span>
@@ -114,7 +114,7 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
               setMarginCapital('100000');
               setHasActiveLoan(false);
             }}
-            className="rounded-lg border bg-card px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-primary hover:text-primary-foreground shadow-xs cursor-pointer"
+            className="rounded-lg border bg-card px-3 py-2 text-xs font-medium text-foreground transition-all hover:bg-primary hover:text-primary-foreground shadow-xs cursor-pointer active:scale-95"
           >
             {t.presets.dairy}
           </button>
@@ -127,7 +127,7 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
               setMarginCapital('12000');
               setHasActiveLoan(false);
             }}
-            className="rounded-lg border bg-card px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-primary hover:text-primary-foreground shadow-xs cursor-pointer"
+            className="rounded-lg border bg-card px-3 py-2 text-xs font-medium text-foreground transition-all hover:bg-primary hover:text-primary-foreground shadow-xs cursor-pointer active:scale-95"
           >
             {t.presets.kirana}
           </button>
@@ -140,14 +140,14 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
               setMarginCapital('30000');
               setHasActiveLoan(false);
             }}
-            className="rounded-lg border bg-card px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-primary hover:text-primary-foreground shadow-xs cursor-pointer"
+            className="rounded-lg border bg-card px-3 py-2 text-xs font-medium text-foreground transition-all hover:bg-primary hover:text-primary-foreground shadow-xs cursor-pointer active:scale-95"
           >
             {t.presets.weaving}
           </button>
         </div>
       </div>
 
-      <form onSubmit={handleSave} className="rounded-2xl border bg-card p-6 sm:p-8 flex flex-col gap-6 shadow-xs">
+      <form onSubmit={handleSave} className="rounded-2xl border bg-card p-6 sm:p-8 flex flex-col gap-6 shadow-xs hover-lift transition-all">
         {/* Language & Input Mode Toggles */}
         <div className="grid gap-4 sm:grid-cols-2 pb-6 border-b">
           <div>

@@ -214,7 +214,7 @@ export function OcrReviewModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border bg-card shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border bg-card shadow-2xl overflow-hidden modal-enter">
         {/* Modal Header */}
         <div className="flex items-center justify-between p-5 border-b shrink-0">
           <div className="flex items-center gap-2.5">

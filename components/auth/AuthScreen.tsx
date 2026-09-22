@@ -146,10 +146,10 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
         ))}
       </div>
 
-      <div className="w-full max-w-md flex flex-col gap-6">
+      <div className="w-full max-w-md flex flex-col gap-6 page-enter">
         {/* Brand Header */}
         <div className="text-center flex flex-col items-center">
-          <div className="grid size-12 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-md mb-3">
+          <div className="grid size-12 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-md mb-3 transition-transform hover:scale-105 duration-200">
             <span className="text-2xl font-bold font-sora">R</span>
           </div>
           <h1 className="text-2xl font-bold font-sora tracking-tight text-foreground">
@@ -167,7 +167,7 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated?: () => void }
         </div>
 
         {/* Main Card */}
-        <div className="rounded-2xl border bg-card p-6 sm:p-8 shadow-xs">
+        <div className="rounded-2xl border bg-card p-6 sm:p-8 shadow-xs card-lift">
           {error && (
             <div className="mb-4 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive leading-relaxed font-medium">
               {error}

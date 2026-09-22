@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import { formatINR } from '@/lib/utils/currency';
 import { Button } from '@/components/ui/button';
+import { AnimatedNumber } from '@/components/ui/animated-number';
 import {
   AnalyticsPeriod,
   calculateFullDashboardMetrics,
@@ -100,7 +101,7 @@ export function FinancialAnalyticsScreen({ setActive }: { setActive?: (value: st
   return (
     <div className="flex flex-col gap-6">
       {/* 1. Header Banner & Period Selector */}
-      <div className="rounded-2xl border bg-card p-6 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+      <div className="rounded-2xl border bg-card p-6 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-5 hover-lift transition-all">
         <div>
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-semibold flex items-center gap-1">
@@ -130,7 +131,7 @@ export function FinancialAnalyticsScreen({ setActive }: { setActive?: (value: st
                 key={p}
                 type="button"
                 onClick={() => setPeriod(p)}
-                className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg font-semibold transition-all duration-150 cursor-pointer ${
                   period === p
                     ? 'bg-primary text-primary-foreground shadow-xs'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
@@ -147,7 +148,7 @@ export function FinancialAnalyticsScreen({ setActive }: { setActive?: (value: st
           <Button
             size="sm"
             onClick={() => setActive?.('Digital Logbook')}
-            className="flex items-center gap-1.5 font-medium cursor-pointer"
+            className="flex items-center gap-1.5 font-medium cursor-pointer active:scale-[0.98] transition-all"
             variant="outline"
           >
             <PlusCircle className="size-3.5" />
@@ -159,15 +160,15 @@ export function FinancialAnalyticsScreen({ setActive }: { setActive?: (value: st
       {/* 2. Key Profit & Loss Metric Cards for Selected Period (Requirement 2) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Inflow (Revenue) */}
-        <div className="rounded-2xl border bg-card p-5 shadow-xs">
+        <div className="stagger-1 hover-lift hover-glow-emerald rounded-2xl border bg-card p-5 shadow-xs transition-all">
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-xs font-medium">{isTe ? 'మొత్తం ఆదాయం (వసూళ్లు)' : 'Total Revenue (Inflow)'}</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 font-semibold">
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 font-semibold shadow-2xs">
               {pnl.incomeCount} {isTe ? 'రశీదులు' : 'Receipts'}
             </span>
           </div>
           <strong className="text-xl sm:text-2xl font-bold font-sora text-emerald-800 dark:text-emerald-400 mt-2 block">
-            {formatINR(pnl.totalIncome)}
+            <AnimatedNumber value={pnl.totalIncome} formatter={formatINR} />
           </strong>
           <span className="text-[11px] text-muted-foreground mt-1 block">
             {getPeriodLabel(period)}
@@ -175,15 +176,15 @@ export function FinancialAnalyticsScreen({ setActive }: { setActive?: (value: st
         </div>
 
         {/* Total Outflow (Expenses) */}
-        <div className="rounded-2xl border bg-card p-5 shadow-xs">
+        <div className="stagger-2 hover-lift rounded-2xl border bg-card p-5 shadow-xs transition-all">
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-xs font-medium">{isTe ? 'మొత్తం ఖర్చులు (చెల్లింపులు)' : 'Total Expenses (Outflow)'}</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-800 dark:text-rose-400 font-semibold">
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-800 dark:text-rose-400 font-semibold shadow-2xs">
               {pnl.expenseCount} {isTe ? 'చెల్లింపులు' : 'Payments'}
             </span>
           </div>
           <strong className="text-xl sm:text-2xl font-bold font-sora text-rose-800 dark:text-rose-400 mt-2 block">
-            {formatINR(pnl.totalExpenses)}
+            <AnimatedNumber value={pnl.totalExpenses} formatter={formatINR} />
           </strong>
           <span className="text-[11px] text-muted-foreground mt-1 block">
             {pnl.totalExpenses > 0 ? `${formatINR(runway.dailyBurnRate)}/day burn` : 'Zero operating burn'}
@@ -191,11 +192,11 @@ export function FinancialAnalyticsScreen({ setActive }: { setActive?: (value: st
         </div>
 
         {/* Net Profit / Loss */}
-        <div className="rounded-2xl border bg-card p-5 shadow-xs">
+        <div className="stagger-3 hover-lift rounded-2xl border bg-card p-5 shadow-xs transition-all">
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-xs font-medium">{isTe ? 'నికర లాభం / నష్టం' : 'Net Profit / Surplus'}</span>
             <span
-              className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+              className={`text-[10px] px-2 py-0.5 rounded-full font-bold shadow-2xs ${
                 pnl.netProfit >= 0
                   ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-400'
                   : 'bg-rose-500/10 text-rose-800 dark:text-rose-400'
@@ -219,13 +220,13 @@ export function FinancialAnalyticsScreen({ setActive }: { setActive?: (value: st
         </div>
 
         {/* Available Working Capital Buffer */}
-        <div className="rounded-2xl border bg-card p-5 shadow-xs">
+        <div className="stagger-4 hover-lift rounded-2xl border bg-card p-5 shadow-xs transition-all">
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-xs font-medium">{isTe ? 'ద్రవ్య నగదు నిల్వలు' : 'Available Liquid Cash'}</span>
             <Wallet className="size-3.5 text-primary" />
           </div>
           <strong className="text-xl sm:text-2xl font-bold font-sora text-foreground mt-2 block">
-            {formatINR(runway.availableCash)}
+            <AnimatedNumber value={runway.availableCash} formatter={formatINR} />
           </strong>
           <span className="text-[11px] text-muted-foreground mt-1 block">
             Net Cash + Promoters Buffer

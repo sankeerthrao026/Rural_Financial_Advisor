@@ -13,33 +13,47 @@ interface AnimatedNumberProps {
 
 export function AnimatedNumber({
   value,
-  duration = 750,
+  duration = 700,
   formatter,
   prefix = '',
   suffix = '',
   className = '',
 }: AnimatedNumberProps) {
-  const [displayValue, setDisplayValue] = useState(value);
+  const [displayValue, setDisplayValue] = useState<number>(() => {
+    // Initial display starts at 0 for entrance count-up effect if value > 0
+    return 0;
+  });
   const startValueRef = useRef(0);
   const startTimeRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
+    // Check if user prefers reduced motion
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setDisplayValue(value);
+      return;
+    }
+
     const startValue = displayValue;
     startValueRef.current = startValue;
     startTimeRef.current = null;
 
-    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+    // Smooth exponential-out curve for premium fintech feel
+    const easeOutQuart = (t: number) => 1 - Math.pow(1 - t, 4);
 
     const step = (timestamp: number) => {
       if (!startTimeRef.current) startTimeRef.current = timestamp;
-      const progress = Math.min((timestamp - startTimeRef.current) / duration, 1);
-      const current = Math.round(startValue + (value - startValue) * easeOutCubic(progress));
-
+      const elapsed = timestamp - startTimeRef.current;
+      const progress = Math.min(elapsed / duration, 1);
+      const easedProgress = easeOutQuart(progress);
+      
+      const current = Math.round(startValue + (value - startValue) * easedProgress);
       setDisplayValue(current);
 
       if (progress < 1) {
         rafRef.current = requestAnimationFrame(step);
+      } else {
+        setDisplayValue(value);
       }
     };
 
@@ -53,7 +67,7 @@ export function AnimatedNumber({
   const formatted = formatter ? formatter(displayValue) : displayValue.toLocaleString('en-IN');
 
   return (
-    <span className={`tabular-nums font-semibold transition-all duration-150 ${className}`}>
+    <span className={`tabular-nums transition-all duration-150 ${className}`}>
       {prefix}
       {formatted}
       {suffix}

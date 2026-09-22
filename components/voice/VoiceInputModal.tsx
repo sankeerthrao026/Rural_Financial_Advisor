@@ -224,7 +224,7 @@ export function VoiceInputModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg rounded-2xl border bg-card p-6 shadow-2xl">
+      <div className="relative w-full max-w-lg rounded-2xl border bg-card p-6 shadow-2xl modal-enter">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b">
           <div className="flex items-center gap-2">

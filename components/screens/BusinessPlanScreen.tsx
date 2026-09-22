@@ -139,7 +139,7 @@ export function BusinessPlanScreen() {
   return (
     <div className="flex flex-col gap-6">
       {/* Top Action Bar */}
-      <div className="rounded-2xl border bg-card p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
+      <div className="rounded-2xl border bg-card p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden hover-lift transition-all">
         <div>
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-semibold flex items-center gap-1">

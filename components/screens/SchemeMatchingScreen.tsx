@@ -13,7 +13,7 @@ export function SchemeMatchingScreen({ setActive }: { setActive?: (tab: string) 
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="rounded-2xl border bg-card p-6 shadow-xs">
+      <div className="rounded-2xl border bg-card p-6 shadow-xs hover-lift transition-all">
         <h2 className="text-xl font-bold font-sora tracking-tight text-foreground">
           {isTe ? 'అధికారిక ప్రభుత్వ రుణ పథకాలు' : 'Authentic Government Credit Schemes'}
         </h2>
@@ -25,15 +25,15 @@ export function SchemeMatchingScreen({ setActive }: { setActive?: (tab: string) 
       </div>
 
       <div className="grid gap-5 md:grid-cols-2">
-        {schemesData.schemes.map((scheme: any) => {
+        {schemesData.schemes.map((scheme: any, idx: number) => {
           const isCurrentlyRouted = scheme.id === finance.scheme.id;
 
           return (
             <div
               key={scheme.id}
-              className={`rounded-2xl border p-6 flex flex-col justify-between shadow-xs transition-all ${
+              className={`stagger-${Math.min(idx + 1, 6)} hover-lift rounded-2xl border p-6 flex flex-col justify-between shadow-xs transition-all ${
                 isCurrentlyRouted
-                  ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                  ? 'border-primary bg-primary/5 ring-2 ring-primary/20 shadow-xs'
                   : 'bg-card hover:border-primary/40'
               }`}
             >

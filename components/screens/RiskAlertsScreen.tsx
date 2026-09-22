@@ -50,7 +50,7 @@ export function RiskAlertsScreen() {
   return (
     <div className="flex flex-col gap-6">
       {/* Intro Header */}
-      <div className="rounded-2xl border bg-card p-6 shadow-xs">
+      <div className="rounded-2xl border bg-card p-6 shadow-xs hover-lift transition-all">
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2">
@@ -70,23 +70,23 @@ export function RiskAlertsScreen() {
 
       {/* No Risk State */}
       {detectedRisks.length === 0 ? (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-8 text-center flex flex-col items-center">
-          <div className="grid size-12 place-items-center rounded-full bg-emerald-100 text-emerald-700">
+        <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50/50 dark:bg-emerald-950/20 p-8 text-center flex flex-col items-center hover-lift transition-all">
+          <div className="grid size-12 place-items-center rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300">
             <ShieldCheck className="size-6" />
           </div>
-          <h3 className="mt-4 text-base font-bold font-sora text-emerald-950">{t.noRiskTitle}</h3>
-          <p className="mt-2 text-xs text-emerald-800/80 max-w-md">{t.noRiskDesc}</p>
-          <div className="mt-5 flex gap-4 text-xs font-medium text-emerald-900">
+          <h3 className="mt-4 text-base font-bold font-sora text-emerald-950 dark:text-emerald-200">{t.noRiskTitle}</h3>
+          <p className="mt-2 text-xs text-emerald-800/80 dark:text-emerald-300/80 max-w-md">{t.noRiskDesc}</p>
+          <div className="mt-5 flex gap-4 text-xs font-medium text-emerald-900 dark:text-emerald-200">
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="size-4 text-emerald-600" />
+              <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
               {isTe ? 'సింగిల్ లోన్ కమిట్‌మెంట్' : 'Single debt profile'}
             </span>
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="size-4 text-emerald-600" />
+              <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
               {isTe ? 'ధనాత్మక నగదు ప్రవాహం' : 'Net positive cash flow'}
             </span>
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="size-4 text-emerald-600" />
+              <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
               {isTe ? 'స్థిరమైన లాభాల మార్జిన్' : 'Consistent operating margin'}
             </span>
           </div>
@@ -94,14 +94,14 @@ export function RiskAlertsScreen() {
       ) : (
         /* Detected Risk Cards */
         <div className="flex flex-col gap-4">
-          {detectedRisks.map((risk) => {
+          {detectedRisks.map((risk, idx) => {
             const explanation = aiExplanations[risk.ruleCode];
             const isExplaining = explainingId === risk.ruleCode;
 
             return (
               <div
                 key={risk.ruleCode}
-                className="rounded-2xl border border-rose-300/80 bg-rose-50/40 p-6 flex flex-col gap-4 shadow-xs"
+                className={`stagger-${Math.min(idx + 1, 4)} rounded-2xl border border-rose-300/80 dark:border-rose-900/80 bg-rose-50/40 dark:bg-rose-950/20 p-6 flex flex-col gap-4 shadow-xs hover-lift transition-all`}
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5">

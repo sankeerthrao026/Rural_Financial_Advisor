@@ -27,6 +27,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { CustomCursor } from '@/components/ui/custom-cursor';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { AppProvider, useApp } from '@/context/AppContext';
 import { AuthScreen } from './auth/AuthScreen';
@@ -55,8 +56,8 @@ const navigation = [
 
 function Brand() {
   return (
-    <div className="flex items-center gap-3">
-      <div className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground shadow-xs">
+    <div className="flex items-center gap-3 group cursor-pointer">
+      <div className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground shadow-xs transition-transform duration-200 group-hover:scale-105">
         <span className="text-lg font-bold font-sora">R</span>
       </div>
       <div>
@@ -126,12 +127,12 @@ function Sidebar({
       {open && (
         <button
           aria-label="Close navigation"
-          className="fixed inset-0 z-30 bg-foreground/20 backdrop-blur-xs lg:hidden"
+          className="fixed inset-0 z-30 bg-foreground/20 backdrop-blur-xs lg:hidden transition-opacity duration-200"
           onClick={() => setOpen(false)}
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-[272px] flex-col border-r bg-sidebar px-4 py-5 transition-transform lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-[272px] flex-col border-r bg-sidebar px-4 py-5 transition-transform duration-300 ease-out lg:static lg:translate-x-0 ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -148,7 +149,7 @@ function Sidebar({
           </Button>
         </div>
 
-        <div className="mt-8 flex flex-1 flex-col gap-1 overflow-y-auto">
+        <div className="mt-8 flex flex-1 flex-col gap-1 overflow-y-auto pr-1">
           <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
             {dictionary.workspace}
           </p>
@@ -160,31 +161,31 @@ function Sidebar({
             const isRiskItem = item.label === 'Risk Alerts';
 
             return (
-              <div key={item.label}>
+              <div key={item.label} className="transition-all duration-150">
                 <button
                   onClick={() =>
                     hasItems ? toggle(item.label) : (setActive(item.label), setOpen(false))
                   }
-                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs font-medium transition-colors ${
+                  className={`group relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs font-medium transition-all duration-150 cursor-pointer ${
                     active === item.label
                       ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
                       : isActive
-                      ? 'text-foreground font-semibold bg-muted/40'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      ? 'text-foreground font-semibold bg-muted/50'
+                      : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'
                   }`}
                 >
-                  <Icon className="size-4 shrink-0" />
+                  <Icon className="size-4 shrink-0 transition-transform duration-150 group-hover:scale-110" />
                   <span className="flex-1 truncate">{getNavLabel(item.label)}</span>
 
                   {isRiskItem && detectedRisks.length > 0 && (
-                    <span className="rounded-full bg-rose-600 px-1.5 py-0.2 text-[10px] font-bold text-white">
+                    <span className="rounded-full bg-rose-600 px-1.5 py-0.2 text-[10px] font-bold text-white shadow-2xs">
                       {detectedRisks.length}
                     </span>
                   )}
 
                   {hasItems && (
                     <ChevronDown
-                      className={`size-3.5 transition-transform ${
+                      className={`size-3.5 transition-transform duration-200 ${
                         expanded.includes(item.label) ? '' : '-rotate-90'
                       }`}
                     />
@@ -192,7 +193,7 @@ function Sidebar({
                 </button>
 
                 {hasItems && expanded.includes(item.label) && (
-                  <div className="ml-6 mt-1 flex flex-col gap-0.5 border-l border-border pl-3">
+                  <div className="ml-6 mt-1 flex flex-col gap-0.5 border-l border-border/80 pl-3 transition-all duration-200">
                     {item.items?.map((child) => (
                       <button
                         key={child}
@@ -200,10 +201,10 @@ function Sidebar({
                           setActive(child);
                           setOpen(false);
                         }}
-                        className={`rounded-md px-2.5 py-1.5 text-left text-xs transition-colors ${
+                        className={`rounded-md px-2.5 py-1.5 text-left text-xs transition-all duration-150 cursor-pointer ${
                           active === child
-                            ? 'font-semibold text-primary bg-primary/10'
-                            : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
+                            ? 'font-semibold text-primary bg-primary/10 shadow-2xs'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                         }`}
                       >
                         {getNavLabel(child)}
@@ -223,7 +224,7 @@ function Sidebar({
               setActive('Settings');
               setOpen(false);
             }}
-            className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium transition-colors ${
+            className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium transition-all duration-150 cursor-pointer ${
               active === 'Settings'
                 ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -238,23 +239,23 @@ function Sidebar({
               setActive('Business Profile');
               setOpen(false);
             }}
-            className="flex w-full items-center gap-3 rounded-xl bg-muted/40 p-2.5 text-left transition-colors hover:bg-muted"
+            className="flex w-full items-center gap-3 rounded-xl bg-muted/40 p-2.5 text-left transition-all duration-150 hover:bg-muted hover:shadow-2xs cursor-pointer"
           >
-            <div className="grid size-8 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+            <div className="grid size-8 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground shadow-2xs">
               {initials}
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-semibold text-foreground">{profile.name}</p>
               <p className="truncate text-[11px] text-muted-foreground">{profile.businessName}</p>
             </div>
-            <ChevronRight className="size-4 text-muted-foreground shrink-0" />
+            <ChevronRight className="size-4 text-muted-foreground shrink-0 transition-transform duration-150 group-hover:translate-x-0.5" />
           </button>
 
           {isDemo ? (
             <button
               type="button"
               onClick={() => exitDemo()}
-              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-amber-800 dark:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 transition-colors cursor-pointer"
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-amber-800 dark:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 transition-all duration-150 cursor-pointer active:scale-[0.98]"
             >
               <LogOut className="size-3.5" />
               <span>{isTe ? 'డెమో ముగించు' : 'Exit Demo'}</span>
@@ -263,7 +264,7 @@ function Sidebar({
             <button
               type="button"
               onClick={() => signOut()}
-              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-150 cursor-pointer active:scale-[0.98]"
             >
               <LogOut className="size-3.5" />
               <span>{isTe ? 'లాగ్ అవుట్' : 'Sign Out'}</span>
@@ -417,10 +418,6 @@ function RuralCredAppInner() {
   const { signOut, exitDemo, isDemo } = useAuth();
   const isTe = language === 'te';
 
-  const toggleLanguage = () => {
-    setLanguage(language === 'en' ? 'te' : 'en');
-  };
-
   const initials = profile.name
     .split(' ')
     .map((w) => w[0])
@@ -441,7 +438,7 @@ function RuralCredAppInner() {
 
       <main className="min-w-0 flex-1 flex flex-col">
         {/* Header Bar */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 backdrop-blur-sm px-5 sm:px-8">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/90 backdrop-blur-md px-5 sm:px-8 transition-colors">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -457,7 +454,7 @@ function RuralCredAppInner() {
               <span className="text-muted-foreground/50">•</span>
               <span className="truncate max-w-44 text-muted-foreground">{profile.businessName || 'Rural Enterprise'}</span>
               {profile.location && (
-                <span className="hidden md:inline-flex items-center text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium border">
+                <span className="hidden md:inline-flex items-center text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium border border-border/60">
                   {profile.location}
                 </span>
               )}
@@ -471,7 +468,7 @@ function RuralCredAppInner() {
             {/* FastAPI Backend Connection Mode Indicator */}
             {backendMode === 'backend' ? (
               <div
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[11px] font-semibold border border-emerald-500/20 shadow-2xs"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[11px] font-semibold border border-emerald-500/20 shadow-2xs transition-all"
                 title="FastAPI Backend Live: Using Python server as source of truth"
               >
                 <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -480,7 +477,7 @@ function RuralCredAppInner() {
               </div>
             ) : (
               <div
-                className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/10 text-amber-800 dark:text-amber-300 text-[11px] font-semibold border border-amber-500/20 shadow-2xs"
+                className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/10 text-amber-800 dark:text-amber-300 text-[11px] font-semibold border border-amber-500/20 shadow-2xs transition-all"
                 title="Offline / Local Calculation Mode: FastAPI server unreachable. Resilient local engine active."
               >
                 <span className="size-1.5 rounded-full bg-amber-500" />
@@ -489,7 +486,7 @@ function RuralCredAppInner() {
                 <button
                   type="button"
                   onClick={() => refreshBackendData()}
-                  className="ml-0.5 text-amber-700 dark:text-amber-300 hover:text-amber-950 dark:hover:text-amber-100 cursor-pointer p-0.5"
+                  className="ml-0.5 text-amber-700 dark:text-amber-300 hover:text-amber-950 dark:hover:text-amber-100 cursor-pointer p-0.5 transition-transform active:scale-90"
                   title="Retry FastAPI connection"
                   disabled={backendLoading}
                 >
@@ -498,7 +495,7 @@ function RuralCredAppInner() {
               </div>
             )}
 
-            {/* Demo Mode Indicator (Requirement 10) */}
+            {/* Demo Mode Indicator */}
             {isDemo && (
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[11px] font-semibold border border-amber-500/20 shadow-2xs">
                 <span className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
@@ -507,16 +504,16 @@ function RuralCredAppInner() {
             )}
 
             {/* Multilingual Selector (English, Telugu) */}
-            <div className="flex items-center rounded-lg border bg-card p-0.5 text-xs font-semibold shadow-xs">
+            <div className="flex items-center rounded-lg border bg-card p-0.5 text-xs font-semibold shadow-2xs">
               {(['en', 'te'] as const).map((l) => (
                 <button
                   key={l}
                   type="button"
                   onClick={() => setLanguage(l)}
-                  className={`px-2 py-1 rounded-md text-[11px] transition-all cursor-pointer ${
+                  className={`px-2 py-1 rounded-md text-[11px] transition-all duration-150 cursor-pointer ${
                     language === l
-                      ? 'bg-primary text-primary-foreground shadow-2xs font-bold'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                      ? 'bg-primary text-primary-foreground shadow-2xs font-bold scale-100'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/70'
                   }`}
                   title={l === 'en' ? 'English' : 'Telugu (తెలుగు)'}
                 >
@@ -528,7 +525,7 @@ function RuralCredAppInner() {
             {/* Notifications / Risk Alerts Icon */}
             <button
               onClick={() => setActive('Risk Alerts')}
-              className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-150 cursor-pointer active:scale-95"
               aria-label="Notifications"
             >
               <Bell className="size-4" />
@@ -543,9 +540,9 @@ function RuralCredAppInner() {
             {/* Settings Quick Access Icon */}
             <button
               onClick={() => setActive('Settings')}
-              className={`p-2 rounded-lg transition-colors ${
+              className={`p-2 rounded-lg transition-all duration-150 cursor-pointer active:scale-95 ${
                 active === 'Settings'
-                  ? 'text-primary bg-primary/10'
+                  ? 'text-primary bg-primary/10 shadow-2xs'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted'
               }`}
               aria-label="Settings"
@@ -559,9 +556,9 @@ function RuralCredAppInner() {
             {/* Profile CTA */}
             <button
               onClick={() => setActive('Business Profile')}
-              className="hidden items-center gap-2 pl-2 text-left sm:flex hover:opacity-85 transition-opacity"
+              className="hidden items-center gap-2 pl-2 text-left sm:flex hover:opacity-85 transition-all duration-150 cursor-pointer group"
             >
-              <div className="grid size-8 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+              <div className="grid size-8 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground shadow-2xs transition-transform duration-150 group-hover:scale-105">
                 {initials}
               </div>
               <div className="text-left">
@@ -579,7 +576,7 @@ function RuralCredAppInner() {
               <button
                 onClick={() => exitDemo()}
                 title={isTe ? 'డెమో నుండి నిష్క్రమించండి' : 'Exit Demo'}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-amber-800 dark:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 transition-colors ml-1 border border-amber-500/20 shadow-2xs"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-amber-800 dark:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 transition-all duration-150 ml-1 border border-amber-500/20 shadow-2xs cursor-pointer active:scale-[0.98]"
               >
                 <LogOut className="size-3.5" />
                 <span className="hidden sm:inline">{isTe ? 'డెమో ముగించు' : 'Exit Demo'}</span>
@@ -588,7 +585,7 @@ function RuralCredAppInner() {
               <button
                 onClick={() => signOut()}
                 title={isTe ? 'లాగ్ అవుట్' : 'Sign Out'}
-                className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors ml-1"
+                className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-150 ml-1 cursor-pointer active:scale-95"
                 aria-label="Sign Out"
               >
                 <LogOut className="size-4" />
@@ -610,17 +607,20 @@ function RuralCredAppGate() {
   const { user } = useAuth();
   const { hasCompletedOnboarding, updateProfile } = useApp();
 
-  // 1. User session exists (Demo mode or Authenticated)
-  if (user) {
-    if (!hasCompletedOnboarding) {
-      return <OnboardingScreen onComplete={() => updateProfile({ onboardingCompleted: true })} />;
-    }
-    return <RuralCredAppInner />;
-  }
-
-  // 2. REQUIRED FIRST SCREEN: Immediately render Login Interface
-  // Zero loading screens, no "Connecting to authenticated session...", no waiting!
-  return <AuthScreen />;
+  return (
+    <>
+      <CustomCursor />
+      {user ? (
+        !hasCompletedOnboarding ? (
+          <OnboardingScreen onComplete={() => updateProfile({ onboardingCompleted: true })} />
+        ) : (
+          <RuralCredAppInner />
+        )
+      ) : (
+        <AuthScreen />
+      )}
+    </>
+  );
 }
 
 export function RuralCredApp() {

@@ -884,7 +884,7 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
           {messages.map((msg) => (
             <div
               key={msg.id}
-              className={`flex gap-3 text-xs leading-relaxed ${
+              className={`flex gap-3 text-xs leading-relaxed message-enter ${
                 msg.role === 'user' ? 'justify-end' : 'justify-start'
               }`}
             >

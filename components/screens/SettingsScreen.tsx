@@ -108,7 +108,7 @@ export function SettingsScreen({ setActive }: { setActive?: (value: string) => v
   return (
     <div className="flex flex-col gap-6">
       {/* Top Banner */}
-      <div className="rounded-2xl border bg-card p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="rounded-2xl border bg-card p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 card-lift stagger-1">
         <div>
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-semibold flex items-center gap-1">
@@ -128,7 +128,7 @@ export function SettingsScreen({ setActive }: { setActive?: (value: string) => v
       </div>
 
       {/* 1. Language & Input Mode Selection */}
-      <section className="rounded-2xl border bg-card p-6 shadow-xs">
+      <section className="rounded-2xl border bg-card p-6 shadow-xs card-lift stagger-2">
         <div className="pb-3 border-b flex items-center gap-2">
           <Languages className="size-4 text-primary" />
           <h3 className="font-bold font-sora text-base text-foreground">
@@ -211,7 +211,7 @@ export function SettingsScreen({ setActive }: { setActive?: (value: string) => v
       </section>
 
       {/* 2. Currency Display Preference */}
-      <section className="rounded-2xl border bg-card p-6 shadow-xs">
+      <section className="rounded-2xl border bg-card p-6 shadow-xs card-lift stagger-3">
         <div className="pb-3 border-b flex items-center gap-2">
           <IndianRupee className="size-4 text-primary" />
           <h3 className="font-bold font-sora text-base text-foreground">
@@ -247,7 +247,7 @@ export function SettingsScreen({ setActive }: { setActive?: (value: string) => v
       </section>
 
       {/* 3. Notification Preferences */}
-      <section className="rounded-2xl border bg-card p-6 shadow-xs">
+      <section className="rounded-2xl border bg-card p-6 shadow-xs card-lift stagger-4">
         <div className="pb-3 border-b flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Bell className="size-4 text-primary" />
@@ -330,7 +330,7 @@ export function SettingsScreen({ setActive }: { setActive?: (value: string) => v
       </section>
 
       {/* 4. Sync Status & FastAPI Backend Mode */}
-      <section className="rounded-2xl border bg-card p-6 shadow-xs">
+      <section className="rounded-2xl border bg-card p-6 shadow-xs card-lift stagger-5">
         <div className="pb-3 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Cpu className="size-4 text-primary" />
@@ -384,7 +384,7 @@ export function SettingsScreen({ setActive }: { setActive?: (value: string) => v
       </section>
 
       {/* 5. Data Backup & Export */}
-      <section className="rounded-2xl border bg-card p-6 shadow-xs">
+      <section className="rounded-2xl border bg-card p-6 shadow-xs card-lift stagger-6">
         <div className="pb-3 border-b flex items-center gap-2">
           <Download className="size-4 text-primary" />
           <h3 className="font-bold font-sora text-base text-foreground">

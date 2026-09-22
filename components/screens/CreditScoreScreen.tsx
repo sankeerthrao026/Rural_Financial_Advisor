@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import { formatINR } from '@/lib/utils/currency';
 import { Button } from '@/components/ui/button';
+import { AnimatedNumber } from '@/components/ui/animated-number';
 import {
   calculateCreditReadiness,
   generateCreditReadinessCertificatePdf,
@@ -70,7 +71,7 @@ export function CreditScoreScreen({ setActive }: { setActive?: (value: string) =
   return (
     <div className="flex flex-col gap-6">
       {/* 1. Header Banner & Certificate Download Button */}
-      <div className="rounded-2xl border bg-card p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="rounded-2xl border bg-card p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover-lift transition-all">
         <div>
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-semibold flex items-center gap-1">
@@ -95,7 +96,7 @@ export function CreditScoreScreen({ setActive }: { setActive?: (value: string) =
           <Button
             onClick={handleDownloadCertificate}
             disabled={downloading}
-            className="flex items-center gap-1.5 font-semibold bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs cursor-pointer"
+            className="flex items-center gap-1.5 font-semibold bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs cursor-pointer active:scale-[0.98] transition-all"
           >
             <Download className="size-3.5" />
             <span>{isTe ? 'క్రెడిట్ సర్టిఫికేట్ డౌన్‌లోడ్' : 'Download Certificate (PDF)'}</span>
@@ -104,14 +105,14 @@ export function CreditScoreScreen({ setActive }: { setActive?: (value: string) =
       </div>
 
       {/* 2. Prominent Overall Score Card (Requirement 2) */}
-      <div className="rounded-2xl border bg-card p-6 sm:p-8 shadow-xs">
+      <div className="rounded-2xl border bg-card p-6 sm:p-8 shadow-xs hover-lift transition-all">
         <div className="grid md:grid-cols-3 gap-6 items-center">
           {/* Radial Score Badge */}
           <div className="flex flex-col items-center justify-center text-center p-4 border-b md:border-b-0 md:border-r">
             <div className="relative grid size-36 place-items-center rounded-full bg-primary/5 border-4 border-primary/20 shadow-inner">
               <div className="flex flex-col items-center">
                 <span className="text-4xl sm:text-5xl font-extrabold font-sora tracking-tight text-primary">
-                  {overallScore}
+                  <AnimatedNumber value={overallScore} />
                 </span>
                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mt-0.5">
                   out of 100

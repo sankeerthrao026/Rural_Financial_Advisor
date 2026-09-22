@@ -146,10 +146,10 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
         ))}
       </div>
 
-      <div className="w-full max-w-xl flex flex-col gap-6">
+      <div className="w-full max-w-xl flex flex-col gap-6 page-enter">
         {/* Header */}
         <div className="text-center flex flex-col items-center">
-          <div className="grid size-12 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-md mb-3">
+          <div className="grid size-12 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-md mb-3 transition-transform hover:scale-105 duration-200">
             <span className="text-2xl font-bold font-sora">R</span>
           </div>
           <h1 className="text-2xl font-bold font-sora tracking-tight text-foreground">
@@ -161,7 +161,7 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
         </div>
 
         {/* 1-Click Judge/Evaluator Quick Preset Card */}
-        <div className="rounded-2xl border border-amber-200/80 bg-accent/40 p-4 shadow-xs">
+        <div className="rounded-2xl border border-amber-200/80 bg-accent/40 p-4 shadow-xs card-lift">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-900">
             <Sparkles className="size-4 text-amber-700" />
             <span>{t.evaluatorPresetTitle}</span>

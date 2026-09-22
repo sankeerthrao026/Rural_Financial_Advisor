@@ -656,7 +656,7 @@ export function BusinessAdvisorScreen() {
 
               if (isUser) {
                 return (
-                  <div key={msg.id} className="flex justify-end items-end gap-2.5 max-w-[85%] self-end">
+                  <div key={msg.id} className="flex justify-end items-end gap-2.5 max-w-[85%] self-end message-enter">
                     <div className="flex flex-col items-end">
                       <div className="bg-primary text-primary-foreground rounded-2xl rounded-br-xs px-4 py-2.5 text-xs sm:text-sm font-medium shadow-xs leading-relaxed">
                         {msg.content}
@@ -674,7 +674,7 @@ export function BusinessAdvisorScreen() {
 
               // Assistant message
               return (
-                <div key={msg.id} className="flex items-start gap-2.5 max-w-[92%] self-start">
+                <div key={msg.id} className="flex items-start gap-2.5 max-w-[92%] self-start message-enter">
                   <div className="grid size-8 place-items-center rounded-xl bg-primary/15 text-primary shrink-0 mt-1">
                     <Sparkles className="size-4" />
                   </div>

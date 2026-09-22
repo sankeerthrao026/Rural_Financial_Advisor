@@ -484,10 +484,10 @@ export function DigitalLogbookScreen() {
           {/* 1. Metric Cards */}
           <div className="grid gap-4 sm:grid-cols-3">
             {/* Total Income */}
-            <div className="hover-lift rounded-2xl border bg-card p-5 shadow-xs">
+            <div className="stagger-1 hover-lift hover-glow-emerald rounded-2xl border bg-card p-5 shadow-xs transition-all">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-muted-foreground">{t.totalIncome}</p>
-                <div className="flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">
+                <div className="flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded shadow-2xs">
                   <ArrowUpRight className="size-3" />
                   {isTe ? 'ఆదాయం' : 'Inflow'}
                 </div>
@@ -501,10 +501,10 @@ export function DigitalLogbookScreen() {
             </div>
 
             {/* Total Expenses */}
-            <div className="hover-lift rounded-2xl border bg-card p-5 shadow-xs">
+            <div className="stagger-2 hover-lift rounded-2xl border bg-card p-5 shadow-xs transition-all">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-muted-foreground">{t.totalExpenses}</p>
-                <div className="flex items-center gap-1 text-xs font-semibold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded">
+                <div className="flex items-center gap-1 text-xs font-semibold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded shadow-2xs">
                   <ArrowDownRight className="size-3" />
                   {isTe ? 'ఖర్చులు' : 'Outflow'}
                 </div>
@@ -518,21 +518,21 @@ export function DigitalLogbookScreen() {
             </div>
 
             {/* Net Cash Flow */}
-            <div className="hover-lift rounded-2xl border bg-card p-5 shadow-xs">
+            <div className="stagger-3 hover-lift rounded-2xl border bg-card p-5 shadow-xs transition-all">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-muted-foreground">{t.netCashFlow}</p>
                 <div
-                  className={`flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded ${
+                  className={`flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded shadow-2xs ${
                     netCashFlow >= 0
                       ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40'
-                      : 'text-rose-700 bg-rose-50'
+                      : 'text-rose-700 bg-rose-50 dark:bg-rose-950/40'
                   }`}
                 >
                   {netCashFlow >= 0 ? <ArrowUpRight className="size-3" /> : <ArrowDownRight className="size-3" />}
                   {netCashFlow >= 0 ? (isTe ? 'నికర మిగులు' : 'Net Surplus') : (isTe ? 'లోటు' : 'Deficit')}
                 </div>
               </div>
-              <p className={`mt-3 text-2xl font-bold font-sora ${netCashFlow >= 0 ? 'text-foreground' : 'text-rose-700'}`}>
+              <p className={`mt-3 text-2xl font-bold font-sora ${netCashFlow >= 0 ? 'text-foreground' : 'text-rose-700 dark:text-rose-400'}`}>
                 <AnimatedNumber value={netCashFlow} formatter={formatINR} />
               </p>
               <p className="mt-1 text-xs text-muted-foreground">

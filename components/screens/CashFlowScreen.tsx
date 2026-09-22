@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import { formatINR } from '@/lib/utils/currency';
 import { Button } from '@/components/ui/button';
+import { AnimatedNumber } from '@/components/ui/animated-number';
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -94,18 +95,18 @@ export function CashFlowScreen({ setActive }: { setActive?: (tab: string) => voi
       {/* Top 4 Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Total Inflow */}
-        <div className="rounded-2xl border bg-card p-5 shadow-xs">
+        <div className="stagger-1 hover-lift hover-glow-emerald rounded-2xl border bg-card p-5 shadow-xs transition-all">
           <div className="flex items-center justify-between">
             <p className="text-xs font-medium text-muted-foreground">
               {isTe ? 'మొత్తం ఆదాయం (Inflow)' : 'Total Inflow (Receipts)'}
             </p>
-            <div className="flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+            <div className="flex items-center gap-1 rounded bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 shadow-2xs">
               <ArrowUpRight className="size-3" />
               {isTe ? 'రాబడి' : 'Inflow'}
             </div>
           </div>
-          <p className="mt-3 text-2xl font-bold font-sora text-emerald-800">
-            {formatINR(totalIncome)}
+          <p className="mt-3 text-2xl font-bold font-sora text-emerald-800 dark:text-emerald-300">
+            <AnimatedNumber value={totalIncome} formatter={formatINR} />
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {entries.filter((e) => e.type === 'income').length} {isTe ? 'లావాదేవీలు' : 'recorded sales'}
@@ -113,18 +114,18 @@ export function CashFlowScreen({ setActive }: { setActive?: (tab: string) => voi
         </div>
 
         {/* Total Outflow */}
-        <div className="rounded-2xl border bg-card p-5 shadow-xs">
+        <div className="stagger-2 hover-lift rounded-2xl border bg-card p-5 shadow-xs transition-all">
           <div className="flex items-center justify-between">
             <p className="text-xs font-medium text-muted-foreground">
               {isTe ? 'మొత్తం ఖర్చులు (Outflow)' : 'Total Outflow (OPEX)'}
             </p>
-            <div className="flex items-center gap-1 rounded bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-700">
+            <div className="flex items-center gap-1 rounded bg-rose-50 dark:bg-rose-950/60 px-2 py-0.5 text-xs font-semibold text-rose-700 dark:text-rose-300 shadow-2xs">
               <ArrowDownRight className="size-3" />
               {isTe ? 'వ్యయం' : 'Outflow'}
             </div>
           </div>
-          <p className="mt-3 text-2xl font-bold font-sora text-rose-800">
-            {formatINR(totalExpenses)}
+          <p className="mt-3 text-2xl font-bold font-sora text-rose-800 dark:text-rose-300">
+            <AnimatedNumber value={totalExpenses} formatter={formatINR} />
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {entries.filter((e) => e.type === 'expense').length} {isTe ? 'ఖర్చు రికార్డులు' : 'recorded payments'}
@@ -132,20 +133,20 @@ export function CashFlowScreen({ setActive }: { setActive?: (tab: string) => voi
         </div>
 
         {/* Net Cash Flow */}
-        <div className="rounded-2xl border bg-card p-5 shadow-xs">
+        <div className="stagger-3 hover-lift rounded-2xl border bg-card p-5 shadow-xs transition-all">
           <div className="flex items-center justify-between">
             <p className="text-xs font-medium text-muted-foreground">
               {isTe ? 'నికర నగదు ప్రవాహం' : 'Net Cash Flow'}
             </p>
-            <div className={`flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold ${
-              netCashFlow >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+            <div className={`flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold shadow-2xs ${
+              netCashFlow >= 0 ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300' : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300'
             }`}>
               {netCashFlow >= 0 ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
               {isTe ? (netCashFlow >= 0 ? 'మిగులు' : 'లోటు') : burnRateStatus}
             </div>
           </div>
-          <p className={`mt-3 text-2xl font-bold font-sora ${netCashFlow >= 0 ? 'text-foreground' : 'text-rose-700'}`}>
-            {formatINR(netCashFlow)}
+          <p className={`mt-3 text-2xl font-bold font-sora ${netCashFlow >= 0 ? 'text-foreground' : 'text-rose-700 dark:text-rose-400'}`}>
+            <AnimatedNumber value={netCashFlow} formatter={formatINR} />
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {totalIncome > 0 ? `${Math.round(((netCashFlow) / totalIncome) * 100)}% net margin` : '0% margin'}
@@ -153,7 +154,7 @@ export function CashFlowScreen({ setActive }: { setActive?: (tab: string) => voi
         </div>
 
         {/* Operating Retention Ratio */}
-        <div className="rounded-2xl border bg-card p-5 shadow-xs">
+        <div className="stagger-4 hover-lift rounded-2xl border bg-card p-5 shadow-xs transition-all">
           <div className="flex items-center justify-between">
             <p className="text-xs font-medium text-muted-foreground">
               {isTe ? 'వ్యయ నిష్పత్తి' : 'Expense-to-Income'}
@@ -161,7 +162,7 @@ export function CashFlowScreen({ setActive }: { setActive?: (tab: string) => voi
             <Activity className="size-4 text-primary opacity-80" />
           </div>
           <p className="mt-3 text-2xl font-bold font-sora text-foreground">
-            {expenseRatio}%
+            <AnimatedNumber value={expenseRatio} suffix="%" />
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {expenseRatio <= 60 ? (isTe ? 'సురక్షిత స్థాయి' : 'Healthy operating band') : (isTe ? 'హెచ్చరిక స్థాయి' : 'High expense pressure')}
