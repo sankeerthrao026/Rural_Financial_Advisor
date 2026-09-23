@@ -53,25 +53,35 @@ class GeminiService:
 You provide realistic, grounded, and concise business advisory for rural Indian micro-entrepreneurs.
 CRITICAL MANDATORY LANGUAGE RULE:
 The selected active application language is TELUGU (తెలుగు).
+Respond entirely in Telugu. Do not include Hindi. Use Telugu as the primary language throughout the answer. Keep technical names, proper nouns, numbers, currency values, and unavoidable technical terminology in their standard form where appropriate.
 You MUST generate EVERY user-facing string value in the output JSON exclusively in natural, fluent Telugu (తెలుగు) script.
 This applies unconditionally to all keys: 'reply', 'marketReach' ('headline', 'details', 'targetSegment', 'estimatedLocalDemand'), 'opportunityAnalysis' ('overview', 'primaryDrivers', 'seasonalOpportunity'), 'swot' ('strengths', 'weaknesses', 'opportunities', 'threats'), 'competitorDensity' ('description', 'mitigationStrategy'), 'pricingSuggestion' ('recommendedBand', 'benchmarkComparison', 'marginTarget'), 'risks', and 'assumptions'.
 STRICT RULES:
 1. Do NOT write in English. Do NOT return bilingual or mixed English-Telugu text.
 2. Even if the user's question, conversation history, or retrieved context is in English, your response MUST be in pure Telugu script.
-3. Ground all factual claims strictly in the provided RETRIEVED LOCAL CONTEXT.
-4. NEVER calculate critical loan amounts, EMI, interest rates, or financial health scores (handled deterministically by the Python engine).
+3. For numerical / business questions (e.g. how many cows/birds/looms needed, target profit, break-even, required sales):
+   - You MUST answer the exact question directly in the 'reply' field using the exact figures from the DETERMINISTIC BUSINESS CALCULATION block.
+   - Show the step-by-step numbers clearly: (Target ÷ Profit per Unit = Required Units).
+   - State the unit economics and assumptions clearly in Telugu.
+   - NEVER provide vague generic boilerplate or dodge the calculation.
+4. Ground all factual claims strictly in the provided context and benchmarks.
 5. Output valid JSON matching the exact schema requested without altering JSON keys."""
         else:
             system_prompt = """You are the RuralCred Advisor AI Engine.
 You provide realistic, grounded, and concise business advisory for rural Indian micro-entrepreneurs.
 CRITICAL MANDATORY LANGUAGE RULE:
 The selected active application language is ENGLISH.
-You MUST generate EVERY user-facing string value in the output JSON in clear, simple Indian English.
+Respond entirely in English. Do not include Telugu, Hindi, or any other regional-language translations. Do not provide bilingual terminology. Answer the user's question directly and completely in English.
+You MUST generate EVERY user-facing string value in the output JSON in clear, simple English.
 STRICT RULES:
-1. Output pure English with clear rural business terminology.
+1. Output pure English with clear rural business terminology. Do NOT generate Telugu, Hindi, or bilingual parentheticals (e.g. never output 'Dairy Farming (పాడి పరిశ్రమ)' or 'Warangal (వరంగల్)').
 2. Even if the user's question or conversation history is written in Telugu script, translate the intent and respond completely in English.
-3. Ground all factual claims strictly in the provided RETRIEVED LOCAL CONTEXT.
-4. NEVER calculate critical loan amounts, EMI, interest rates, or financial health scores (handled deterministically by the Python engine).
+3. For numerical / business questions (e.g. how many cows/birds/looms needed, target profit, break-even, required sales):
+   - You MUST answer the exact question directly in the 'reply' field using the exact figures from the DETERMINISTIC BUSINESS CALCULATION block.
+   - Show the step-by-step numbers clearly: (Target ÷ Profit per Unit = Required Units).
+   - State the unit economics and assumptions clearly in English.
+   - NEVER provide vague generic boilerplate or dodge the calculation.
+4. Ground all factual claims strictly in the provided context and benchmarks.
 5. Output valid JSON matching the exact schema requested without altering JSON keys."""
 
         history_text = ""
@@ -85,12 +95,12 @@ STRICT RULES:
             history_text = "CONVERSATION HISTORY (RECENT TURNS):\n" + "\n".join(formatted_turns) + "\n\n"
 
         lang_directive = (
-            "MANDATORY: Generate all string values in pure Telugu (తెలుగు) script."
+            "MANDATORY: Respond entirely in Telugu. Do not include Hindi. Use Telugu as the primary language throughout the answer. Keep technical names, proper nouns, numbers, currency values, and unavoidable technical terminology in their standard form where appropriate."
             if is_te
-            else "MANDATORY: Generate all string values in English."
+            else "MANDATORY: Respond entirely in English. Do not include Telugu, Hindi, or any other regional-language translations. Do not provide bilingual terminology. Answer the user's question directly and completely in English."
         )
 
-        prompt = f"""{history_text}CURRENT USER QUESTION / INQUIRY:
+        prompt = f"""{history_text}CURRENT USER INQUIRY & CALCULATION CONTEXT:
 {user_query}
 
 RETRIEVED LOCAL CONTEXT (ChromaDB Vector Store):
@@ -99,7 +109,7 @@ RETRIEVED LOCAL CONTEXT (ChromaDB Vector Store):
 {lang_directive}
 Return a valid JSON object with the following structure:
 {{
-  "reply": "Clear, direct, and conversational 2-4 sentence explanation addressing the user's specific inquiry or follow-up question directly.",
+  "reply": "Direct, precise answer to the user's inquiry first, followed by clear step-by-step numbers, unit economics, and actionable guidance.",
   "marketReach": {{
     "headline": "string",
     "details": "string",
@@ -132,7 +142,10 @@ Return a valid JSON object with the following structure:
 }}"""
 
         candidate_models = [
+            "gemini-flash-latest",
             "gemini-2.5-flash",
+            "gemini-2.0-flash",
+            "gemini-1.5-flash",
         ]
         for model in candidate_models:
             t_model_start = time.time()
@@ -194,6 +207,7 @@ Return a valid JSON object with the following structure:
 You converse with rural Indian micro-entrepreneurs in supportive, respectful, and practical language.
 CRITICAL MANDATORY LANGUAGE RULE:
 The selected active application language is TELUGU (తెలుగు).
+Respond entirely in Telugu. Do not include Hindi. Use Telugu as the primary language throughout the answer. Keep technical names, proper nouns, numbers, currency values, and unavoidable technical terminology in their standard form where appropriate.
 You MUST generate your entire conversational response in natural, fluent Telugu (తెలుగు) script.
 STRICT RULES:
 1. Do NOT write in English. Do NOT provide bilingual text.
@@ -206,9 +220,10 @@ STRICT RULES:
 You converse with rural Indian micro-entrepreneurs in supportive, respectful, and practical language.
 CRITICAL MANDATORY LANGUAGE RULE:
 The selected active application language is ENGLISH.
-You MUST generate your entire conversational response in clear, simple Indian English.
+Respond entirely in English. Do not include Telugu, Hindi, or any other regional-language translations. Do not provide bilingual terminology. Answer the user's question directly and completely in English.
+You MUST generate your entire conversational response in clear, simple English.
 STRICT RULES:
-1. Output pure English with clear financial terminology.
+1. Output pure English with clear financial terminology. Do NOT generate Telugu, Hindi, or bilingual terms.
 2. Even if the user inquiry is in Telugu script, your response MUST be in English.
 3. NEVER alter, hallucinate, or recalculate the verified loan numbers provided in the LOAN SUMMARY below (these are calculated deterministically by our banking engine).
 4. Directly answer the entrepreneur's question or follow-up, referencing their exact loan amount, EMI, working capital split, or seasonal moratorium where appropriate.
@@ -224,6 +239,12 @@ STRICT RULES:
                 formatted_turns.append(f"{speaker}: {content_val}")
             history_text = "PREVIOUS CONVERSATION:\n" + "\n".join(formatted_turns) + "\n\n"
 
+        lang_instruction = (
+            "MANDATORY: Respond entirely in Telugu. Do not include Hindi. Use Telugu as the primary language throughout the answer. Keep technical names, proper nouns, numbers, currency values, and unavoidable technical terminology in their standard form where appropriate."
+            if is_te
+            else "MANDATORY: Respond entirely in English. Do not include Telugu, Hindi, or any other regional-language translations. Do not provide bilingual terminology. Answer the user's question directly and completely in English."
+        )
+
         prompt = f"""{history_text}VERIFIED LOAN & ENTREPRENEUR SUMMARY:
 - Margin Capital (Equity): ₹{loan_context.get('marginCapital', 0):,.0f}
 - Bank Loan Amount: ₹{loan_context.get('loanAmount', 0):,.0f}
@@ -238,10 +259,14 @@ STRICT RULES:
 CURRENT ENTREPRENEUR INQUIRY:
 {user_query}
 
+{lang_instruction}
 Provide a helpful, warm, and professional conversational response (2 to 4 paragraphs) addressing the entrepreneur's question with specific references to their profile and numbers."""
 
         candidate_models = [
+            "gemini-flash-latest",
             "gemini-2.5-flash",
+            "gemini-2.0-flash",
+            "gemini-1.5-flash",
         ]
         for model in candidate_models:
             try:

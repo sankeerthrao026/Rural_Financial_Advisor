@@ -588,7 +588,16 @@ def generate_finance_advice(req: FinanceAdviceRequest) -> FinanceAdviceResponse:
     4. Ranks credit schemes biased by demographics (woman, SC/ST, OBC).
     5. Answers follow-up queries conversationally via Gemini 2.5 Flash with grounded fallback.
     """
+    from app.services.rag_service import clean_for_english, clean_for_telugu
+
     is_te = req.language == "te"
+    cat_clean = clean_for_telugu(req.category) if is_te else clean_for_english(req.category)
+    loc_clean = clean_for_telugu(req.location) if is_te else clean_for_english(req.location)
+    if not cat_clean:
+        cat_clean = req.category
+    if not loc_clean:
+        loc_clean = req.location
+
     wc_breakdown = get_working_capital_breakdown(
         loan_amount=req.loanAmount,
         category=req.category,
@@ -612,14 +621,14 @@ def generate_finance_advice(req: FinanceAdviceRequest) -> FinanceAdviceResponse:
     # Base plain-language explanation grounded in deterministic math
     if is_te:
         loan_exp = (
-            f"మీ {req.category} వ్యాపారం కోసం మొత్తం ప్రాజెక్ట్ వ్యయం ₹{req.projectCost:,.0f} గా లెక్కించబడింది. "
+            f"మీ {cat_clean} వ్యాపారం కోసం మొత్తం ప్రాజెక్ట్ వ్యయం ₹{req.projectCost:,.0f} గా లెక్కించబడింది. "
             f"ఇందులో మీ స్వంత మూలధన వాటా ₹{req.marginCapital:,.0f} (10%) కాగా, బ్యాంక్ ద్వారా లభించే రుణం ₹{req.loanAmount:,.0f} (90%). "
             f"ప్రతి 3 నెలలకు తగ్గుతున్న అసలుపై చెల్లించాల్సిన EMI ₹{req.quarterlyEmi:,.0f}. "
             f"మీ ప్రొఫైల్ ప్రకారం '{top_scheme.nameTe if top_scheme else scheme_name}' పథకం అత్యుత్తమంగా సరిపోతుంది ({top_scheme.whyRecommendedTe if top_scheme else ''})."
         )
     else:
         loan_exp = (
-            f"For your {req.category} enterprise, our banking model establishes a total project outlay of ₹{req.projectCost:,.0f}. "
+            f"For your {cat_clean} enterprise, our banking model establishes a total project outlay of ₹{req.projectCost:,.0f}. "
             f"Your promoter equity contribution is ₹{req.marginCapital:,.0f} (10%), with the remaining ₹{req.loanAmount:,.0f} (90%) funded via institutional credit. "
             f"Your quarterly reducing-balance repayment will be ₹{req.quarterlyEmi:,.0f}. "
             f"Based on your profile, '{scheme_name}' is prioritized ({top_scheme.whyRecommended if top_scheme else ''})."
@@ -640,8 +649,8 @@ def generate_finance_advice(req: FinanceAdviceRequest) -> FinanceAdviceResponse:
         "capexPercent": wc_breakdown.capexPercent,
         "gender": req.gender,
         "socialCategory": req.socialCategory,
-        "category": req.category,
-        "location": req.location,
+        "category": cat_clean,
+        "location": loc_clean,
         "moratoriumGuidance": moratorium_advice.guidance,
         "topSchemes": ", ".join([f"{s.name} ({s.whyRecommended})" for s in schemes[:3]]),
     }
@@ -715,13 +724,13 @@ def generate_finance_advice(req: FinanceAdviceRequest) -> FinanceAdviceResponse:
             else:
                 if is_te:
                     reply_text = (
-                        f"{req.location} లోని మీ {req.category} వ్యాపార విశ్లేషణ ప్రకారం, మీ ₹{req.loanAmount:,.0f} రుణానికి త్రైమాసిక వాయిదా ₹{req.quarterlyEmi:,.0f}. "
+                        f"{loc_clean} లోని మీ {cat_clean} వ్యాపార విశ్లేషణ ప్రకారం, మీ ₹{req.loanAmount:,.0f} రుణానికి త్రైమాసిక వాయిదా ₹{req.quarterlyEmi:,.0f}. "
                         f"మేము వర్కింగ్ క్యాపిటల్ కోసం ₹{wc_breakdown.workingCapitalAmount:,.0f} మరియు పరికరాల కోసం ₹{wc_breakdown.capexAmount:,.0f} కేటాయించాము. "
                         f"పథకం వివరాలు లేదా బ్యాంక్ పత్రాల గురించి ఏవైనా సందేహాలుంటే అడగండి."
                     )
                 else:
                     reply_text = (
-                        f"Based on your {req.category} profile in {req.location}, your loan of ₹{req.loanAmount:,.0f} requires a quarterly payment of ₹{req.quarterlyEmi:,.0f}. "
+                        f"Based on your {cat_clean} profile in {loc_clean}, your loan of ₹{req.loanAmount:,.0f} requires a quarterly payment of ₹{req.quarterlyEmi:,.0f}. "
                         f"We have structured ₹{wc_breakdown.workingCapitalAmount:,.0f} for working capital and ₹{wc_breakdown.capexAmount:,.0f} for equipment. "
                         f"Feel free to ask about scheme eligibility, seasonal grace periods, or required bank paperwork."
                     )
@@ -729,14 +738,14 @@ def generate_finance_advice(req: FinanceAdviceRequest) -> FinanceAdviceResponse:
         # Default greeting / executive advisor overview
         if is_te:
             reply_text = (
-                f"నమస్కారం! మీ {req.category} వ్యాపారానికి సంబంధించిన ఆర్థిక విశ్లేషణ సిద్ధంగా ఉంది. "
+                f"నమస్కారం! మీ {cat_clean} వ్యాపారానికి సంబంధించిన ఆర్థిక విశ్లేషణ సిద్ధంగా ఉంది. "
                 f"మీకు ₹{req.loanAmount:,.0f} రుణం అవసరమవుతుంది, త్రైమాసిక వాయిదా ₹{req.quarterlyEmi:,.0f}. "
                 f"మీ ప్రొఫైల్ ఆధారంగా '{top_scheme.nameTe if top_scheme else scheme_name}' పథకం సిఫార్సు చేయబడింది. "
                 f"రుణ వివరాలు, మారటోరియం లేదా వర్కింగ్ క్యాపిటల్ గురించి ఏవైనా సందేహాలుంటే నన్ను అడగండి."
             )
         else:
             reply_text = (
-                f"Welcome! I have analyzed your {req.category} enterprise requirements. "
+                f"Welcome! I have analyzed your {cat_clean} enterprise requirements. "
                 f"Based on your ₹{req.marginCapital:,.0f} equity margin, you qualify for an institutional loan of ₹{req.loanAmount:,.0f} with a quarterly EMI of ₹{req.quarterlyEmi:,.0f}. "
                 f"I have tailored '{scheme_name}' as your top scheme match and scheduled a seasonal moratorium for your lean months. "
                 f"You can ask me any questions about interest rates, working capital, or bank approval requirements below."
