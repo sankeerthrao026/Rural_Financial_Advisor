@@ -671,7 +671,14 @@ def generate_finance_advice(req: FinanceAdviceRequest) -> FinanceAdviceResponse:
         # Grounded conversational fallback if Gemini was unavailable or returned empty
         if not reply_text:
             q_lower = req.userQuery.lower()
-            if "why" in q_lower or "scheme" in q_lower or "stand-up" in q_lower or "pmegp" in q_lower or "mudra" in q_lower:
+            if any(k in q_lower for k in ["eligible", "what scheme", "government scheme", "all scheme", "options"]):
+                scheme_list_en = "; ".join([f"{s.name} ({s.subsidyOrConcession} - {s.whyRecommended})" for s in schemes[:3]])
+                scheme_list_te = "; ".join([f"{s.nameTe} ({s.subsidyOrConcessionTe} - {s.whyRecommendedTe})" for s in schemes[:3]])
+                if is_te:
+                    reply_text = f"మీ ప్రొఫైల్ ఆధారంగా మీరు క్రింది పథకాలకు అర్హులు: {scheme_list_te}. అత్యంత అనుకూలమైన పథకం '{top_scheme.nameTe if top_scheme else scheme_name}'."
+                else:
+                    reply_text = f"Based on your profile, you are eligible for the following government schemes: {scheme_list_en}. The most recommended option for your setup is {top_scheme.name if top_scheme else 'the primary scheme'}."
+            elif any(k in q_lower for k in ["why", "stand-up", "pmegp", "mudra", "nabard", "scheme"]):
                 if is_te:
                     reply_text = (
                         f"మీకు '{top_scheme.nameTe if top_scheme else scheme_name}' పథకం సిఫార్సు చేయబడింది ఎందుకంటే: "
@@ -683,7 +690,7 @@ def generate_finance_advice(req: FinanceAdviceRequest) -> FinanceAdviceResponse:
                         f"We recommended {top_scheme.name if top_scheme else 'this scheme'} because: {top_scheme.whyRecommended if top_scheme else ''} "
                         f"It provides {top_scheme.subsidyOrConcession if top_scheme else ''}, keeping your quarterly repayment at ₹{req.quarterlyEmi:,.0f}."
                     )
-            elif "moratorium" in q_lower or "summer" in q_lower or "lean" in q_lower or "skip" in q_lower or "pause" in q_lower:
+            elif any(k in q_lower for k in ["moratorium", "summer", "lean", "skip", "pause", "grace"]):
                 if is_te:
                     reply_text = (
                         f"{moratorium_advice.guidanceTe or moratorium_advice.guidance} "
@@ -694,7 +701,20 @@ def generate_finance_advice(req: FinanceAdviceRequest) -> FinanceAdviceResponse:
                         f"{moratorium_advice.guidance} "
                         f"During the initial {moratorium_advice.moratoriumQuartersRecommended * 3} months, you only need to service accrued interest, giving your cash flows time to stabilize."
                     )
-            elif "working capital" in q_lower or "capex" in q_lower or "equipment" in q_lower or "stock" in q_lower or "split" in q_lower:
+            elif any(k in q_lower for k in ["document", "bank", "apply", "approval", "paper", "require"]):
+                if is_te:
+                    reply_text = (
+                        f"{top_scheme.nameTe if top_scheme else 'ఈ పథకం'} కింద ₹{req.loanAmount:,.0f} రుణం కోసం దరఖాస్తు చేయడానికి అవసరమైన పత్రాలు: "
+                        f"1) ఆధార్ & పాన్ కార్డ్, 2) నివాస & కుల ధృవీకరణ పత్రం (SC/ST/OBC అయితే), 3) యంత్రాల కొటేషన్లు (₹{wc_breakdown.capexAmount:,.0f}), "
+                        f"మరియు 4) మీ ₹{req.marginCapital:,.0f} మూలధన సంసిద్ధతను చూపే 6 నెలల బ్యాంక్ ఖాతా లేదా లాగ్‌బుక్ రికార్డులు."
+                    )
+                else:
+                    reply_text = (
+                        f"To apply for your ₹{req.loanAmount:,.0f} loan under {top_scheme.name if top_scheme else 'the scheme'}, lenders will require: "
+                        f"1) Aadhaar & PAN, 2) Residence & Caste certificate (if SC/ST/OBC), 3) Quotations for capex equipment (₹{wc_breakdown.capexAmount:,.0f}), "
+                        f"and 4) 6 months of bank account or logbook cash flow statements showing your ₹{req.marginCapital:,.0f} margin capital readiness."
+                    )
+            elif any(k in q_lower for k in ["working capital", "capex", "equipment", "stock", "split", "ratio"]):
                 if is_te:
                     reply_text = (
                         f"మీ మొత్తం ₹{req.loanAmount:,.0f} రుణంలో, రోజువారీ వర్కింగ్ క్యాపిటల్ కోసం ₹{wc_breakdown.workingCapitalAmount:,.0f} ({wc_breakdown.workingCapitalPercent}%) "
@@ -708,18 +728,34 @@ def generate_finance_advice(req: FinanceAdviceRequest) -> FinanceAdviceResponse:
                         f"({wc_breakdown.capexPercent}%) to one-time equipment/capex ({', '.join(wc_breakdown.capexUses[:2])}). "
                         f"This separation gives lenders confidence that funds won't be diverted."
                     )
-            elif "document" in q_lower or "bank" in q_lower or "apply" in q_lower or "approval" in q_lower:
+            elif any(k in q_lower for k in ["emi", "installment", "monthly", "quarterly", "pay per"]):
                 if is_te:
                     reply_text = (
-                        f"{top_scheme.nameTe if top_scheme else 'ఈ పథకం'} కింద ₹{req.loanAmount:,.0f} రుణం కోసం దరఖాస్తు చేయడానికి అవసరమైన పత్రాలు: "
-                        f"1) ఆధార్ & పాన్ కార్డ్, 2) నివాస & కుల ధృవీకరణ పత్రం (SC/ST/OBC అయితే), 3) యంత్రాల కొటేషన్లు (₹{wc_breakdown.capexAmount:,.0f}), "
-                        f"మరియు 4) మీ ₹{req.marginCapital:,.0f} మూలధన సంసిద్ధతను చూపే 6 నెలల బ్యాంక్ ఖాతా లేదా లాగ్‌బుక్ రికార్డులు."
+                        f"మీ ₹{req.loanAmount:,.0f} రుణానికి త్రైమాసిక వాయిదా (Quarterly EMI) ఖచ్చితంగా ₹{req.quarterlyEmi:,.0f} (వడ్డీ రేటు: {req.interestRate}%)."
                     )
                 else:
                     reply_text = (
-                        f"To apply for your ₹{req.loanAmount:,.0f} loan under {top_scheme.name if top_scheme else 'the scheme'}, lenders will require: "
-                        f"1) Aadhaar & PAN, 2) Residence & Caste certificate (if SC/ST/OBC), 3) Quotations for capex equipment (₹{wc_breakdown.capexAmount:,.0f}), "
-                        f"and 4) 6 months of bank account or logbook cash flow statements showing your ₹{req.marginCapital:,.0f} margin capital readiness."
+                        f"For your ₹{req.loanAmount:,.0f} loan at {req.interestRate}% interest, your quarterly installment is exactly ₹{req.quarterlyEmi:,.0f} over {req.tenureMonths // 12} years."
+                    )
+            elif any(k in q_lower for k in ["interest", "total repay", "cost of loan", "outlay"]):
+                total_repay = req.quarterlyEmi * (req.tenureMonths / 3)
+                total_int = max(0.0, total_repay - req.loanAmount)
+                if is_te:
+                    reply_text = (
+                        f"మొత్తం రుణ కాలవ్యవధిలో మీరు చెల్లించే మొత్తం వడ్డీ సుమారు ₹{total_int:,.0f}, మరియు మొత్తం తిరిగి చెల్లించాల్సిన మొత్తం (Principal + Interest) ₹{total_repay:,.0f}."
+                    )
+                else:
+                    reply_text = (
+                        f"Over your {req.tenureMonths // 12}-year tenure, total estimated interest is ₹{total_int:,.0f}, making your total repayment outlay approximately ₹{total_repay:,.0f}."
+                    )
+            elif any(k in q_lower for k in ["afford", "dscr", "risk", "cash flow", "income"]):
+                if is_te:
+                    reply_text = (
+                        f"త్రైమాసిక వాయిదా ₹{req.quarterlyEmi:,.0f} మీ వ్యాపార ఆదాయ ప్రవాహానికి అనుగుణంగా నిర్ణయించబడింది. మీరు తగినంత మిగులు నిధులను నిర్వహించడం ద్వారా సకాలంలో తిరిగి చెల్లించవచ్చు."
+                    )
+                else:
+                    reply_text = (
+                        f"With a quarterly repayment of ₹{req.quarterlyEmi:,.0f}, your projected cash surplus supports safe debt servicing, ensuring strong lender confidence."
                     )
             else:
                 if is_te:
