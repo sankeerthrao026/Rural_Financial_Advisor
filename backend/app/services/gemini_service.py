@@ -245,22 +245,41 @@ STRICT RULES:
             else "MANDATORY: Respond entirely in English. Do not include Telugu, Hindi, or any other regional-language translations. Do not provide bilingual terminology. Answer the user's question directly and completely in English."
         )
 
-        prompt = f"""{history_text}VERIFIED LOAN & ENTREPRENEUR SUMMARY:
+        prompt = f"""{history_text}CURRENT USER PROFILE:
+- Name: {loan_context.get('userName', 'Entrepreneur')}
+- Business: {loan_context.get('category', 'Dairy Farming')}
+- Location: {loan_context.get('location', 'Warangal, Telangana')}
+- Demographics: {loan_context.get('gender', 'female')}, {loan_context.get('socialCategory', 'OBC')}
+
+CURRENT FINANCIAL SUMMARY:
+- Monthly Revenue: ₹{loan_context.get('monthlyRevenue', 0):,.0f}
+- Monthly Expenses: ₹{loan_context.get('monthlyExpenses', 0):,.0f}
+- Net Monthly Cash Surplus: ₹{loan_context.get('monthlyProfit', 0):,.0f}
+- Debt-Service Coverage Ratio (DSCR): {loan_context.get('dscr', 1.8)}x
+
+DIGITAL LOGBOOK SUMMARY:
+- Total Income: ₹{loan_context.get('totalIncome', 0):,.0f} | Total Expenses: ₹{loan_context.get('totalExpenses', 0):,.0f}
+- Net Cash Flow: ₹{loan_context.get('netCashFlow', 0):,.0f}
+- Top Expense Categories: {loan_context.get('topExpenseCategories', 'N/A')}
+
+LOAN SUMMARY:
 - Margin Capital (Equity): ₹{loan_context.get('marginCapital', 0):,.0f}
 - Bank Loan Amount: ₹{loan_context.get('loanAmount', 0):,.0f}
 - Total Project Outlay: ₹{loan_context.get('projectCost', 0):,.0f}
 - Quarterly EMI: ₹{loan_context.get('quarterlyEmi', 0):,.0f}
 - Working Capital Split: ₹{loan_context.get('workingCapitalAmount', 0):,.0f} ({loan_context.get('workingCapitalPercent', 0)}%)
 - Capital Expenditure (Capex) Split: ₹{loan_context.get('capexAmount', 0):,.0f} ({loan_context.get('capexPercent', 0)}%)
-- Entrepreneur Demographics: Gender: {loan_context.get('gender')}, Category: {loan_context.get('socialCategory')}, Business: {loan_context.get('category')}, Location: {loan_context.get('location')}
-- Seasonal Moratorium Guidance: {loan_context.get('moratoriumGuidance')}
 - Recommended Schemes: {loan_context.get('topSchemes')}
+- Seasonal Moratorium Guidance: {loan_context.get('moratoriumGuidance')}
+
+VERIFIED DETERMINISTIC CALCULATIONS FOR THIS QUESTION:
+{loan_context.get('verifiedCalculationSummary', 'N/A')}
 
 CURRENT ENTREPRENEUR INQUIRY:
 {user_query}
 
 {lang_instruction}
-Provide a helpful, warm, and professional conversational response (2 to 4 paragraphs) addressing the entrepreneur's question with specific references to their profile and numbers."""
+Provide a direct, helpful, and professional conversational response (2 to 4 paragraphs) addressing the entrepreneur's question directly using the verified calculations above."""
 
         candidate_models = [
             "gemini-flash-latest",

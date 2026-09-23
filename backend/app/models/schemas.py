@@ -171,6 +171,10 @@ class FinanceAdviceRequest(BaseModel):
     userQuery: Optional[str] = None
     history: Optional[List[ChatMessage]] = Field(default_factory=list)
     language: str = "en"
+    profile: Optional[Dict[str, Any]] = None
+    logbookEntries: Optional[List[Dict[str, Any]]] = None
+    khataEntries: Optional[List[Dict[str, Any]]] = None
+    aggregates: Optional[Dict[str, Any]] = None
 
 class FinanceAdviceResponse(BaseModel):
     reply: str

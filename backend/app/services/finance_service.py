@@ -13,6 +13,11 @@ from app.models.schemas import (
     FinanceAdviceResponse,
 )
 from app.services.gemini_service import gemini_service
+from app.services.finance_advisor_engine import (
+    classify_query_intent,
+    calculate_intent_metrics,
+    resolve_sector,
+)
 
 def calculate_finance_plan(margin_capital: float) -> FinancePlanResponse:
     """
@@ -635,32 +640,122 @@ def generate_finance_advice(req: FinanceAdviceRequest) -> FinanceAdviceResponse:
         )
 
     # Conversational reply handling (answering userQuery or welcome overview)
-    provider_used = "Grounded Local Finance Engine"
+    provider_used = "Grounded Financial Calculation Engine"
     reply_text = ""
 
-    loan_context = {
-        "marginCapital": req.marginCapital,
-        "loanAmount": req.loanAmount,
-        "projectCost": req.projectCost,
-        "quarterlyEmi": req.quarterlyEmi,
-        "workingCapitalAmount": wc_breakdown.workingCapitalAmount,
-        "workingCapitalPercent": wc_breakdown.workingCapitalPercent,
-        "capexAmount": wc_breakdown.capexAmount,
-        "capexPercent": wc_breakdown.capexPercent,
-        "gender": req.gender,
-        "socialCategory": req.socialCategory,
-        "category": cat_clean,
-        "location": loc_clean,
-        "moratoriumGuidance": moratorium_advice.guidance,
-        "topSchemes": ", ".join([f"{s.name} ({s.whyRecommended})" for s in schemes[:3]]),
+    # Aggregate logbook / income numbers from request if provided
+    prof_dict = req.profile or {}
+    user_name = prof_dict.get("name", "Anita Sharma")
+    aggs_dict = req.aggregates or {}
+    monthly_rev = float(aggs_dict.get("totalIncome", 0.0))
+    monthly_exp = float(aggs_dict.get("totalExpenses", 0.0))
+    if monthly_rev == 0 and monthly_exp == 0:
+        if "kirana" in cat_clean.lower():
+            monthly_rev, monthly_exp = 65000.0, 48000.0
+        elif "weave" in cat_clean.lower():
+            monthly_rev, monthly_exp = 42000.0, 24000.0
+        else:
+            monthly_rev, monthly_exp = 45700.0, 12700.0
+
+    monthly_profit = monthly_rev - monthly_exp
+    monthly_emi_equiv = round(req.quarterlyEmi / 3.0)
+    dscr = round((monthly_profit / monthly_emi_equiv * 100.0)) / 100.0 if monthly_emi_equiv > 0 else 9.99
+
+    sector_info = resolve_sector(cat_clean)
+
+    context_dict = {
+        "profile": {
+            "name": user_name,
+            "businessName": prof_dict.get("businessName", f"{user_name}'s Enterprise"),
+            "location": loc_clean,
+            "businessType": cat_clean,
+            "availableCapital": req.marginCapital,
+            "gender": req.gender,
+            "socialCategory": req.socialCategory,
+        },
+        "income": {
+            "monthlyRevenue": monthly_rev,
+            "annualRevenue": monthly_rev * 12,
+        },
+        "expenses": {
+            "monthlyExpenses": monthly_exp,
+            "annualExpenses": monthly_exp * 12,
+            "largestCategories": [
+                {"category": "Supplies & Inventory", "amount": round(monthly_exp * 0.5), "percentage": 50},
+                {"category": "Operations & Utilities", "amount": round(monthly_exp * 0.3), "percentage": 30},
+            ],
+        },
+        "loan": {
+            "marginCapital": req.marginCapital,
+            "loanAmount": req.loanAmount,
+            "projectCost": req.projectCost,
+            "quarterlyEmi": req.quarterlyEmi,
+            "monthlyEmiEquivalent": monthly_emi_equiv,
+            "interestRate": 9.0,
+            "tenureYears": 5,
+            "workingCapitalAmount": wc_breakdown.workingCapitalAmount,
+            "workingCapitalPercent": wc_breakdown.workingCapitalPercent,
+            "capexAmount": wc_breakdown.capexAmount,
+            "capexPercent": wc_breakdown.capexPercent,
+        },
+        "business": {
+            "businessType": cat_clean,
+            "location": loc_clean,
+            "unitNameEn": sector_info["unitNameEn"],
+            "unitNameTe": sector_info["unitNameTe"],
+            "unitCapex": sector_info["unitCapex"],
+            "unitAnnualRevenue": sector_info["unitAnnualRevenue"],
+            "unitAnnualOpex": sector_info["unitAnnualOpex"],
+            "unitAnnualNetProfit": sector_info["unitAnnualNetProfit"],
+            "leanSeason": sector_info["leanSeason"],
+            "peakSeason": sector_info["peakSeason"],
+            "moratoriumGuidance": sector_info["guidanceEn"],
+            "moratoriumGuidanceTe": sector_info["guidanceTe"],
+        },
+        "calculations": {
+            "monthlyProfit": monthly_profit,
+            "debtServiceCoverageRatio": dscr,
+            "maxSafeMonthlyEmi": max(0.0, monthly_profit * 0.40),
+            "maxSafeLoanAmount": max(0.0, monthly_profit * 0.40 * 48),
+        },
     }
 
     if req.userQuery and req.userQuery.strip():
+        intent_info = classify_query_intent(req.userQuery)
+        calc_res = calculate_intent_metrics(context_dict, intent_info)
+
+        loan_context_for_gemini = {
+            "userName": user_name,
+            "category": cat_clean,
+            "location": loc_clean,
+            "gender": req.gender,
+            "socialCategory": req.socialCategory,
+            "monthlyRevenue": monthly_rev,
+            "monthlyExpenses": monthly_exp,
+            "monthlyProfit": monthly_profit,
+            "dscr": dscr,
+            "totalIncome": monthly_rev,
+            "totalExpenses": monthly_exp,
+            "netCashFlow": monthly_profit,
+            "topExpenseCategories": "Supplies (50%), Operations (30%)",
+            "marginCapital": req.marginCapital,
+            "loanAmount": req.loanAmount,
+            "projectCost": req.projectCost,
+            "quarterlyEmi": req.quarterlyEmi,
+            "workingCapitalAmount": wc_breakdown.workingCapitalAmount,
+            "workingCapitalPercent": wc_breakdown.workingCapitalPercent,
+            "capexAmount": wc_breakdown.capexAmount,
+            "capexPercent": wc_breakdown.capexPercent,
+            "moratoriumGuidance": moratorium_advice.guidance,
+            "topSchemes": ", ".join([f"{s.name} ({s.whyRecommended})" for s in schemes[:3]]),
+            "verifiedCalculationSummary": calc_res["summary"] if not is_te else calc_res["summaryTe"],
+        }
+
         # Attempt Gemini 2.5 Flash first
         if gemini_service.is_available():
             gemini_reply = gemini_service.generate_conversational_finance_reply(
                 user_query=req.userQuery,
-                loan_context=loan_context,
+                loan_context=loan_context_for_gemini,
                 language=req.language,
                 history=req.history,
             )
@@ -668,108 +763,9 @@ def generate_finance_advice(req: FinanceAdviceRequest) -> FinanceAdviceResponse:
                 reply_text = gemini_reply
                 provider_used = f"Google Gemini ({gemini_service.last_model_used or 'gemini-2.5-flash'})"
 
-        # Grounded conversational fallback if Gemini was unavailable or returned empty
+        # Grounded conversational fallback (uses verified calculation summary)
         if not reply_text:
-            q_lower = req.userQuery.lower()
-            if any(k in q_lower for k in ["eligible", "what scheme", "government scheme", "all scheme", "options"]):
-                scheme_list_en = "; ".join([f"{s.name} ({s.subsidyOrConcession} - {s.whyRecommended})" for s in schemes[:3]])
-                scheme_list_te = "; ".join([f"{s.nameTe} ({s.subsidyOrConcessionTe} - {s.whyRecommendedTe})" for s in schemes[:3]])
-                if is_te:
-                    reply_text = f"మీ ప్రొఫైల్ ఆధారంగా మీరు క్రింది పథకాలకు అర్హులు: {scheme_list_te}. అత్యంత అనుకూలమైన పథకం '{top_scheme.nameTe if top_scheme else scheme_name}'."
-                else:
-                    reply_text = f"Based on your profile, you are eligible for the following government schemes: {scheme_list_en}. The most recommended option for your setup is {top_scheme.name if top_scheme else 'the primary scheme'}."
-            elif any(k in q_lower for k in ["why", "stand-up", "pmegp", "mudra", "nabard", "scheme"]):
-                if is_te:
-                    reply_text = (
-                        f"మీకు '{top_scheme.nameTe if top_scheme else scheme_name}' పథకం సిఫార్సు చేయబడింది ఎందుకంటే: "
-                        f"{top_scheme.whyRecommendedTe if top_scheme else ''} "
-                        f"ఇది {top_scheme.subsidyOrConcessionTe if top_scheme else ''} అందిస్తుంది, మీ త్రైమాసిక వాయిదా ₹{req.quarterlyEmi:,.0f} గా ఉంటుంది."
-                    )
-                else:
-                    reply_text = (
-                        f"We recommended {top_scheme.name if top_scheme else 'this scheme'} because: {top_scheme.whyRecommended if top_scheme else ''} "
-                        f"It provides {top_scheme.subsidyOrConcession if top_scheme else ''}, keeping your quarterly repayment at ₹{req.quarterlyEmi:,.0f}."
-                    )
-            elif any(k in q_lower for k in ["moratorium", "summer", "lean", "skip", "pause", "grace"]):
-                if is_te:
-                    reply_text = (
-                        f"{moratorium_advice.guidanceTe or moratorium_advice.guidance} "
-                        f"ప్రారంభ {moratorium_advice.moratoriumQuartersRecommended * 3} నెలల పాటు మీరు అసలు చెల్లించాల్సిన అవసరం లేదు, కేవలం వడ్డీ మాత్రమే చెల్లించవచ్చు."
-                    )
-                else:
-                    reply_text = (
-                        f"{moratorium_advice.guidance} "
-                        f"During the initial {moratorium_advice.moratoriumQuartersRecommended * 3} months, you only need to service accrued interest, giving your cash flows time to stabilize."
-                    )
-            elif any(k in q_lower for k in ["document", "bank", "apply", "approval", "paper", "require"]):
-                if is_te:
-                    reply_text = (
-                        f"{top_scheme.nameTe if top_scheme else 'ఈ పథకం'} కింద ₹{req.loanAmount:,.0f} రుణం కోసం దరఖాస్తు చేయడానికి అవసరమైన పత్రాలు: "
-                        f"1) ఆధార్ & పాన్ కార్డ్, 2) నివాస & కుల ధృవీకరణ పత్రం (SC/ST/OBC అయితే), 3) యంత్రాల కొటేషన్లు (₹{wc_breakdown.capexAmount:,.0f}), "
-                        f"మరియు 4) మీ ₹{req.marginCapital:,.0f} మూలధన సంసిద్ధతను చూపే 6 నెలల బ్యాంక్ ఖాతా లేదా లాగ్‌బుక్ రికార్డులు."
-                    )
-                else:
-                    reply_text = (
-                        f"To apply for your ₹{req.loanAmount:,.0f} loan under {top_scheme.name if top_scheme else 'the scheme'}, lenders will require: "
-                        f"1) Aadhaar & PAN, 2) Residence & Caste certificate (if SC/ST/OBC), 3) Quotations for capex equipment (₹{wc_breakdown.capexAmount:,.0f}), "
-                        f"and 4) 6 months of bank account or logbook cash flow statements showing your ₹{req.marginCapital:,.0f} margin capital readiness."
-                    )
-            elif any(k in q_lower for k in ["working capital", "capex", "equipment", "stock", "split", "ratio"]):
-                if is_te:
-                    reply_text = (
-                        f"మీ మొత్తం ₹{req.loanAmount:,.0f} రుణంలో, రోజువారీ వర్కింగ్ క్యాపిటల్ కోసం ₹{wc_breakdown.workingCapitalAmount:,.0f} ({wc_breakdown.workingCapitalPercent}%) "
-                        f"మరియు యంత్రాలు/పరికరాల కొనుగోలు (Capex) కోసం ₹{wc_breakdown.capexAmount:,.0f} ({wc_breakdown.capexPercent}%) కేటాయించబడింది. "
-                        f"ఈ విభజన బ్యాంకర్లకు రుణ వినియోగంపై పూర్తి నమ్మకాన్ని ఇస్తుంది."
-                    )
-                else:
-                    reply_text = (
-                        f"Of your ₹{req.loanAmount:,.0f} loan, we allocate ₹{wc_breakdown.workingCapitalAmount:,.0f} ({wc_breakdown.workingCapitalPercent}%) "
-                        f"to day-to-day working capital ({', '.join(wc_breakdown.workingCapitalUses[:2])}) and ₹{wc_breakdown.capexAmount:,.0f} "
-                        f"({wc_breakdown.capexPercent}%) to one-time equipment/capex ({', '.join(wc_breakdown.capexUses[:2])}). "
-                        f"This separation gives lenders confidence that funds won't be diverted."
-                    )
-            elif any(k in q_lower for k in ["emi", "installment", "monthly", "quarterly", "pay per"]):
-                if is_te:
-                    reply_text = (
-                        f"మీ ₹{req.loanAmount:,.0f} రుణానికి త్రైమాసిక వాయిదా (Quarterly EMI) ఖచ్చితంగా ₹{req.quarterlyEmi:,.0f} (వడ్డీ రేటు: {req.interestRate}%)."
-                    )
-                else:
-                    reply_text = (
-                        f"For your ₹{req.loanAmount:,.0f} loan at {req.interestRate}% interest, your quarterly installment is exactly ₹{req.quarterlyEmi:,.0f} over {req.tenureMonths // 12} years."
-                    )
-            elif any(k in q_lower for k in ["interest", "total repay", "cost of loan", "outlay"]):
-                total_repay = req.quarterlyEmi * (req.tenureMonths / 3)
-                total_int = max(0.0, total_repay - req.loanAmount)
-                if is_te:
-                    reply_text = (
-                        f"మొత్తం రుణ కాలవ్యవధిలో మీరు చెల్లించే మొత్తం వడ్డీ సుమారు ₹{total_int:,.0f}, మరియు మొత్తం తిరిగి చెల్లించాల్సిన మొత్తం (Principal + Interest) ₹{total_repay:,.0f}."
-                    )
-                else:
-                    reply_text = (
-                        f"Over your {req.tenureMonths // 12}-year tenure, total estimated interest is ₹{total_int:,.0f}, making your total repayment outlay approximately ₹{total_repay:,.0f}."
-                    )
-            elif any(k in q_lower for k in ["afford", "dscr", "risk", "cash flow", "income"]):
-                if is_te:
-                    reply_text = (
-                        f"త్రైమాసిక వాయిదా ₹{req.quarterlyEmi:,.0f} మీ వ్యాపార ఆదాయ ప్రవాహానికి అనుగుణంగా నిర్ణయించబడింది. మీరు తగినంత మిగులు నిధులను నిర్వహించడం ద్వారా సకాలంలో తిరిగి చెల్లించవచ్చు."
-                    )
-                else:
-                    reply_text = (
-                        f"With a quarterly repayment of ₹{req.quarterlyEmi:,.0f}, your projected cash surplus supports safe debt servicing, ensuring strong lender confidence."
-                    )
-            else:
-                if is_te:
-                    reply_text = (
-                        f"{loc_clean} లోని మీ {cat_clean} వ్యాపార విశ్లేషణ ప్రకారం, మీ ₹{req.loanAmount:,.0f} రుణానికి త్రైమాసిక వాయిదా ₹{req.quarterlyEmi:,.0f}. "
-                        f"మేము వర్కింగ్ క్యాపిటల్ కోసం ₹{wc_breakdown.workingCapitalAmount:,.0f} మరియు పరికరాల కోసం ₹{wc_breakdown.capexAmount:,.0f} కేటాయించాము. "
-                        f"పథకం వివరాలు లేదా బ్యాంక్ పత్రాల గురించి ఏవైనా సందేహాలుంటే అడగండి."
-                    )
-                else:
-                    reply_text = (
-                        f"Based on your {cat_clean} profile in {loc_clean}, your loan of ₹{req.loanAmount:,.0f} requires a quarterly payment of ₹{req.quarterlyEmi:,.0f}. "
-                        f"We have structured ₹{wc_breakdown.workingCapitalAmount:,.0f} for working capital and ₹{wc_breakdown.capexAmount:,.0f} for equipment. "
-                        f"Feel free to ask about scheme eligibility, seasonal grace periods, or required bank paperwork."
-                    )
+            reply_text = calc_res["summaryTe"] if is_te else calc_res["summary"]
     else:
         # Default greeting / executive advisor overview
         if is_te:

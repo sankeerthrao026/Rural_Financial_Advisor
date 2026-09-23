@@ -62,7 +62,20 @@ export interface AdvisorChatMessage {
 }
 
 export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) => void }) {
-  const { finance, language, dictionary, profile, updateProfile, backendMode, backendLoading } = useApp();
+  const {
+    finance,
+    language,
+    dictionary,
+    profile,
+    updateProfile,
+    backendMode,
+    backendLoading,
+    entries,
+    khataEntries,
+    totalIncome,
+    totalExpenses,
+    netCashFlow,
+  } = useApp();
   const t = dictionary.finance;
   const isTe = language === 'te';
 
@@ -152,6 +165,24 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
           workingCapitalRatio: customWcRatio !== null ? customWcRatio : undefined,
           userQuery: queryText,
           language,
+          profile: {
+            name: profile.name,
+            businessName: profile.businessName,
+            location: profile.location,
+            category: profile.category,
+            marginCapital: profile.marginCapital,
+            hasActiveLoan: profile.hasActiveLoan,
+            simulatingSecondLoan: profile.simulatingSecondLoan,
+            gender: selectedGender,
+            socialCategory: selectedSocialCategory,
+          },
+          logbookEntries: entries,
+          khataEntries: khataEntries,
+          aggregates: {
+            totalIncome,
+            totalExpenses,
+            netCashFlow,
+          },
         }),
       });
 
@@ -188,6 +219,7 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
     selectedSocialCategory,
     customWcRatio,
     language,
+    entries.length,
   ]);
 
   // Scroll chat into view on new message
@@ -235,6 +267,24 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
           userQuery: query,
           history: historyPayload,
           language,
+          profile: {
+            name: profile.name,
+            businessName: profile.businessName,
+            location: profile.location,
+            category: profile.category,
+            marginCapital: profile.marginCapital,
+            hasActiveLoan: profile.hasActiveLoan,
+            simulatingSecondLoan: profile.simulatingSecondLoan,
+            gender: selectedGender,
+            socialCategory: selectedSocialCategory,
+          },
+          logbookEntries: entries,
+          khataEntries: khataEntries,
+          aggregates: {
+            totalIncome,
+            totalExpenses,
+            netCashFlow,
+          },
         }),
       });
 

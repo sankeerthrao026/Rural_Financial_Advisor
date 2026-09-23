@@ -131,6 +131,24 @@ export interface FinanceAdviceRequest {
   userQuery?: string;
   history?: { role: 'user' | 'assistant'; content: string }[];
   language?: string;
+  profile?: {
+    name?: string;
+    businessName?: string;
+    location?: string;
+    category?: string;
+    marginCapital?: number;
+    hasActiveLoan?: boolean;
+    simulatingSecondLoan?: boolean;
+    gender?: string;
+    socialCategory?: string;
+  };
+  logbookEntries?: any[];
+  khataEntries?: any[];
+  aggregates?: {
+    totalIncome?: number;
+    totalExpenses?: number;
+    netCashFlow?: number;
+  };
 }
 
 export interface FinanceAdviceResponse {

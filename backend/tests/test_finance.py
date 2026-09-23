@@ -153,3 +153,99 @@ def test_conversational_finance_follow_up():
     assert len(res.reply) > 20
     assert "moratorium" in res.reply.lower() or "interest" in res.reply.lower() or "summer" in res.reply.lower()
 
+def test_personalization_across_three_distinct_users():
+    # User A: High profit Dairy Farmer (Revenue 50k, Expenses 15k, Surplus 35k)
+    user_a_req = FinanceAdviceRequest(
+        marginCapital=100000.0,
+        loanAmount=900000.0,
+        projectCost=1000000.0,
+        quarterlyEmi=42000.0,
+        category="Dairy Farming",
+        gender="female",
+        socialCategory="OBC",
+        location="Warangal, Telangana",
+        profile={"name": "Anita Sharma", "category": "Dairy Farming"},
+        aggregates={"totalIncome": 50000.0, "totalExpenses": 15000.0, "netCashFlow": 35000.0},
+        userQuery="Can I afford a ₹2 lakh loan?",
+    )
+    res_a = generate_finance_advice(user_a_req)
+
+    # User B: Kirana Store (Revenue 120k, Expenses 60k, Surplus 60k)
+    user_b_req = FinanceAdviceRequest(
+        marginCapital=50000.0,
+        loanAmount=450000.0,
+        projectCost=500000.0,
+        quarterlyEmi=21000.0,
+        category="Rural Grocery / Kirana",
+        gender="male",
+        socialCategory="General",
+        location="Khammam, Telangana",
+        profile={"name": "Ramesh Kumar", "category": "Rural Grocery / Kirana"},
+        aggregates={"totalIncome": 120000.0, "totalExpenses": 60000.0, "netCashFlow": 60000.0},
+        userQuery="Can I afford a ₹2 lakh loan?",
+    )
+    res_b = generate_finance_advice(user_b_req)
+
+    # User C: Weaving Artisan (Revenue 30k, Expenses 28k, Surplus 2k - Strained)
+    user_c_req = FinanceAdviceRequest(
+        marginCapital=30000.0,
+        loanAmount=270000.0,
+        projectCost=300000.0,
+        quarterlyEmi=13000.0,
+        category="Handloom / Weaving",
+        gender="female",
+        socialCategory="OBC",
+        location="Nalgonda, Telangana",
+        profile={"name": "Lakshmi Devi", "category": "Handloom / Weaving"},
+        aggregates={"totalIncome": 30000.0, "totalExpenses": 28000.0, "netCashFlow": 2000.0},
+        userQuery="Can I afford a ₹2 lakh loan?",
+    )
+    res_c = generate_finance_advice(user_c_req)
+
+    # All three must receive distinct responses reflecting their financial health
+    assert res_a.reply != res_b.reply
+    assert res_b.reply != res_c.reply
+    assert res_a.reply != res_c.reply
+
+    # User C has only 2k surplus, so a 2L loan (EMI ~4k) must be tight or not recommended
+    assert "tight" in res_c.reply.lower() or "not recommended" in res_c.reply.lower() or "risk" in res_c.reply.lower()
+
+def test_question_specific_intents():
+    base_req = FinanceAdviceRequest(
+        marginCapital=100000.0,
+        loanAmount=900000.0,
+        projectCost=1000000.0,
+        quarterlyEmi=42000.0,
+        category="Dairy Farming",
+        gender="female",
+        socialCategory="OBC",
+        location="Warangal, Telangana",
+        aggregates={"totalIncome": 45700.0, "totalExpenses": 12700.0, "netCashFlow": 33000.0},
+    )
+
+    # Question 1: How many cows for 5 lakh profit?
+    q1 = base_req.model_copy(update={"userQuery": "how many cows do i need to get a profit of 500000"})
+    res1 = generate_finance_advice(q1)
+    assert any(c in res1.reply.lower() for c in ["cow", "buffalo", "unit", "7", "6", "8"])
+
+    # Question 2: How can I reduce expenses?
+    q2 = base_req.model_copy(update={"userQuery": "How can I reduce my expenses?"})
+    res2 = generate_finance_advice(q2)
+    assert any(w in res2.reply.lower() for w in ["supplies", "feed", "bulk", "save", "expense"])
+
+    # Question 3: How much should I save?
+    q3 = base_req.model_copy(update={"userQuery": "How much should I save every month?"})
+    res3 = generate_finance_advice(q3)
+    assert any(w in res3.reply.lower() for w in ["save", "saving", "emergency", "runway", "month"])
+
+    # Question 4: How much can I borrow?
+    q4 = base_req.model_copy(update={"userQuery": "How much can I borrow?"})
+    res4 = generate_finance_advice(q4)
+    assert any(w in res4.reply.lower() for w in ["limit", "borrow", "safe", "capacity", "₹"])
+
+    # All answers must be completely distinct
+    assert res1.reply != res2.reply
+    assert res2.reply != res3.reply
+    assert res3.reply != res4.reply
+
+
