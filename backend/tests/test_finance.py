@@ -303,5 +303,82 @@ def test_target_profit_planning_telugu_query():
     assert res.reply is not None
     assert "లాభం" in res.reply or "రూ." in res.reply or "5,00,000" in res.reply
 
+def test_air_conditioner_investment_decision_dairy_farm():
+    """
+    Regression Test Case for User Scenario:
+    User asks: "Let's say I want to buy an air conditioner for my dairy farm. Is that a good investment with my financial history? Is it safe for me to buy an air conditioner? Is it profitable?"
+    Must specifically address the Air Conditioner / AC investment.
+    Must NOT return an unrelated response about 5 lakh target profit or herd scaling.
+    Must evaluate affordability against actual monthly surplus (₹33,000) and dairy economics.
+    """
+    req = FinanceAdviceRequest(
+        marginCapital=100000.0,
+        loanAmount=900000.0,
+        projectCost=1000000.0,
+        quarterlyEmi=42000.0,
+        category="Dairy Farming",
+        gender="female",
+        socialCategory="OBC",
+        location="Warangal, Telangana",
+        profile={"name": "Anita Sharma", "category": "Dairy Farming"},
+        aggregates={"totalIncome": 45700.0, "totalExpenses": 12700.0, "netCashFlow": 33000.0},
+        userQuery="Let's say I want to buy an air conditioner for my dairy farm. Is that a good investment with my financial history? Is it safe for me to buy an air conditioner? Is it profitable?",
+    )
+    res = generate_finance_advice(req)
+
+    # Must NOT return unrelated 5 lakh profit plan
+    assert "to achieve a target annual profit of ₹500,000" not in res.reply.lower()
+    assert "to achieve a target annual profit of ₹5,00,000" not in res.reply.lower()
+
+    # Must address AC / cooling investment
+    reply_lower = res.reply.lower()
+    assert any(k in reply_lower for k in ["air conditioner", "ac", "cooling"])
+    assert any(k in reply_lower for k in ["safe", "afford", "surplus", "33,000", "33000", "cushion"])
+    assert any(k in reply_lower for k in ["profit", "roi", "fogger", "misting", "alternative", "economics", "shed"])
+
+def test_machine_investment_decision_with_amount():
+    """
+    Test: 'Can I afford a ₹50,000 machine?'
+    """
+    req = FinanceAdviceRequest(
+        marginCapital=100000.0,
+        loanAmount=900000.0,
+        projectCost=1000000.0,
+        quarterlyEmi=42000.0,
+        category="Dairy Farming",
+        gender="female",
+        socialCategory="OBC",
+        location="Warangal, Telangana",
+        profile={"name": "Anita Sharma", "category": "Dairy Farming"},
+        aggregates={"totalIncome": 45700.0, "totalExpenses": 12700.0, "netCashFlow": 33000.0},
+        userQuery="Can I afford a ₹50,000 machine?",
+    )
+    res = generate_finance_advice(req)
+    reply_lower = res.reply.lower()
+    assert any(k in res.reply for k in ["50,000", "50000"])
+    assert any(k in reply_lower for k in ["machine", "safe", "afford", "surplus", "operating"])
+
+def test_air_conditioner_investment_telugu():
+    """
+    Test Telugu: 'నా డెయిరీ ఫామ్ కోసం ఏసీ కొనడం మంచిదేనా? లాభదాయకమా?'
+    """
+    req = FinanceAdviceRequest(
+        marginCapital=100000.0,
+        loanAmount=900000.0,
+        projectCost=1000000.0,
+        quarterlyEmi=42000.0,
+        category="Dairy Farming",
+        gender="female",
+        socialCategory="OBC",
+        location="Warangal, Telangana",
+        language="te",
+        profile={"name": "అనిత శర్మ", "category": "Dairy Farming"},
+        aggregates={"totalIncome": 45700.0, "totalExpenses": 12700.0, "netCashFlow": 33000.0},
+        userQuery="నా డెయిరీ ఫామ్ కోసం ఏసీ కొనడం మంచిదేనా? లాభదాయకమా?",
+    )
+    res = generate_finance_advice(req)
+    assert res.reply is not None
+    assert any(k in res.reply for k in ["AC", "ఏసీ", "ఎయిర్ కండీషనర్", "డెయిరీ", "మిగులు"])
+
 
 

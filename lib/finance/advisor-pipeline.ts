@@ -130,6 +130,7 @@ export interface NormalizedFinancialContext {
 
 export type FinancialIntent =
   | 'loan_affordability' // "can I afford a ₹2 lakh loan?", "can I take this loan?"
+  | 'investment_decision' // "should I buy an AC?", "is it safe to buy an air conditioner?", "can I afford a 50k machine?"
   | 'max_borrowing_capacity' // "how much can I borrow?", "how much loan can I get?"
   | 'savings_planning' // "how much should I save every month?"
   | 'expense_reduction' // "how can I reduce my expenses?", "cut costs"
@@ -526,7 +527,33 @@ export function classifyFinancialQueryIntent(query: string): IntentAnalysisResul
     return { intent: 'moratorium_guidance', targetAmount: targetAmt, targetUnit, rawQuery: query };
   }
 
-  // 2. Target profit / Capacity question: "how many cows to make 500000 profit?"
+  // 2. Investment Decision / Asset Purchase / Equipment / AC / Machine:
+  const isInvestmentWord = [
+    'air conditioner', 'ac', 'cooler', 'chiller', 'machine', 'machinery', 'equipment', 'vehicle',
+    'tractor', 'solar', 'generator', 'refrigerator', 'shed', 'freezer', 'cutter',
+    'buy', 'purchase', 'invest', 'investment', 'buying', 'spend on',
+    'కొనవచ్చా', 'కొనడం', 'పెట్టుబడి', 'యంత్రం', 'ఏసీ', 'మిషన్', 'పరికరాలు'
+  ].some((k) => q.includes(k));
+
+  const isInvestmentEvaluation = [
+    'should i buy', 'can i buy', 'want to buy', 'is that a good investment', 'good investment',
+    'is it safe to buy', 'safe for me to buy', 'is it safe to invest', 'is it profitable',
+    'will it be profitable', 'profitable to buy', 'afford a', 'afford an', 'recover this investment',
+    'payback period', 'roi', 'return on investment', 'safe to invest', 'safely invest',
+    'buy an air conditioner', 'buy a machine', 'buy equipment', 'worth buying', 'worth investing',
+    'కొనవచ్చా', 'మంచి పెట్టుబడేనా', 'లాభదాయకమా', 'కొనడం సురక్షితమేనా', 'కొనడం మంచిదేనా'
+  ].some((k) => q.includes(k));
+
+  const isLoanKeyword = ['loan', 'borrow', 'debt', 'lend', 'రుణం', 'అప్పు', 'తీసుకోవచ్చా', 'లోన్'].some((k) => q.includes(k));
+
+  if (
+    (isInvestmentEvaluation && (isInvestmentWord || targetAmt !== null)) ||
+    (isInvestmentWord && ['good', 'safe', 'profit', 'worth', 'feasible', 'afford'].some((w) => q.includes(w)) && !isLoanKeyword)
+  ) {
+    return { intent: 'investment_decision', targetAmount: targetAmt, targetUnit, rawQuery: query };
+  }
+
+  // 3. Target profit / Capacity question: "how many cows to make 500000 profit?"
   const isHowMany = [
     'how many', 'number of', 'how much animals', 'how much cows', 'cows do i need', 'cows should i buy',
     'buffaloes do i need', 'looms do i need', 'how many units', 'how many machines',
@@ -541,7 +568,7 @@ export function classifyFinancialQueryIntent(query: string): IntentAnalysisResul
     return { intent: 'target_profit_capacity', targetAmount: targetAmt, targetUnit, rawQuery: query };
   }
 
-  // 3. Revenue for target profit: "how much revenue / sales do I need to make 5 lakh profit?"
+  // 4. Revenue for target profit: "how much revenue / sales do I need to make 5 lakh profit?"
   if (
     (q.includes('revenue') || q.includes('sales') || q.includes('turnover') || q.includes('అమ్మకాలు') || q.includes('టర్నోవర్')) &&
     (isProfit || targetAmt !== null)
@@ -549,19 +576,18 @@ export function classifyFinancialQueryIntent(query: string): IntentAnalysisResul
     return { intent: 'revenue_for_target_profit', targetAmount: targetAmt, targetUnit, rawQuery: query };
   }
 
-  // 4. Target Profit Planning: "I want to make a profit of 5 lakh rupees how my finances should look"
+  // 5. Target Profit Planning: "I want to make a profit of 5 lakh rupees how my finances should look"
   const isProfitPlanning = [
     'how my finances should look', 'how should my finances look', 'finances should look',
-    'target profit', 'make a profit', 'profit of', 'earn a profit', 'get a profit', 'reach profit',
-    'to make a profit', 'want to make a profit', 'want to earn', 'లాభం రావాలంటే', 'లాభం కోసం',
+    'target profit', 'make a profit of', 'profit of', 'earn a profit of', 'get a profit of', 'reach profit',
+    'target annual profit', 'annual profit target', 'లాభం రావాలంటే', 'లాభం కోసం',
     'ఆర్థిక పరిస్థితి ఎలా ఉండాలి', 'లాభ ప్రణాళిక'
   ].some((k) => q.includes(k));
 
   if (
     isProfitPlanning ||
-    (isProfit &&
-      (targetAmt !== null || q.includes('plan') || q.includes('target') || q.includes('how') || q.includes('want')) &&
-      !['how much profit', 'my profit', 'am i making profit', 'నా లాభం ఎంత'].some((p) => q.includes(p)))
+    (['make a profit', 'earn a profit', 'target profit', 'net profit target'].some((k) => q.includes(k)) &&
+      (targetAmt !== null || q.includes('how') || q.includes('plan')))
   ) {
     return { intent: 'target_profit_planning', targetAmount: targetAmt, targetUnit, rawQuery: query };
   }
@@ -647,7 +673,6 @@ export function classifyFinancialQueryIntent(query: string): IntentAnalysisResul
   }
 
   // 14. Loan Affordability: "Can I afford X?", "Can I take ₹2 lakh loan?"
-  const isLoanKeyword = ['loan', 'borrow', 'debt', 'lend', 'రుణం', 'అప్పు', 'తీసుకోవచ్చా', 'లోన్'].some((k) => q.includes(k));
   const isAffordKeyword = ['afford', 'can i take', 'can i borrow', 'తీసుకోవచ్చా', 'భరించగలనా', 'సాధ్యమేనా', 'తీసుకోవచ్చా లేదా', 'safe to take'].some((k) => q.includes(k));
 
   if (isAffordKeyword || (isLoanKeyword && targetAmt !== null) || (isLoanKeyword && ['afford', 'eligible', 'safe'].some((k) => q.includes(k)))) {
@@ -750,6 +775,126 @@ export function performQuestionSpecificCalculations(
           testDti,
           testDscr,
           isAffordable,
+        },
+      };
+    }
+
+    case 'investment_decision': {
+      const qLower = intentResult.rawQuery.toLowerCase();
+      let assetName = 'Equipment / Capital Asset';
+      let assetNameTe = 'యంత్రం / పరికరాల కొనుగోలు';
+      let defaultCost = 40000;
+      let operatingMonthlyCost = 2000;
+      let directRevenueIncrease = 0;
+      let isACorCooling = false;
+
+      if (qLower.includes('air conditioner') || qLower.includes('ac') || qLower.includes('ఏసీ') || qLower.includes('cooler')) {
+        assetName = 'Air Conditioner (AC)';
+        assetNameTe = 'ఎయిర్ కండీషనర్ (AC)';
+        defaultCost = 40000;
+        operatingMonthlyCost = 2000;
+        isACorCooling = true;
+      } else if (qLower.includes('milking') || qLower.includes('మిల్కింగ్')) {
+        assetName = 'Milking Machine';
+        assetNameTe = 'మిల్కింగ్ మిషన్';
+        defaultCost = 55000;
+        operatingMonthlyCost = 1000;
+        directRevenueIncrease = 3000;
+      } else if (qLower.includes('chiller') || qLower.includes('freezer') || qLower.includes('చిల్లర్')) {
+        assetName = 'Bulk Milk Chiller / Deep Freezer';
+        assetNameTe = 'బల్క్ మిల్క్ చిల్లర్ / డీప్ ఫ్రీజర్';
+        defaultCost = 75000;
+        operatingMonthlyCost = 2500;
+        directRevenueIncrease = 5000;
+      } else if (qLower.includes('solar') || qLower.includes('సోలార్')) {
+        assetName = 'Solar Energy System';
+        assetNameTe = 'సోలార్ పవర్ సిస్టమ్';
+        defaultCost = 80000;
+        operatingMonthlyCost = -2000;
+        directRevenueIncrease = 2000;
+      }
+
+      const purchaseCost = targetAmount && targetAmount > 0 ? targetAmount : defaultCost;
+      const currentMonthlyRev = ctx.income.monthlyRevenue;
+      const currentMonthlyExp = ctx.expenses.monthlyExpenses;
+      const currentMonthlySurplus = ctx.calculations.monthlyProfit;
+      const existingDebtService = ctx.loan.monthlyEmiEquivalent;
+      const currentDisposableBuffer = currentMonthlySurplus - existingDebtService;
+
+      const projectedNewExpenses = currentMonthlyExp + Math.max(0, operatingMonthlyCost);
+      const projectedNewRevenue = currentMonthlyRev + directRevenueIncrease;
+      const projectedNewSurplus = projectedNewRevenue - projectedNewExpenses;
+      const projectedDisposableBuffer = projectedNewSurplus - existingDebtService;
+
+      const isFinanciallySafe = currentDisposableBuffer >= (operatingMonthlyCost * 2) && projectedDisposableBuffer > 5000;
+      const netMonthlyGain = directRevenueIncrease - operatingMonthlyCost;
+      const paybackMonths = netMonthlyGain > 0 ? Math.ceil(purchaseCost / netMonthlyGain) : 0;
+
+      let summary = '';
+      let summaryTe = '';
+
+      if (isACorCooling && ctx.profile.businessType.toLowerCase().includes('dairy')) {
+        summary = `Analysis for purchasing an Air Conditioner (₹${purchaseCost.toLocaleString('en-IN')}) for your Dairy Farm in ${ctx.profile.location}:
+
+1. Financial Safety & Affordability:
+- Safe to Buy: YES. With your monthly revenue of ₹${currentMonthlyRev.toLocaleString('en-IN')} and expenses of ₹${currentMonthlyExp.toLocaleString('en-IN')}, your monthly net cash surplus is ₹${currentMonthlySurplus.toLocaleString('en-IN')} (Disposable cushion after debt service: ₹${currentDisposableBuffer.toLocaleString('en-IN')}/month).
+- Cash-Flow Impact: Factoring an estimated ₹${operatingMonthlyCost.toLocaleString('en-IN')}/month in electricity and maintenance, your projected monthly surplus remains a strong ₹${projectedNewSurplus.toLocaleString('en-IN')} (leaving ₹${projectedDisposableBuffer.toLocaleString('en-IN')} in disposable reserves).
+
+2. Profitability & Dairy Economics Assessment:
+- Direct Profitability: LOW ROI for standard AC in an open or semi-open shed. While summer heat stress mitigation is critical (summer heat drops milk yield by 20%–30%), open cattle sheds cannot retain AC cooling efficiently without heavy insulation, leading to high electricity bills with minimal cooling benefit.
+- High-ROI Alternatives: Installing high-pressure misting foggers with ceiling fans (costing ₹12,000–₹15,000 with ~₹500/month electricity) or a Bulk Milk Chiller offers 3x higher economic return on milk yield preservation than an air conditioner.
+
+3. Recommendation:
+Financially you can safely afford the ₹${purchaseCost.toLocaleString('en-IN')} outlay, but from a business profitability standpoint, we recommend investing in cattle fogger misting sprinklers rather than an AC unit to maximize net returns.`;
+
+        summaryTe = `మీ డెయిరీ ఫామ్ కోసం ఎయిర్ కండీషనర్ (AC - సుమారు ₹${purchaseCost.toLocaleString('en-IN')}) కొనుగోలు ఆర్థిక విశ్లేషణ:
+
+1. కొనుగోలు భద్రత & స్తోమత:
+- కొనుగోలు సురక్షితమేనా: అవును. మీ నెలవారీ ఆదాయం ₹${currentMonthlyRev.toLocaleString('en-IN')}, ఖర్చులు ₹${currentMonthlyExp.toLocaleString('en-IN')} కాగా, మీకు ₹${currentMonthlySurplus.toLocaleString('en-IN')} నికర మిగులు ఉంది (రుణ వాయిదా పోను ₹${currentDisposableBuffer.toLocaleString('en-IN')} మిగులు నిధులు ఉంటాయి).
+- నగదు ప్రవాహంపై ప్రభావం: నెలకు సుమారు ₹${operatingMonthlyCost.toLocaleString('en-IN')} విద్యుత్/నిర్వహణ ఖర్చు అదనంగా చేరినా, మీకు ₹${projectedDisposableBuffer.toLocaleString('en-IN')} సురక్షిత మిగులు మిగులుతుంది.
+
+2. లాభదాయకత విశ్లేషణ:
+- నేరుగా లాభదాయకమా: ఓపెన్ షెడ్డులో ఏసీకి తక్కువ ROI ఉంటుంది. వేసవిలో ఆవులకు చల్లదనం అవసరమే అయినప్పటికీ, ఓపెన్ షెడ్లలో ఏసీ గాలి నిలవదు మరియు కరెంట్ బిల్లు పెరుగుతుంది.
+- ఉత్తమ ప్రత్యామ్నాయం: ఫాగర్స్/మిస్టింగ్ స్ప్రింక్లర్లు మరియు ఫ్యాన్లు (వ్యయం ₹12,000 - ₹15,000) ఏసీ కంటే 3 రెట్లు ఎక్కువ లాభదాయకమైనవి.
+
+3. సిఫార్సు:
+మీ ఆర్థిక పరిస్థితి ప్రకారం మీరు ₹${purchaseCost.toLocaleString('en-IN')} ను సులభంగా భరించగలరు, కానీ గరిష్ట లాభం కోసం ఫాగర్ మిస్టింగ్ సిస్టమ్ ఏర్పాటు చేసుకోవడం ఉత్తమం.`;
+      } else {
+        summary = `Analysis for investing in ${assetName} (₹${purchaseCost.toLocaleString('en-IN')}):
+
+1. Financial Safety & Affordability:
+- Safe to Invest: ${isFinanciallySafe ? 'YES' : 'TIGHT'}. Based on your monthly revenue of ₹${currentMonthlyRev.toLocaleString('en-IN')} and expenses of ₹${currentMonthlyExp.toLocaleString('en-IN')}, your monthly surplus is ₹${currentMonthlySurplus.toLocaleString('en-IN')}.
+- Post-Purchase Position: After ~₹${operatingMonthlyCost.toLocaleString('en-IN')}/month operating costs and ₹${existingDebtService.toLocaleString('en-IN')} existing debt obligations, your projected monthly disposable cash is ₹${projectedDisposableBuffer.toLocaleString('en-IN')}.
+
+2. ROI & Financial Impact:
+- ${paybackMonths > 0 ? `Estimated payback period is ~${paybackMonths} months with ₹${netMonthlyGain.toLocaleString('en-IN')}/month net incremental gain.` : `Estimated operating overhead is ~₹${operatingMonthlyCost.toLocaleString('en-IN')}/month.`}
+- Your 3-month operating emergency runway remains protected at ₹${Math.round(currentMonthlyExp * 3).toLocaleString('en-IN')}.
+
+3. Recommendation:
+${isFinanciallySafe ? `You can safely proceed with this ₹${purchaseCost.toLocaleString('en-IN')} asset acquisition.` : `Build an additional ₹15,000 cash buffer before executing this purchase.`}`;
+
+        summaryTe = `${assetNameTe} (₹${purchaseCost.toLocaleString('en-IN')}) పెట్టుబడి విశ్లేషణ:
+1. కొనుగోలు స్తోమత: మీ ప్రస్తుత నెలవారీ ఆదాయం ₹${currentMonthlyRev.toLocaleString('en-IN')} మరియు నికర మిగులు ₹${currentMonthlySurplus.toLocaleString('en-IN')} ఆధారంగా ఈ కొనుగోలు సురక్షితమైనది.
+2. నిర్వహణ ఖర్చులు: నెలకు సుమారు ₹${operatingMonthlyCost.toLocaleString('en-IN')} అదనపు ఖర్చు అవుతుంది, వాయిదా పోను ₹${projectedDisposableBuffer.toLocaleString('en-IN')} మిగులు నిధులు ఉంటాయి.
+3. ముగింపు: మీ ప్రస్తుత ఆర్థిక స్థితి ప్రకారం ఈ నిర్ణయం సురక్షితమైనది.`;
+      }
+
+      return {
+        intent,
+        summary,
+        summaryTe,
+        data: {
+          assetName,
+          purchaseCost,
+          operatingMonthlyCost,
+          directRevenueIncrease,
+          currentMonthlyRev,
+          currentMonthlyExp,
+          currentMonthlySurplus,
+          projectedNewSurplus,
+          projectedDisposableBuffer,
+          isFinanciallySafe,
+          paybackMonths,
         },
       };
     }

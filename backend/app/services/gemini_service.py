@@ -282,10 +282,11 @@ CURRENT ENTREPRENEUR INQUIRY:
 Provide a direct, helpful, and professional conversational response (2 to 4 paragraphs) addressing the entrepreneur's question directly using the verified calculations above."""
 
         candidate_models = [
-            "gemini-flash-latest",
             "gemini-2.5-flash",
+            "gemini-3.6-flash",
+            "gemini-3.5-flash",
+            "gemini-flash-latest",
             "gemini-2.0-flash",
-            "gemini-1.5-flash",
         ]
         for model in candidate_models:
             try:

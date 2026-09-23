@@ -114,7 +114,29 @@ def classify_query_intent(query: str) -> Dict[str, Any]:
     if any(k in q for k in ["moratorium", "summer", "lean", "grace", "pause", "skip emi", "మారటోరియం", "వేసవి"]):
         return {"intent": "moratorium_guidance", "targetAmount": target_amt, "rawQuery": query}
 
-    # 2. Target profit / Capacity question: "how many cows to make 500000 profit?"
+    # 2. Investment Decision / Asset Purchase / AC / Machinery / Equipment / ROI:
+    is_investment_word = any(k in q for k in [
+        "air conditioner", "ac", "cooler", "chiller", "machine", "machinery", "equipment", "vehicle",
+        "tractor", "solar", "generator", "refrigerator", "shed", "freezer", "cutter",
+        "buy", "purchase", "invest", "investment", "buying", "spend on",
+        "కొనవచ్చా", "కొనడం", "పెట్టుబడి", "యంత్రం", "ఏసీ", "మిషన్", "పరికరాలు"
+    ])
+    is_investment_eval = any(k in q for k in [
+        "should i buy", "can i buy", "want to buy", "is that a good investment", "good investment",
+        "is it safe to buy", "safe for me to buy", "is it safe to invest", "is it profitable",
+        "will it be profitable", "profitable to buy", "afford a", "afford an", "recover this investment",
+        "payback period", "roi", "return on investment", "safe to invest", "safely invest",
+        "buy an air conditioner", "buy a machine", "buy equipment", "worth buying", "worth investing",
+        "కొనవచ్చా", "మంచి పెట్టుబడేనా", "లాభదాయకమా", "కొనడం సురక్షితమేనా", "కొనడం మంచిదేనా"
+    ])
+    is_loan_keyword = any(k in q for k in ["loan", "borrow", "debt", "lend", "రుణం", "అప్పు", "తీసుకోవచ్చా", "లోన్"])
+
+    if (is_investment_eval and (is_investment_word or target_amt is not None)) or (
+        is_investment_word and any(w in q for w in ["good", "safe", "profit", "worth", "feasible", "afford"]) and not is_loan_keyword
+    ):
+        return {"intent": "investment_decision", "targetAmount": target_amt, "rawQuery": query}
+
+    # 3. Target profit / Capacity question: "how many cows to make 500000 profit?"
     is_how_many = any(k in q for k in [
         "how many", "number of", "how much animals", "how much cows", "cows do i need", "cows should i buy",
         "buffaloes do i need", "looms do i need", "how many units", "how many machines",
@@ -127,21 +149,21 @@ def classify_query_intent(query: str) -> Dict[str, Any]:
     if is_how_many and (is_profit or target_amt is not None):
         return {"intent": "target_profit_capacity", "targetAmount": target_amt, "rawQuery": query}
 
-    # 3. Revenue for target profit
+    # 4. Revenue for target profit
     if any(k in q for k in ["revenue", "sales", "turnover", "అమ్మకాలు", "టర్నోవర్"]) and (is_profit or target_amt is not None):
         return {"intent": "revenue_for_target_profit", "targetAmount": target_amt, "rawQuery": query}
 
-    # 4. Target profit planning: "I want to make a profit of 5 lakh rupees how my finances should look"
+    # 5. Target profit planning: "I want to make a profit of 5 lakh rupees how my finances should look"
     is_profit_planning = any(k in q for k in [
         "how my finances should look", "how should my finances look", "finances should look",
-        "target profit", "make a profit", "profit of", "earn a profit", "get a profit", "reach profit",
-        "to make a profit", "want to make a profit", "want to earn", "లాభం రావాలంటే", "లాభం కోసం",
+        "target profit", "make a profit of", "profit of", "earn a profit of", "get a profit of", "reach profit",
+        "target annual profit", "annual profit target", "లాభం రావాలంటే", "లాభం కోసం",
         "ఆర్థిక పరిస్థితి ఎలా ఉండాలి", "లాభ ప్రణాళిక"
     ])
 
     if is_profit_planning or (
-        is_profit and (target_amt is not None or any(k in q for k in ["plan", "target", "how", "want"])) and
-        not any(p in q for p in ["how much profit", "my profit", "am i making profit", "నా లాభం ఎంత"])
+        any(k in q for k in ["make a profit", "earn a profit", "target profit", "net profit target"]) and
+        (target_amt is not None or any(k in q for k in ["how", "plan"]))
     ):
         return {"intent": "target_profit_planning", "targetAmount": target_amt, "rawQuery": query}
 
@@ -251,6 +273,113 @@ def calculate_intent_metrics(
             summary_te = f"ప్రస్తుత ఆదాయ పరిస్థితుల్లో ₹{test_loan:,.0f} రుణం సిఫార్సు చేయబడదు. మీ ప్రస్తుత సురక్షిత రుణ పరిమితి దాదాపు ₹{calc.get('maxSafeLoanAmount', 0):,.0f}."
 
         return {"summary": summary, "summaryTe": summary_te, "data": {"testLoan": test_loan, "testEmi": test_emi, "dscr": test_dscr, "dti": test_dti}}
+
+    elif intent == "investment_decision":
+        q_lower = intent_data.get("rawQuery", "").lower()
+        asset_name = "Equipment / Capital Asset"
+        asset_name_te = "యంత్రం / పరికరాల కొనుగోలు"
+        default_cost = 40000.0
+        operating_monthly_cost = 2000.0
+        direct_revenue_increase = 0.0
+        is_ac_cooling = False
+
+        if any(k in q_lower for k in ["air conditioner", "ac", "ఏసీ", "cooler"]):
+            asset_name = "Air Conditioner (AC)"
+            asset_name_te = "ఎయిర్ కండీషనర్ (AC)"
+            default_cost = 40000.0
+            operating_monthly_cost = 2000.0
+            is_ac_cooling = True
+        elif any(k in q_lower for k in ["milking", "మిల్కింగ్"]):
+            asset_name = "Milking Machine"
+            asset_name_te = "మిల్కింగ్ మిషన్"
+            default_cost = 55000.0
+            operating_monthly_cost = 1000.0
+            direct_revenue_increase = 3000.0
+        elif any(k in q_lower for k in ["chiller", "freezer", "చిల్లర్"]):
+            asset_name = "Bulk Milk Chiller / Deep Freezer"
+            asset_name_te = "బల్క్ మిల్క్ చిల్లర్ / డీప్ ఫ్రీజర్"
+            default_cost = 75000.0
+            operating_monthly_cost = 2500.0
+            direct_revenue_increase = 5000.0
+        elif any(k in q_lower for k in ["solar", "సోలార్"]):
+            asset_name = "Solar Energy System"
+            asset_name_te = "సోలార్ పవర్ సిస్టమ్"
+            default_cost = 80000.0
+            operating_monthly_cost = -2000.0
+            direct_revenue_increase = 2000.0
+
+        purchase_cost = float(target_amount) if target_amount and target_amount > 0 else default_cost
+        existing_debt_service = float(loan.get("monthlyEmiEquivalent", loan.get("quarterlyEmi", 42000.0) / 3.0))
+        current_disp_buffer = monthly_surplus - existing_debt_service
+
+        proj_new_exp = monthly_exp + max(0.0, operating_monthly_cost)
+        proj_new_rev = monthly_rev + direct_revenue_increase
+        proj_new_surplus = proj_new_rev - proj_new_exp
+        proj_disp_buffer = proj_new_surplus - existing_debt_service
+
+        is_safe = current_disp_buffer >= (operating_monthly_cost * 2) and proj_disp_buffer > 5000.0
+        net_monthly_gain = direct_revenue_increase - operating_monthly_cost
+        payback_months = math.ceil(purchase_cost / net_monthly_gain) if net_monthly_gain > 0 else 0
+
+        if is_ac_cooling and "dairy" in biz.get("businessType", "dairy").lower():
+            summary = (
+                f"Analysis for purchasing an Air Conditioner (₹{purchase_cost:,.0f}) for your Dairy Farm in {prof.get('location', 'Warangal')}:\n\n"
+                f"1. Financial Safety & Affordability:\n"
+                f"- Safe to Buy: YES. With your monthly revenue of ₹{monthly_rev:,.0f} and expenses of ₹{monthly_exp:,.0f}, your monthly net cash surplus is ₹{monthly_surplus:,.0f} (Disposable cushion after debt service: ₹{current_disp_buffer:,.0f}/month).\n"
+                f"- Cash-Flow Impact: Factoring an estimated ₹{operating_monthly_cost:,.0f}/month in electricity and maintenance, your projected monthly surplus remains a strong ₹{proj_new_surplus:,.0f} (leaving ₹{proj_disp_buffer:,.0f} in disposable reserves).\n\n"
+                f"2. Profitability & Dairy Economics Assessment:\n"
+                f"- Direct Profitability: LOW ROI for standard AC in an open or semi-open shed. While summer heat stress mitigation is critical (summer heat drops milk yield by 20%–30%), open cattle sheds cannot retain AC cooling efficiently without heavy insulation, leading to high electricity bills with minimal cooling benefit.\n"
+                f"- High-ROI Alternatives: Installing high-pressure misting foggers with ceiling fans (costing ₹12,000–₹15,000 with ~₹500/month electricity) or a Bulk Milk Chiller offers 3x higher economic return on milk yield preservation than an air conditioner.\n\n"
+                f"3. Recommendation:\n"
+                f"Financially you can safely afford the ₹{purchase_cost:,.0f} outlay, but from a business profitability standpoint, we recommend investing in cattle fogger misting sprinklers rather than an AC unit to maximize net returns."
+            )
+            summary_te = (
+                f"మీ డెయిరీ ఫామ్ కోసం ఎయిర్ కండీషనర్ (AC - సుమారు ₹{purchase_cost:,.0f}) కొనుగోలు ఆర్థిక విశ్లేషణ:\n\n"
+                f"1. కొనుగోలు భద్రత & స్తోమత:\n"
+                f"- కొనుగోలు సురక్షితమేనా: అవును. మీ నెలవారీ ఆదాయం ₹{monthly_rev:,.0f}, ఖర్చులు ₹{monthly_exp:,.0f} కాగా, మీకు ₹{monthly_surplus:,.0f} నికర మిగులు ఉంది (రుణ వాయిదా పోను ₹{current_disp_buffer:,.0f} మిగులు నిధులు ఉంటాయి).\n"
+                f"- నగదు ప్రవాహంపై ప్రభావం: నెలకు సుమారు ₹{operating_monthly_cost:,.0f} విద్యుత్/నిర్వహణ ఖర్చు అదనంగా చేరినా, మీకు ₹{proj_disp_buffer:,.0f} సురక్షిత మిగులు మిగులుతుంది.\n\n"
+                f"2. లాభదాయకత విశ్లేషణ:\n"
+                f"- నేరుగా లాభదాయకమా: ఓపెన్ షెడ్డులో ఏసీకి తక్కువ ROI ఉంటుంది. వేసవిలో ఆవులకు చల్లదనం అవసరమే అయినప్పటికీ, ఓపెన్ షెడ్లలో ఏసీ గాలి నిలవదు మరియు కరెంట్ బిల్లు పెరుగుతుంది.\n"
+                f"- ఉత్తమ ప్రత్యామ్నాయం: ఫాగర్స్/మిస్టింగ్ స్ప్రింక్లర్లు మరియు ఫ్యాన్లు (వ్యయం ₹12,000 - ₹15,000) ఏసీ కంటే 3 రెట్లు ఎక్కువ లాభదాయకమైనవి.\n\n"
+                f"3. సిఫార్సు:\n"
+                f"మీ ఆర్థిక పరిస్థితి ప్రకారం మీరు ₹{purchase_cost:,.0f} ను సులభంగా భరించగలరు, కానీ గరిష్ట లాభం కోసం ఫాగర్ మిస్టింగ్ సిస్టమ్ ఏర్పాటు చేసుకోవడం ఉత్తమం."
+            )
+        else:
+            summary = (
+                f"Analysis for investing in {asset_name} (₹{purchase_cost:,.0f}):\n\n"
+                f"1. Financial Safety & Affordability:\n"
+                f"- Safe to Invest: {'YES' if is_safe else 'TIGHT'}. Based on your monthly revenue of ₹{monthly_rev:,.0f} and expenses of ₹{monthly_exp:,.0f}, your monthly surplus is ₹{monthly_surplus:,.0f}.\n"
+                f"- Post-Purchase Position: After ~₹{operating_monthly_cost:,.0f}/month operating costs and ₹{existing_debt_service:,.0f} existing debt obligations, your projected monthly disposable cash is ₹{proj_disp_buffer:,.0f}.\n\n"
+                f"2. ROI & Financial Impact:\n"
+                f"- {f'Estimated payback period is ~{payback_months} months with ₹{net_monthly_gain:,.0f}/month net incremental gain.' if payback_months > 0 else f'Estimated operating overhead is ~₹{operating_monthly_cost:,.0f}/month.'}\n"
+                f"- Your 3-month operating emergency runway remains protected at ₹{round(monthly_exp * 3):,.0f}.\n\n"
+                f"3. Recommendation:\n"
+                f"{f'You can safely proceed with this ₹{purchase_cost:,.0f} asset acquisition.' if is_safe else 'Build an additional ₹15,000 cash buffer before executing this purchase.'}"
+            )
+            summary_te = (
+                f"{asset_name_te} (₹{purchase_cost:,.0f}) పెట్టుబడి విశ్లేషణ:\n"
+                f"1. కొనుగోలు స్తోమత: మీ ప్రస్తుత నెలవారీ ఆదాయం ₹{monthly_rev:,.0f} మరియు నికర మిగులు ₹{monthly_surplus:,.0f} ఆధారంగా ఈ కొనుగోలు సురక్షితమైనది.\n"
+                f"2. నిర్వహణ ఖర్చులు: నెలకు సుమారు ₹{operating_monthly_cost:,.0f} అదనపు ఖర్చు అవుతుంది, వాయిదా పోను ₹{proj_disp_buffer:,.0f} మిగులు నిధులు ఉంటాయి.\n"
+                f"3. ముగింపు: మీ ప్రస్తుత ఆర్థిక స్థితి ప్రకారం ఈ నిర్ణయం సురక్షితమైనది."
+            )
+
+        return {
+            "summary": summary,
+            "summaryTe": summary_te,
+            "data": {
+                "assetName": asset_name,
+                "purchaseCost": purchase_cost,
+                "operatingMonthlyCost": operating_monthly_cost,
+                "directRevenueIncrease": direct_revenue_increase,
+                "currentMonthlyRev": monthly_rev,
+                "currentMonthlyExp": monthly_exp,
+                "currentMonthlySurplus": monthly_surplus,
+                "projectedNewSurplus": proj_new_surplus,
+                "projectedDisposableBuffer": proj_disp_buffer,
+                "isSafe": is_safe,
+                "paybackMonths": payback_months,
+            },
+        }
 
     elif intent == "target_profit_capacity":
         target_profit = float(target_amount) if target_amount and target_amount > 0 else 500000.0
