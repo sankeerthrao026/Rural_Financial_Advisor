@@ -272,43 +272,28 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
   const handleVoiceInput = async () => {
     setVoiceError(null);
 
+    // If already listening, stop recording
     if (isListening) {
-      voiceControllerRef.current?.stop();
-      voiceControllerRef.current = null;
+      if (voiceControllerRef.current) {
+        voiceControllerRef.current.stop();
+        voiceControllerRef.current = null;
+      }
       setIsListening(false);
       return;
     }
 
-    if (isSpeechRecognitionSupported()) {
-      setIsListening(true);
-      const controller = startSpeechListening({
-        language,
-        onInterim: (interim) => {
-          if (interim) setInputText(interim);
-        },
-        onResult: (transcript: string) => {
-          if (transcript) setInputText(transcript);
-        },
-        onEnd: () => {
-          setIsListening(false);
-          voiceControllerRef.current = null;
-          inputRef.current?.focus();
-        },
-        onError: (_code, message) => {
-          setIsListening(false);
-          voiceControllerRef.current = null;
-          setVoiceError(message);
-        },
-      });
-
-      if (controller) {
-        voiceControllerRef.current = controller;
+    // Secondary fallback starter
+    const startFallback = async () => {
+      if (!isMediaRecordingSupported()) {
+        setIsListening(false);
+        setVoiceError(
+          isTe
+            ? 'ఈ బ్రౌజర్‌లో వాయిస్ ఇన్‌పుట్ సపోర్ట్ లేదు. దయచేసి Chrome లేదా Edge ఉపయోగించండి.'
+            : 'Voice input is not supported in this browser. Please use Chrome or Edge.'
+        );
         return;
       }
-    }
 
-    // Secondary Fallback: MediaRecorder audio streaming
-    if (isMediaRecordingSupported()) {
       try {
         setIsListening(true);
         const fallbackRecorder = await startAudioRecordingFallback({
@@ -329,21 +314,56 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
           },
         });
         voiceControllerRef.current = fallbackRecorder;
-        return;
       } catch (e: any) {
         setIsListening(false);
         voiceControllerRef.current = null;
         setVoiceError(e?.message || (isTe ? 'మైక్రోఫోన్ అనుమతించబడలేదు.' : 'Microphone access denied.'));
+      }
+    };
+
+    // 1. Try Web Speech API first
+    if (isSpeechRecognitionSupported()) {
+      let hasReceivedAnyResult = false;
+
+      setIsListening(true);
+      const controller = startSpeechListening({
+        language,
+        onInterim: (interim) => {
+          if (interim) {
+            hasReceivedAnyResult = true;
+            setInputText(interim);
+          }
+        },
+        onResult: (transcript: string) => {
+          if (transcript) {
+            hasReceivedAnyResult = true;
+            setInputText(transcript);
+          }
+        },
+        onEnd: () => {
+          setIsListening(false);
+          voiceControllerRef.current = null;
+          inputRef.current?.focus();
+        },
+        onError: (_code, message) => {
+          if (!hasReceivedAnyResult && isMediaRecordingSupported()) {
+            startFallback();
+          } else {
+            setIsListening(false);
+            voiceControllerRef.current = null;
+            setVoiceError(message);
+          }
+        },
+      });
+
+      if (controller) {
+        voiceControllerRef.current = controller;
         return;
       }
     }
 
-    setIsListening(false);
-    setVoiceError(
-      isTe
-        ? 'ఈ బ్రౌజర్‌లో వాయిస్ ఇన్‌పుట్ సపోర్ట్ లేదు. దయచేసి Chrome లేదా Edge ఉపయోగించండి.'
-        : 'Voice input is not supported in this browser. Please use Chrome or Edge.'
-    );
+    // 2. Direct fallback if Web Speech API is not supported or returned null
+    await startFallback();
   };
 
   // Suggested follow-up prompt pills

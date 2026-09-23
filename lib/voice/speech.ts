@@ -163,7 +163,7 @@ export function startSpeechListening(options: SpeechListenerOptions): SpeechCont
   const recognition = new SpeechRecognitionClass();
   activeRecognitionInstance = recognition;
 
-  recognition.continuous = false;
+  recognition.continuous = true;
   recognition.interimResults = true;
   recognition.lang = getLanguageCode(options.language);
   recognition.maxAlternatives = 1;
@@ -178,8 +178,11 @@ export function startSpeechListening(options: SpeechListenerOptions): SpeechCont
 
     for (let i = 0; i < event.results.length; ++i) {
       const result = event.results[i];
-      if (result && result[0]) {
-        fullTranscript += result[0].transcript;
+      if (result && result[0] && result[0].transcript) {
+        const chunk = result[0].transcript.trim();
+        if (chunk) {
+          fullTranscript = fullTranscript ? `${fullTranscript} ${chunk}` : chunk;
+        }
         if (!result.isFinal) {
           isAllFinal = false;
         }
