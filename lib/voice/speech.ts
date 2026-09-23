@@ -173,26 +173,25 @@ export function startSpeechListening(options: SpeechListenerOptions): SpeechCont
   };
 
   recognition.onresult = (event: any) => {
-    let finalTranscript = '';
-    let interimTranscript = '';
+    let fullTranscript = '';
+    let isAllFinal = true;
 
-    for (let i = event.resultIndex; i < event.results.length; ++i) {
+    for (let i = 0; i < event.results.length; ++i) {
       const result = event.results[i];
-      if (result.isFinal) {
-        finalTranscript += result[0].transcript;
-      } else {
-        interimTranscript += result[0].transcript;
+      if (result && result[0]) {
+        fullTranscript += result[0].transcript;
+        if (!result.isFinal) {
+          isAllFinal = false;
+        }
       }
     }
 
-    const finalText = finalTranscript.trim();
-    if (finalText) {
-      options.onResult(finalText, true);
-    }
-    const interimText = interimTranscript.trim();
-    if (interimText) {
-      options.onResult(interimText, false);
-      options.onInterim?.(interimText);
+    const cleanedText = fullTranscript.trim();
+    if (cleanedText) {
+      options.onResult(cleanedText, isAllFinal);
+      if (!isAllFinal) {
+        options.onInterim?.(cleanedText);
+      }
     }
   };
 

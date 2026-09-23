@@ -151,6 +151,7 @@ export function BusinessAdvisorScreen() {
   const [inputText, setInputText] = useState('');
   const [isFollowUpLoading, setIsFollowUpLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
   const [expandedTurns, setExpandedTurns] = useState<Record<string, boolean>>({});
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
@@ -377,6 +378,8 @@ export function BusinessAdvisorScreen() {
 
   // Voice Input handler
   const handleToggleVoice = async () => {
+    setVoiceError(null);
+
     if (isListening) {
       voiceControllerRef.current?.stop();
       voiceControllerRef.current = null;
@@ -386,29 +389,30 @@ export function BusinessAdvisorScreen() {
 
     if (isSpeechRecognitionSupported()) {
       setIsListening(true);
-      voiceControllerRef.current = startSpeechListening({
+      const controller = startSpeechListening({
         language,
         onInterim: (interim) => {
           if (interim) setInputText(interim);
         },
-        onResult: (transcript, isFinal) => {
+        onResult: (transcript: string) => {
           if (transcript) setInputText(transcript);
-          if (isFinal) {
-            setIsListening(false);
-            voiceControllerRef.current = null;
-            inputRef.current?.focus();
-          }
         },
-        onError: (_code, _msg) => {
+        onError: (_code, message) => {
           setIsListening(false);
           voiceControllerRef.current = null;
+          setVoiceError(message);
         },
         onEnd: () => {
           setIsListening(false);
           voiceControllerRef.current = null;
+          inputRef.current?.focus();
         },
       });
-      return;
+
+      if (controller) {
+        voiceControllerRef.current = controller;
+        return;
+      }
     }
 
     // Secondary Fallback: MediaRecorder audio streaming via /api/voice/transcribe
@@ -425,20 +429,29 @@ export function BusinessAdvisorScreen() {
               inputRef.current?.focus();
             }
           },
-          onError: () => {
+          onError: (err) => {
             setIsListening(false);
             voiceControllerRef.current = null;
+            const errMsg = err?.message || (isTe ? 'వాయిస్ రికార్డింగ్‌లో సమస్య ఏర్పడింది.' : 'Voice recording failed.');
+            setVoiceError(errMsg);
           },
         });
         voiceControllerRef.current = fallbackRecorder;
-      } catch (e) {
+        return;
+      } catch (e: any) {
         setIsListening(false);
         voiceControllerRef.current = null;
+        setVoiceError(e?.message || (isTe ? 'మైక్రోఫోన్ అనుమతించబడలేదు.' : 'Microphone access denied.'));
+        return;
       }
-      return;
     }
 
     setIsListening(false);
+    setVoiceError(
+      isTe
+        ? 'ఈ బ్రౌజర్‌లో వాయిస్ ఇన్‌పుట్ సపోర్ట్ లేదు. దయచేసి Chrome లేదా Edge ఉపయోగించండి.'
+        : 'Voice input is not supported in this browser. Please use Chrome or Edge.'
+    );
   };
 
   // Run automatically on first load if not loaded yet
@@ -935,6 +948,23 @@ export function BusinessAdvisorScreen() {
               })}
             </div>
           </div>
+
+          {/* Voice Error Notification */}
+          {voiceError && (
+            <div className="px-4 py-2 bg-destructive/10 border-t border-destructive/20 text-destructive text-xs flex items-center justify-between animate-in fade-in">
+              <span className="flex items-center gap-1.5">
+                <AlertCircle className="size-3.5 shrink-0" />
+                {voiceError}
+              </span>
+              <button
+                type="button"
+                onClick={() => setVoiceError(null)}
+                className="text-xs underline font-semibold ml-2 cursor-pointer shrink-0"
+              >
+                {isTe ? 'మూసివేయి' : 'Dismiss'}
+              </button>
+            </div>
+          )}
 
           {/* Chat Input Bar with Text and Voice Input */}
           <form

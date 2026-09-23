@@ -160,20 +160,22 @@ export function VoiceInputModal({
           if (isClosedRef.current) return;
           setTranscript(interim);
         },
-        onResult: async (finalText) => {
+        onResult: async (finalText, isFinal) => {
           if (isClosedRef.current) return;
-          stopTimer();
-          setTranscript(finalText);
-          setState('processing');
-          try {
-            const parsed = await parseSpokenTransactionWithFallback(finalText, activeLang);
-            if (isClosedRef.current) return;
-            setExtractedResult(parsed);
-            setState('success');
-          } catch (err: any) {
-            if (isClosedRef.current) return;
-            setErrorMessage(err?.message || 'Failed to analyze speech with AI.');
-            setState('error');
+          if (isFinal) {
+            stopTimer();
+            setTranscript(finalText);
+            setState('processing');
+            try {
+              const parsed = await parseSpokenTransactionWithFallback(finalText, activeLang);
+              if (isClosedRef.current) return;
+              setExtractedResult(parsed);
+              setState('success');
+            } catch (err: any) {
+              if (isClosedRef.current) return;
+              setErrorMessage(err?.message || 'Failed to analyze speech with AI.');
+              setState('error');
+            }
           }
         },
         onError: (_code, message) => {

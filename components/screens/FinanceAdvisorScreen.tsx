@@ -109,7 +109,9 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
   const [inputText, setInputText] = useState<string>('');
   const [isChatLoading, setIsChatLoading] = useState<boolean>(false);
   const [isListening, setIsListening] = useState<boolean>(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const voiceControllerRef = useRef<SpeechController | null>(null);
 
   // Abort any active voice session when the screen unmounts so the microphone
@@ -268,6 +270,8 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
 
   // Voice STT input handler
   const handleVoiceInput = async () => {
+    setVoiceError(null);
+
     if (isListening) {
       voiceControllerRef.current?.stop();
       voiceControllerRef.current = null;
@@ -277,28 +281,30 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
 
     if (isSpeechRecognitionSupported()) {
       setIsListening(true);
-      voiceControllerRef.current = startSpeechListening({
+      const controller = startSpeechListening({
         language,
         onInterim: (interim) => {
           if (interim) setInputText(interim);
         },
-        onResult: (transcript: string, isFinal: boolean) => {
+        onResult: (transcript: string) => {
           if (transcript) setInputText(transcript);
-          if (isFinal) {
-            setIsListening(false);
-            voiceControllerRef.current = null;
-          }
         },
         onEnd: () => {
           setIsListening(false);
           voiceControllerRef.current = null;
+          inputRef.current?.focus();
         },
-        onError: () => {
+        onError: (_code, message) => {
           setIsListening(false);
           voiceControllerRef.current = null;
+          setVoiceError(message);
         },
       });
-      return;
+
+      if (controller) {
+        voiceControllerRef.current = controller;
+        return;
+      }
     }
 
     // Secondary Fallback: MediaRecorder audio streaming
@@ -312,22 +318,32 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
             voiceControllerRef.current = null;
             if (transcribedText) {
               setInputText(transcribedText);
+              inputRef.current?.focus();
             }
           },
-          onError: () => {
+          onError: (err) => {
             setIsListening(false);
             voiceControllerRef.current = null;
+            const errMsg = err?.message || (isTe ? 'వాయిస్ రికార్డింగ్‌లో సమస్య ఏర్పడింది.' : 'Voice recording failed.');
+            setVoiceError(errMsg);
           },
         });
         voiceControllerRef.current = fallbackRecorder;
-      } catch (e) {
+        return;
+      } catch (e: any) {
         setIsListening(false);
         voiceControllerRef.current = null;
+        setVoiceError(e?.message || (isTe ? 'మైక్రోఫోన్ అనుమతించబడలేదు.' : 'Microphone access denied.'));
+        return;
       }
-      return;
     }
 
     setIsListening(false);
+    setVoiceError(
+      isTe
+        ? 'ఈ బ్రౌజర్‌లో వాయిస్ ఇన్‌పుట్ సపోర్ట్ లేదు. దయచేసి Chrome లేదా Edge ఉపయోగించండి.'
+        : 'Voice input is not supported in this browser. Please use Chrome or Edge.'
+    );
   };
 
   // Suggested follow-up prompt pills
@@ -1011,29 +1027,49 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
           ))}
         </div>
 
+        {/* Voice Error Notification */}
+        {voiceError && (
+          <div className="px-4 py-2 bg-destructive/10 border-t border-destructive/20 text-destructive text-xs flex items-center justify-between animate-in fade-in">
+            <span className="flex items-center gap-1.5">
+              <AlertTriangle className="size-3.5 shrink-0" />
+              {voiceError}
+            </span>
+            <button
+              type="button"
+              onClick={() => setVoiceError(null)}
+              className="text-xs underline font-semibold ml-2 cursor-pointer shrink-0"
+            >
+              {isTe ? 'మూసివేయి' : 'Dismiss'}
+            </button>
+          </div>
+        )}
+
         {/* Input Bar */}
         <div className="p-3 sm:p-4 border-t bg-card flex items-center gap-2">
           <Button
             variant="outline"
             size="icon"
             onClick={handleVoiceInput}
-            title={isListening ? 'Listening...' : 'Speak your question'}
+            title={isListening ? (isTe ? 'వాయిస్ నిలిపివేయండి' : 'Stop listening') : (isTe ? 'వాయిస్ ద్వారా అడగండి' : 'Speak your question')}
             className={`cursor-pointer shrink-0 transition-all ${
-              isListening ? 'bg-destructive text-destructive-foreground animate-pulse' : ''
+              isListening ? 'bg-destructive text-destructive-foreground animate-pulse ring-2 ring-destructive/40' : ''
             }`}
           >
             {isListening ? <MicOff className="size-4" /> : <Mic className="size-4 text-primary" />}
           </Button>
 
           <input
+            ref={inputRef}
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
             placeholder={
-              isTe
-                ? 'రుణ వివరాలు, వడ్డీ లేదా బ్యాంక్ నిబంధనల గురించి అడగండి...'
-                : 'Ask anything about your loan numbers, interest rates, or schemes...'
+              isListening
+                ? (isTe ? 'వింటున్నాము... మాట్లాడండి...' : 'Listening... speak your question...')
+                : (isTe
+                    ? 'రుణ వివరాలు, వడ్డీ లేదా బ్యాంక్ నిబంధనల గురించి అడగండి...'
+                    : 'Ask anything about your loan numbers, interest rates, or schemes...')
             }
             disabled={isChatLoading}
             className="flex-1 rounded-xl border bg-background px-3.5 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
