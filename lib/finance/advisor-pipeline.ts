@@ -135,6 +135,7 @@ export type FinancialIntent =
   | 'expense_reduction' // "how can I reduce my expenses?", "cut costs"
   | 'profit_analysis' // "how much profit am I making?", "what is my margin?"
   | 'target_profit_capacity' // "how many cows/units to get ₹500,000 profit?"
+  | 'target_profit_planning' // "I want to make 5 lakh profit how my finances should look"
   | 'revenue_for_target_profit' // "how much revenue do I need for ₹5 lakh profit?"
   | 'business_expansion' // "should I expand my business?", "can I expand?"
   | 'government_schemes' // "what schemes am I eligible for?", "which government schemes?"
@@ -528,8 +529,8 @@ export function classifyFinancialQueryIntent(query: string): IntentAnalysisResul
   // 2. Target profit / Capacity question: "how many cows to make 500000 profit?"
   const isHowMany = [
     'how many', 'number of', 'how much animals', 'how much cows', 'cows do i need', 'cows should i buy',
-    'buffaloes do i need', 'looms do i need', 'ఎన్ని ఆవులు', 'ఎన్ని బర్రెలు', 'ఎన్ని మగ్గాలు', 'ఎన్ని కావాలి',
-    'ఆవులు కొనాలి', 'బర్రెలు కొనాలి'
+    'buffaloes do i need', 'looms do i need', 'how many units', 'how many machines',
+    'ఎన్ని ఆవులు', 'ఎన్ని బర్రెలు', 'ఎన్ని మగ్గాలు', 'ఎన్ని కావాలి', 'ఆవులు కొనాలి', 'బర్రెలు కొనాలి'
   ].some((k) => q.includes(k));
 
   const isProfit = [
@@ -548,7 +549,24 @@ export function classifyFinancialQueryIntent(query: string): IntentAnalysisResul
     return { intent: 'revenue_for_target_profit', targetAmount: targetAmt, targetUnit, rawQuery: query };
   }
 
-  // 4. Savings planning: "how much should I save every month?"
+  // 4. Target Profit Planning: "I want to make a profit of 5 lakh rupees how my finances should look"
+  const isProfitPlanning = [
+    'how my finances should look', 'how should my finances look', 'finances should look',
+    'target profit', 'make a profit', 'profit of', 'earn a profit', 'get a profit', 'reach profit',
+    'to make a profit', 'want to make a profit', 'want to earn', 'లాభం రావాలంటే', 'లాభం కోసం',
+    'ఆర్థిక పరిస్థితి ఎలా ఉండాలి', 'లాభ ప్రణాళిక'
+  ].some((k) => q.includes(k));
+
+  if (
+    isProfitPlanning ||
+    (isProfit &&
+      (targetAmt !== null || q.includes('plan') || q.includes('target') || q.includes('how') || q.includes('want')) &&
+      !['how much profit', 'my profit', 'am i making profit', 'నా లాభం ఎంత'].some((p) => q.includes(p)))
+  ) {
+    return { intent: 'target_profit_planning', targetAmount: targetAmt, targetUnit, rawQuery: query };
+  }
+
+  // 5. Savings planning: "how much should I save every month?"
   if (
     ['save', 'saving', 'savings', 'దాచుకోవాలి', 'పొదుపు', 'బచత్', 'emergency fund'].some((k) => q.includes(k)) &&
     !q.includes('subsidy')
@@ -556,7 +574,7 @@ export function classifyFinancialQueryIntent(query: string): IntentAnalysisResul
     return { intent: 'savings_planning', targetAmount: targetAmt, targetUnit, rawQuery: query };
   }
 
-  // 5. Expense reduction: "how can I reduce my expenses?"
+  // 6. Expense reduction: "how can I reduce my expenses?"
   if (
     (['reduce', 'cut', 'lower', 'control', 'curtail', 'తగ్గించు', 'తగ్గించ'].some((k) => q.includes(k)) &&
       ['expense', 'cost', 'spending', 'ఖర్చు'].some((w) => q.includes(w))) ||
@@ -565,7 +583,7 @@ export function classifyFinancialQueryIntent(query: string): IntentAnalysisResul
     return { intent: 'expense_reduction', targetAmount: targetAmt, targetUnit, rawQuery: query };
   }
 
-  // 6. Specific Scheme Rationale: "why Stand-Up India / PMEGP / Mudra?"
+  // 7. Specific Scheme Rationale: "why Stand-Up India / PMEGP / Mudra?"
   if (
     ['why', 'ఎందుకు'].some((k) => q.includes(k)) &&
     ['stand-up', 'pmegp', 'mudra', 'vishwakarma', 'nbcfdc', 'scheme', 'పథకం'].some((k) => q.includes(k))
@@ -573,7 +591,7 @@ export function classifyFinancialQueryIntent(query: string): IntentAnalysisResul
     return { intent: 'scheme_rationale', targetAmount: targetAmt, targetUnit, rawQuery: query };
   }
 
-  // 7. Scheme eligibility & comparison: "what schemes am I eligible for?"
+  // 8. Scheme eligibility & comparison: "what schemes am I eligible for?"
   if (
     ['scheme', 'eligible', 'government scheme', 'subsidies', 'subsidy', 'పథకాలు', 'ప్రభుత్వ పథకాలు', 'అర్హత', 'సబ్సిడీ'].some(
       (k) => q.includes(k)
@@ -582,7 +600,7 @@ export function classifyFinancialQueryIntent(query: string): IntentAnalysisResul
     return { intent: 'government_schemes', targetAmount: targetAmt, targetUnit, rawQuery: query };
   }
 
-  // 8. Bank documentation checklist
+  // 9. Bank documentation checklist
   if (
     ['document', 'paperwork', 'bank require', 'kyc', 'apply', 'approval', 'పత్రాలు', 'డాక్యుమెంట్లు', 'బ్యాంక్ కాగితాలు'].some(
       (k) => q.includes(k)
@@ -591,7 +609,7 @@ export function classifyFinancialQueryIntent(query: string): IntentAnalysisResul
     return { intent: 'document_requirements', targetAmount: targetAmt, targetUnit, rawQuery: query };
   }
 
-  // 9. Working capital vs Capex
+  // 10. Working capital vs Capex
   if (
     ['working capital', 'capex', 'split', 'machinery', 'stock', 'వర్కింగ్ క్యాపిటల్', 'కేపెక్స్', 'విభజన'].some((k) =>
       q.includes(k)
@@ -600,7 +618,7 @@ export function classifyFinancialQueryIntent(query: string): IntentAnalysisResul
     return { intent: 'working_capital_split', targetAmount: targetAmt, targetUnit, rawQuery: query };
   }
 
-  // 10. Max borrowing: "how much can I borrow?", "how much loan can I get?"
+  // 11. Max borrowing: "how much can I borrow?", "how much loan can I get?"
   if (
     ['how much can i borrow', 'how much loan can i get', 'maximum loan', 'max loan', 'borrowing limit', 'ఎంత రుణం తీసుకోవచ్చు', 'ఎంత లోన్ వస్తుంది', 'ఎంత అప్పు పొందగలను'].some(
       (k) => q.includes(k)
@@ -609,7 +627,7 @@ export function classifyFinancialQueryIntent(query: string): IntentAnalysisResul
     return { intent: 'max_borrowing_capacity', targetAmount: targetAmt, targetUnit, rawQuery: query };
   }
 
-  // 11. Repayment / EMI / Installments
+  // 12. Repayment / EMI / Installments
   if (
     ['quarterly repayment', 'quarterly emi', 'monthly emi', 'installment', 'monthly pay', 'quarterly pay', 'వాయిదా', 'కిస్తీ', 'చెల్లింపు'].some((k) =>
       q.includes(k)
@@ -619,7 +637,7 @@ export function classifyFinancialQueryIntent(query: string): IntentAnalysisResul
     return { intent: 'emi_calculation', targetAmount: targetAmt, targetUnit, rawQuery: query };
   }
 
-  // 12. Interest / Total Outlay
+  // 13. Interest / Total Outlay
   if (
     ['interest rate', 'total cost of loan', 'total interest', 'total repay', 'వడ్డీ', 'మొత్తం వడ్డీ', 'వడ్డీ రేటు'].some((k) =>
       q.includes(k)
@@ -628,13 +646,11 @@ export function classifyFinancialQueryIntent(query: string): IntentAnalysisResul
     return { intent: 'interest_cost', targetAmount: targetAmt, targetUnit, rawQuery: query };
   }
 
-  // 13. Loan Affordability: "Can I afford X?", "Can I take ₹2 lakh loan?"
-  if (
-    ['afford', 'can i take', 'can i borrow', 'తీసుకోవచ్చా', 'భరించగలనా', 'సాధ్యమేనా', 'తీసుకోవచ్చా లేదా'].some(
-      (k) => q.includes(k)
-    ) ||
-    (targetAmt !== null && (q.includes('loan') || q.includes('రుణం') || q.includes('లోన్') || q.includes('lakh')))
-  ) {
+  // 14. Loan Affordability: "Can I afford X?", "Can I take ₹2 lakh loan?"
+  const isLoanKeyword = ['loan', 'borrow', 'debt', 'lend', 'రుణం', 'అప్పు', 'తీసుకోవచ్చా', 'లోన్'].some((k) => q.includes(k));
+  const isAffordKeyword = ['afford', 'can i take', 'can i borrow', 'తీసుకోవచ్చా', 'భరించగలనా', 'సాధ్యమేనా', 'తీసుకోవచ్చా లేదా', 'safe to take'].some((k) => q.includes(k));
+
+  if (isAffordKeyword || (isLoanKeyword && targetAmt !== null) || (isLoanKeyword && ['afford', 'eligible', 'safe'].some((k) => q.includes(k)))) {
     return { intent: 'loan_affordability', targetAmount: targetAmt, targetUnit, rawQuery: query };
   }
 
@@ -773,6 +789,72 @@ export function performQuestionSpecificCalculations(
           bankLoan,
           annualProjectedRevenue,
           grossAnnualProfit,
+        },
+      };
+    }
+
+    case 'target_profit_planning': {
+      const targetProfit = targetAmount && targetAmount > 0 ? targetAmount : 500000;
+      const targetMonthlyProfit = Math.round(targetProfit / 12);
+
+      const currentMonthlyRevenue = ctx.income.monthlyRevenue;
+      const currentMonthlyExpenses = ctx.expenses.monthlyExpenses;
+      const currentMonthlyProfit = ctx.calculations.monthlyProfit;
+      const annualizedCurrentProfit = ctx.calculations.annualProfit;
+
+      const profitGapMonthly = targetMonthlyProfit - currentMonthlyProfit;
+      const profitGapAnnual = targetProfit - annualizedCurrentProfit;
+
+      const currentProfitMargin =
+        currentMonthlyRevenue > 0
+          ? Math.round((currentMonthlyProfit / currentMonthlyRevenue) * 100)
+          : 50;
+      const marginDecimal = Math.max(0.15, currentProfitMargin / 100);
+
+      const requiredMonthlyRevenue = Math.round(targetMonthlyProfit / marginDecimal);
+      const requiredAnnualRevenue = requiredMonthlyRevenue * 12;
+      const incrementalMonthlyRevenue = Math.max(0, requiredMonthlyRevenue - currentMonthlyRevenue);
+
+      const unitNetProfit = ctx.business.unitAnnualNetProfit;
+      const unitCapex = ctx.business.unitCapex;
+      const unitName = ctx.business.unitNameEn;
+      const unitNameTe = ctx.business.unitNameTe;
+      const additionalUnitsNeeded = Math.max(1, Math.ceil(profitGapAnnual / Math.max(1, unitNetProfit)));
+
+      const summary =
+        profitGapMonthly <= 0
+          ? `Your enterprise currently generates ₹${currentMonthlyProfit.toLocaleString('en-IN')}/month in net profit (Annualized: ₹${annualizedCurrentProfit.toLocaleString('en-IN')}), which already fulfills your target annual profit of ₹${targetProfit.toLocaleString('en-IN')}. To sustain and secure this: 1) Maintain monthly sales volume at ₹${currentMonthlyRevenue.toLocaleString('en-IN')}, 2) Keep operating costs controlled at ₹${currentMonthlyExpenses.toLocaleString('en-IN')}, and 3) Build a 3-month operating emergency buffer of ₹${Math.round(currentMonthlyExpenses * 3).toLocaleString('en-IN')}.`
+          : `To achieve a target annual profit of ₹${targetProfit.toLocaleString('en-IN')} (~₹${targetMonthlyProfit.toLocaleString('en-IN')}/month) for your ${ctx.business.businessType} enterprise:
+1. Current Baseline & Profit Gap: You currently earn ₹${currentMonthlyProfit.toLocaleString('en-IN')}/month in net cash surplus (Revenue: ₹${currentMonthlyRevenue.toLocaleString('en-IN')} minus Expenses: ₹${currentMonthlyExpenses.toLocaleString('en-IN')}). Your monthly profit gap is ₹${profitGapMonthly.toLocaleString('en-IN')} (Annual gap: ₹${profitGapAnnual.toLocaleString('en-IN')}).
+2. Financial Blueprint: At your current operating margin of ${currentProfitMargin}%, your target monthly revenue should be ₹${requiredMonthlyRevenue.toLocaleString('en-IN')} (Annualized: ₹${requiredAnnualRevenue.toLocaleString('en-IN')}) with operating expenses disciplined around ₹${Math.round(requiredMonthlyRevenue * (1 - marginDecimal)).toLocaleString('en-IN')}/month.
+3. Growth & Capacity Pathway: You can bridge this ₹${profitGapMonthly.toLocaleString('en-IN')}/month gap by adding ${additionalUnitsNeeded} ${unitName}${additionalUnitsNeeded > 1 ? 's' : ''} (generating ~₹${(additionalUnitsNeeded * unitNetProfit).toLocaleString('en-IN')}/year net profit) or scaling monthly production volume by ₹${incrementalMonthlyRevenue.toLocaleString('en-IN')}.`;
+
+      const summaryTe =
+        profitGapMonthly <= 0
+          ? `మీ వ్యాపారం ఇప్పటికే నెలకు ₹${currentMonthlyProfit.toLocaleString('en-IN')} (వార్షికంగా: ₹${annualizedCurrentProfit.toLocaleString('en-IN')}) నికర లాభాన్ని ఆర్జిస్తోంది, ఇది మీ లక్ష్యమైన ₹${targetProfit.toLocaleString('en-IN')} లాభాన్ని చేరుకుంది.`
+          : `వార్షికంగా ₹${targetProfit.toLocaleString('en-IN')} (నెలకు సుమారు ₹${targetMonthlyProfit.toLocaleString('en-IN')}) నికర లాభాన్ని సాధించడానికి మీ ఆర్థిక ప్రణాళిక:
+1. ప్రస్తుత స్థితి & లాభాల లోటు: మీ ప్రస్తుత నెలవారీ లాభం ₹${currentMonthlyProfit.toLocaleString('en-IN')} (ఆదాయం: ₹${currentMonthlyRevenue.toLocaleString('en-IN')}, ఖర్చులు: ₹${currentMonthlyExpenses.toLocaleString('en-IN')}). మీ లక్ష్యాన్ని చేరడానికి నెలకు ఇంకా ₹${profitGapMonthly.toLocaleString('en-IN')} (సంవత్సరానికి ₹${profitGapAnnual.toLocaleString('en-IN')}) అదనపు లాభం అవసరం.
+2. టర్నోవర్ & బడ్జెట్: ${currentProfitMargin}% లాభాల మార్జిన్ ప్రకారం మీ నెలవారీ ఆదాయం ₹${requiredMonthlyRevenue.toLocaleString('en-IN')} (వార్షికంగా ₹${requiredAnnualRevenue.toLocaleString('en-IN')}) కి చేరాలి.
+3. వ్యాపార విస్తరణ: అదనంగా ${additionalUnitsNeeded} ${unitNameTe}లను చేర్చుకోవడం ద్వారా లేదా నెలవారీ అమ్మకాలను ₹${incrementalMonthlyRevenue.toLocaleString('en-IN')} పెంచడం ద్వారా ఈ లాభాల లోటును భర్తీ చేయవచ్చు.`;
+
+      return {
+        intent,
+        summary,
+        summaryTe,
+        data: {
+          targetProfit,
+          targetMonthlyProfit,
+          currentMonthlyRevenue,
+          currentMonthlyExpenses,
+          currentMonthlyProfit,
+          annualizedCurrentProfit,
+          profitGapMonthly,
+          profitGapAnnual,
+          currentProfitMargin,
+          requiredMonthlyRevenue,
+          requiredAnnualRevenue,
+          incrementalMonthlyRevenue,
+          additionalUnitsNeeded,
         },
       };
     }

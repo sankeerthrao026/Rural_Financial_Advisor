@@ -117,8 +117,8 @@ def classify_query_intent(query: str) -> Dict[str, Any]:
     # 2. Target profit / Capacity question: "how many cows to make 500000 profit?"
     is_how_many = any(k in q for k in [
         "how many", "number of", "how much animals", "how much cows", "cows do i need", "cows should i buy",
-        "buffaloes do i need", "looms do i need", "ఎన్ని ఆవులు", "ఎన్ని బర్రెలు", "ఎన్ని మగ్గాలు", "ఎన్ని కావాలి",
-        "ఆవులు కొనాలి", "బర్రెలు కొనాలి"
+        "buffaloes do i need", "looms do i need", "how many units", "how many machines",
+        "ఎన్ని ఆవులు", "ఎన్ని బర్రెలు", "ఎన్ని మగ్గాలు", "ఎన్ని కావాలి", "ఆవులు కొనాలి", "బర్రెలు కొనాలి"
     ])
     is_profit = any(k in q for k in [
         "profit", "earn", "net income", "income of", "లాభం", "సంపాదించడానికి", "వార్షిక లాభం", "मुनाफा", "कमाई"
@@ -131,44 +131,60 @@ def classify_query_intent(query: str) -> Dict[str, Any]:
     if any(k in q for k in ["revenue", "sales", "turnover", "అమ్మకాలు", "టర్నోవర్"]) and (is_profit or target_amt is not None):
         return {"intent": "revenue_for_target_profit", "targetAmount": target_amt, "rawQuery": query}
 
-    # 4. Savings planning
+    # 4. Target profit planning: "I want to make a profit of 5 lakh rupees how my finances should look"
+    is_profit_planning = any(k in q for k in [
+        "how my finances should look", "how should my finances look", "finances should look",
+        "target profit", "make a profit", "profit of", "earn a profit", "get a profit", "reach profit",
+        "to make a profit", "want to make a profit", "want to earn", "లాభం రావాలంటే", "లాభం కోసం",
+        "ఆర్థిక పరిస్థితి ఎలా ఉండాలి", "లాభ ప్రణాళిక"
+    ])
+
+    if is_profit_planning or (
+        is_profit and (target_amt is not None or any(k in q for k in ["plan", "target", "how", "want"])) and
+        not any(p in q for p in ["how much profit", "my profit", "am i making profit", "నా లాభం ఎంత"])
+    ):
+        return {"intent": "target_profit_planning", "targetAmount": target_amt, "rawQuery": query}
+
+    # 5. Savings planning
     if any(k in q for k in ["save", "saving", "savings", "దాచుకోవాలి", "పొదుపు", "emergency fund"]) and "subsidy" not in q:
         return {"intent": "savings_planning", "targetAmount": target_amt, "rawQuery": query}
 
-    # 5. Expense reduction
+    # 6. Expense reduction
     if (any(k in q for k in ["reduce", "cut", "lower", "control", "curtail", "తగ్గించు", "తగ్గించ"]) and any(w in q for w in ["expense", "cost", "spending", "ఖర్చు"])) or "reduce my expenses" in q:
         return {"intent": "expense_reduction", "targetAmount": target_amt, "rawQuery": query}
 
-    # 6. Specific Scheme Rationale
+    # 7. Specific Scheme Rationale
     if any(k in q for k in ["why", "ఎందుకు"]) and any(k in q for k in ["stand-up", "pmegp", "mudra", "vishwakarma", "nbcfdc", "scheme", "పథకం"]):
         return {"intent": "scheme_rationale", "targetAmount": target_amt, "rawQuery": query}
 
-    # 7. Scheme eligibility
+    # 8. Scheme eligibility
     if any(k in q for k in ["scheme", "eligible", "government scheme", "subsidies", "subsidy", "పథకాలు", "ప్రభుత్వ పథకాలు", "అర్హత"]):
         return {"intent": "government_schemes", "targetAmount": target_amt, "rawQuery": query}
 
-    # 8. Bank documentation
+    # 9. Bank documentation
     if any(k in q for k in ["document", "paperwork", "bank require", "kyc", "apply", "approval", "పత్రాలు", "డాక్యుమెంట్లు"]):
         return {"intent": "document_requirements", "targetAmount": target_amt, "rawQuery": query}
 
-    # 9. Working capital vs Capex
+    # 10. Working capital vs Capex
     if any(k in q for k in ["working capital", "capex", "split", "machinery", "stock", "వర్కింగ్ క్యాపిటల్", "కేపెక్స్"]):
         return {"intent": "working_capital_split", "targetAmount": target_amt, "rawQuery": query}
 
-    # 10. Max borrowing
+    # 11. Max borrowing
     if any(k in q for k in ["how much can i borrow", "how much loan can i get", "maximum loan", "max loan", "borrowing limit", "ఎంత రుణం తీసుకోవచ్చు", "ఎంత లోన్ వస్తుంది"]):
         return {"intent": "max_borrowing_capacity", "targetAmount": target_amt, "rawQuery": query}
 
-    # 11. Repayment / EMI
+    # 12. Repayment / EMI
     if any(k in q for k in ["quarterly repayment", "quarterly emi", "monthly emi", "installment", "monthly pay", "quarterly pay", "వాయిదా", "కిస్తీ"]) or (("emi" in q or "repay" in q) and "interest" not in q):
         return {"intent": "emi_calculation", "targetAmount": target_amt, "rawQuery": query}
 
-    # 12. Interest Cost
+    # 13. Interest Cost
     if any(k in q for k in ["interest rate", "total cost of loan", "total interest", "total repay", "వడ్డీ", "మొత్తం వడ్డీ"]):
         return {"intent": "interest_cost", "targetAmount": target_amt, "rawQuery": query}
 
-    # 13. Loan Affordability
-    if any(k in q for k in ["afford", "can i take", "can i borrow", "తీసుకోవచ్చా", "భరించగలనా", "సాధ్యమేనా"]) or (target_amt is not None and any(k in q for k in ["loan", "రుణం", "లోన్", "lakh"])):
+    # 14. Loan Affordability
+    is_loan_k = any(k in q for k in ["loan", "borrow", "debt", "lend", "రుణం", "అప్పు", "తీసుకోవచ్చా", "లోన్"])
+    is_afford_k = any(k in q for k in ["afford", "can i take", "can i borrow", "తీసుకోవచ్చా", "భరించగలనా", "సాధ్యమేనా", "తీసుకోవచ్చా లేదా", "safe to take"])
+    if is_afford_k or (is_loan_k and target_amt is not None) or (is_loan_k and any(k in q for k in ["afford", "eligible", "safe"])):
         return {"intent": "loan_affordability", "targetAmount": target_amt, "rawQuery": query}
 
     # 14. Profit analysis
@@ -253,6 +269,67 @@ def calculate_intent_metrics(
         summary_te = f"వార్షికంగా ₹{target_profit:,.0f} నికర లాభం సంపాదించడానికి మీకు {rec_units} {unit_name_te}లు అవసరం. ప్రతి యూనిట్ ద్వారా వార్షికంగా ₹{unit_profit:,.0f} నికర లాభం వస్తుంది. మొత్తం ప్రాజెక్ట్ వ్యయం ₹{total_outlay:,.0f} (మీ పెట్టుబడి: ₹{margin_req:,.0f}, బ్యాంక్ రుణం: ₹{loan_req:,.0f})."
 
         return {"summary": summary, "summaryTe": summary_te, "data": {"recommendedUnits": rec_units, "totalOutlay": total_outlay, "marginReq": margin_req, "loanReq": loan_req}}
+
+    elif intent == "target_profit_planning":
+        target_profit = float(target_amount) if target_amount and target_amount > 0 else 500000.0
+        target_monthly_profit = round(target_profit / 12.0)
+
+        current_monthly_rev = monthly_rev
+        current_monthly_exp = monthly_exp
+        current_monthly_profit = monthly_surplus
+        annualized_profit = current_monthly_profit * 12.0
+
+        profit_gap_monthly = target_monthly_profit - current_monthly_profit
+        profit_gap_annual = target_profit - annualized_profit
+
+        current_margin_pct = round((current_monthly_profit / current_monthly_rev * 100.0)) if current_monthly_rev > 0 else 50
+        margin_decimal = max(0.15, current_margin_pct / 100.0)
+
+        required_monthly_rev = round(target_monthly_profit / margin_decimal)
+        required_annual_rev = required_monthly_rev * 12
+        incremental_monthly_rev = max(0, required_monthly_rev - int(current_monthly_rev))
+
+        unit_profit = float(biz.get("unitAnnualNetProfit", 78000.0))
+        unit_name = biz.get("unitNameEn", "Dairy Cow")
+        unit_name_te = biz.get("unitNameTe", "పాడి ఆవు")
+        units_needed = max(1, math.ceil(profit_gap_annual / max(1.0, unit_profit)))
+
+        if profit_gap_monthly <= 0:
+            summary = f"Your enterprise currently generates ₹{current_monthly_profit:,.0f}/month in net profit (Annualized: ₹{annualized_profit:,.0f}), which already fulfills your target annual profit of ₹{target_profit:,.0f}. To sustain this: 1) Maintain monthly sales volume at ₹{current_monthly_rev:,.0f}, 2) Keep operating costs controlled at ₹{current_monthly_exp:,.0f}, and 3) Build a 3-month operating emergency buffer of ₹{round(current_monthly_exp * 3):,.0f}."
+            summary_te = f"మీ వ్యాపారం ఇప్పటికే నెలకు ₹{current_monthly_profit:,.0f} (వార్షికంగా: ₹{annualized_profit:,.0f}) నికర లాభాన్ని ఆర్జిస్తోంది, ఇది మీ లక్ష్యమైన ₹{target_profit:,.0f} లాభాన్ని చేరుకుంది."
+        else:
+            summary = (
+                f"To achieve a target annual profit of ₹{target_profit:,.0f} (~₹{target_monthly_profit:,.0f}/month) for your {biz.get('businessType', 'Dairy Farming')} enterprise:\n"
+                f"1. Current Baseline & Profit Gap: You currently earn ₹{current_monthly_profit:,.0f}/month in net cash surplus (Revenue: ₹{current_monthly_rev:,.0f} minus Expenses: ₹{current_monthly_exp:,.0f}). Your monthly profit gap is ₹{profit_gap_monthly:,.0f} (Annual gap: ₹{profit_gap_annual:,.0f}).\n"
+                f"2. Financial Blueprint: At your current operating margin of {current_margin_pct}%, your target monthly revenue should be ₹{required_monthly_rev:,.0f} (Annualized: ₹{required_annual_rev:,.0f}) with operating expenses disciplined around ₹{round(required_monthly_rev * (1 - margin_decimal)):,.0f}/month.\n"
+                f"3. Growth & Capacity Pathway: You can bridge this ₹{profit_gap_monthly:,.0f}/month gap by adding {units_needed} {unit_name}{'s' if units_needed > 1 else ''} (generating ~₹{units_needed * unit_profit:,.0f}/year net profit) or scaling monthly production volume by ₹{incremental_monthly_rev:,.0f}."
+            )
+            summary_te = (
+                f"వార్షికంగా ₹{target_profit:,.0f} (నెలకు సుమారు ₹{target_monthly_profit:,.0f}) నికర లాభాన్ని సాధించడానికి మీ ఆర్థిక ప్రణాళిక:\n"
+                f"1. ప్రస్తుత స్థితి & లాభాల లోటు: మీ ప్రస్తుత నెలవారీ లాభం ₹{current_monthly_profit:,.0f} (ఆదాయం: ₹{current_monthly_rev:,.0f}, ఖర్చులు: ₹{current_monthly_exp:,.0f}). లక్ష్యాన్ని చేరడానికి నెలకు ఇంకా ₹{profit_gap_monthly:,.0f} (సంవత్సరానికి ₹{profit_gap_annual:,.0f}) అదనపు లాభం అవసరం.\n"
+                f"2. టర్నోవర్ లక్ష్యం: {current_margin_pct}% లాభాల మార్జిన్ ప్రకారం మీ నెలవారీ ఆదాయం ₹{required_monthly_rev:,.0f} (వార్షికంగా ₹{required_annual_rev:,.0f}) కి చేరాలి.\n"
+                f"3. వ్యాపార విస్తరణ: అదనంగా {units_needed} {unit_name_te}లను చేర్చుకోవడం ద్వారా లేదా నెలవారీ అమ్మకాలను ₹{incremental_monthly_rev:,.0f} పెంచడం ద్వారా ఈ లాభాల లోటును భర్తీ చేయవచ్చు."
+            )
+
+        return {
+            "summary": summary,
+            "summaryTe": summary_te,
+            "data": {
+                "targetProfit": target_profit,
+                "targetMonthlyProfit": target_monthly_profit,
+                "currentMonthlyRevenue": current_monthly_rev,
+                "currentMonthlyExpenses": current_monthly_exp,
+                "currentMonthlyProfit": current_monthly_profit,
+                "annualizedProfit": annualized_profit,
+                "profitGapMonthly": profit_gap_monthly,
+                "profitGapAnnual": profit_gap_annual,
+                "currentMarginPct": current_margin_pct,
+                "requiredMonthlyRevenue": required_monthly_rev,
+                "requiredAnnualRevenue": required_annual_rev,
+                "incrementalMonthlyRevenue": incremental_monthly_rev,
+                "additionalUnitsNeeded": units_needed,
+            },
+        }
 
     elif intent == "expense_reduction":
         largest = expenses.get("largestCategories", [])

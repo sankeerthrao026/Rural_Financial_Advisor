@@ -248,4 +248,60 @@ def test_question_specific_intents():
     assert res2.reply != res3.reply
     assert res3.reply != res4.reply
 
+def test_target_profit_planning_golden_query():
+    """
+    Golden Test Case:
+    User asks: 'I want to make a profit of 5 lakh rupees how my finances should look'
+    Must NOT be classified as loan affordability (no 'afford a ₹5,00,000 loan' reply).
+    Must provide target profit planning, profit gap, revenue requirements, and unit scaling.
+    """
+    req = FinanceAdviceRequest(
+        marginCapital=100000.0,
+        loanAmount=900000.0,
+        projectCost=1000000.0,
+        quarterlyEmi=42000.0,
+        category="Dairy Farming",
+        gender="female",
+        socialCategory="OBC",
+        location="Warangal, Telangana",
+        profile={"name": "Anita Sharma", "category": "Dairy Farming"},
+        aggregates={"totalIncome": 45700.0, "totalExpenses": 12700.0, "netCashFlow": 33000.0},
+        userQuery="I want to make a profit of 5 lakh rupees how my finances should look",
+    )
+    res = generate_finance_advice(req)
+
+    # Must NOT mention loan affordability or borrow ₹5,00,000
+    assert "afford a ₹5,00,000 loan" not in res.reply.lower()
+    assert "can comfortably afford a ₹5,00,000 loan" not in res.reply.lower()
+
+    # Must mention profit gap, target profit, and required revenue / scaling
+    reply_lower = res.reply.lower()
+    assert "profit" in reply_lower or "gap" in reply_lower
+    assert any(k in res.reply for k in ["500,000", "5,00,000", "500000"]) or "5 lakh" in reply_lower
+    assert any(k in reply_lower for k in ["revenue", "gap", "baseline", "blueprint", "scaling", "unit", "cow"])
+
+def test_target_profit_planning_telugu_query():
+    """
+    Telugu Test Case:
+    User asks: '5 లక్షల లాభం రావాలంటే నా ఆర్థిక పరిస్థితి ఎలా ఉండాలి' in Telugu mode
+    """
+    req = FinanceAdviceRequest(
+        marginCapital=100000.0,
+        loanAmount=900000.0,
+        projectCost=1000000.0,
+        quarterlyEmi=42000.0,
+        category="Dairy Farming",
+        gender="female",
+        socialCategory="OBC",
+        location="Warangal, Telangana",
+        language="te",
+        profile={"name": "అనిత శర్మ", "category": "Dairy Farming"},
+        aggregates={"totalIncome": 45700.0, "totalExpenses": 12700.0, "netCashFlow": 33000.0},
+        userQuery="5 లక్షల లాభం రావాలంటే నా ఆర్థిక పరిస్థితి ఎలా ఉండాలి",
+    )
+    res = generate_finance_advice(req)
+    assert res.reply is not None
+    assert "లాభం" in res.reply or "రూ." in res.reply or "5,00,000" in res.reply
+
+
 
