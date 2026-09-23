@@ -12,7 +12,14 @@ import {
   SeasonalMoratoriumAdvice,
 } from '@/lib/api/client';
 import { calculateAllEligibleSchemes, SchemeCalculationResult } from '@/lib/finance/schemes';
-import { isSpeechRecognitionSupported, startSpeechListening, stopActiveSpeechRecognition, SpeechController } from '@/lib/voice/speech';
+import {
+  isSpeechRecognitionSupported,
+  isMediaRecordingSupported,
+  startSpeechListening,
+  startAudioRecordingFallback,
+  stopActiveSpeechRecognition,
+  SpeechController,
+} from '@/lib/voice/speech';
 import {
   Calculator,
   ShieldCheck,
@@ -260,12 +267,7 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
   };
 
   // Voice STT input handler
-  const handleVoiceInput = () => {
-    if (!isSpeechRecognitionSupported()) {
-      alert(isTe ? 'మీ బ్రౌజర్ వాయిస్ రికగ్నిషన్‌ను సపోర్ట్ చేయదు.' : 'Voice recognition is not supported in this browser.');
-      return;
-    }
-
+  const handleVoiceInput = async () => {
     if (isListening) {
       voiceControllerRef.current?.stop();
       voiceControllerRef.current = null;
@@ -273,26 +275,59 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
       return;
     }
 
-    setIsListening(true);
-    voiceControllerRef.current = startSpeechListening({
-      language,
-      onResult: (transcript: string, isFinal: boolean) => {
-        if (isFinal && transcript && transcript.trim()) {
+    if (isSpeechRecognitionSupported()) {
+      setIsListening(true);
+      voiceControllerRef.current = startSpeechListening({
+        language,
+        onInterim: (interim) => {
+          if (interim) setInputText(interim);
+        },
+        onResult: (transcript: string, isFinal: boolean) => {
+          if (transcript) setInputText(transcript);
+          if (isFinal) {
+            setIsListening(false);
+            voiceControllerRef.current = null;
+          }
+        },
+        onEnd: () => {
           setIsListening(false);
           voiceControllerRef.current = null;
-          setInputText(transcript.trim());
-          handleSendMessage(transcript.trim());
-        }
-      },
-      onEnd: () => {
+        },
+        onError: () => {
+          setIsListening(false);
+          voiceControllerRef.current = null;
+        },
+      });
+      return;
+    }
+
+    // Secondary Fallback: MediaRecorder audio streaming
+    if (isMediaRecordingSupported()) {
+      try {
+        setIsListening(true);
+        const fallbackRecorder = await startAudioRecordingFallback({
+          language: language as 'en' | 'te',
+          onResult: (transcribedText) => {
+            setIsListening(false);
+            voiceControllerRef.current = null;
+            if (transcribedText) {
+              setInputText(transcribedText);
+            }
+          },
+          onError: () => {
+            setIsListening(false);
+            voiceControllerRef.current = null;
+          },
+        });
+        voiceControllerRef.current = fallbackRecorder;
+      } catch (e) {
         setIsListening(false);
         voiceControllerRef.current = null;
-      },
-      onError: () => {
-        setIsListening(false);
-        voiceControllerRef.current = null;
-      },
-    });
+      }
+      return;
+    }
+
+    setIsListening(false);
   };
 
   // Suggested follow-up prompt pills
@@ -822,7 +857,7 @@ export function FinanceAdvisorScreen({ setActive }: { setActive?: (tab: string) 
 
                   {/* Benefits */}
                   <ul className="mt-2.5 space-y-1 text-xs text-muted-foreground">
-                    {(isTe && scheme.benefitsTe ? scheme.benefitsTe : scheme.benefits).slice(0, 2).map((b, bIdx) => (
+                    {(isTe && scheme.benefitsTe ? scheme.benefitsTe : scheme.benefits).slice(0, 2).map((b: string, bIdx: number) => (
                       <li key={bIdx} className="flex items-start gap-1.5 text-[11px]">
                         <Check className="size-3 text-emerald-800 dark:text-emerald-400 shrink-0 mt-0.5" />
                         <span>{b}</span>

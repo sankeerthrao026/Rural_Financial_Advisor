@@ -7,6 +7,7 @@ import { Mic, MicOff, Check, Sparkles, Building2, MapPin, IndianRupee, ShieldChe
 import { formatINR } from '@/lib/utils/currency';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { VoiceButton } from '@/components/ui/voice-button';
+import { parseSpokenTransaction } from '@/lib/voice/speech';
 
 export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
   const { profile, updateProfile, language, setLanguage, inputMode, setInputMode, loadPreset, dictionary } = useApp();
@@ -35,9 +36,12 @@ export function BusinessProfileScreen({ onSaved }: { onSaved?: () => void }) {
       // otherwise flicker partial text into the fields.
       if (!isFinal) return;
 
+      const parsedTx = parseSpokenTransaction(transcript);
       const cleanStr = transcript.replace(/₹/g, '').replace(/,/g, '');
       const numbers = cleanStr.match(/\d+/g);
-      if (numbers && numbers.length > 0) {
+      if (parsedTx.amount && parsedTx.amount >= 1000) {
+        setMarginCapital(parsedTx.amount.toString());
+      } else if (numbers && numbers.length > 0) {
         const detectedCapital = parseInt(numbers.join(''), 10);
         if (detectedCapital >= 1000) {
           setMarginCapital(detectedCapital.toString());

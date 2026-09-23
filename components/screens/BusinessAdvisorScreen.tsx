@@ -2,9 +2,17 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
-import { BusinessAdvisorOutput } from '@/lib/ai/provider';
 import { Button } from '@/components/ui/button';
-import { isSpeechRecognitionSupported, startSpeechListening, stopActiveSpeechRecognition, SpeechController } from '@/lib/voice/speech';
+import { BusinessAdvisorOutput } from '@/lib/ai/provider';
+import {
+  isSpeechRecognitionSupported,
+  isMediaRecordingSupported,
+  startSpeechListening,
+  startAudioRecordingFallback,
+  stopActiveSpeechRecognition,
+  SpeechController,
+  getSpeechErrorMessage,
+} from '@/lib/voice/speech';
 import {
   Sparkles,
   TrendingUp,
@@ -368,7 +376,7 @@ export function BusinessAdvisorScreen() {
   };
 
   // Voice Input handler
-  const handleToggleVoice = () => {
+  const handleToggleVoice = async () => {
     if (isListening) {
       voiceControllerRef.current?.stop();
       voiceControllerRef.current = null;
@@ -376,33 +384,61 @@ export function BusinessAdvisorScreen() {
       return;
     }
 
-    if (!isSpeechRecognitionSupported()) {
-      alert(
-        isTe
-          ? 'మీ బ్రౌజర్‌లో వాయిస్ రికగ్నిషన్ అందుబాటులో లేదు.'
-          : 'Voice speech recognition is not supported in this browser.'
-      );
+    if (isSpeechRecognitionSupported()) {
+      setIsListening(true);
+      voiceControllerRef.current = startSpeechListening({
+        language,
+        onInterim: (interim) => {
+          if (interim) setInputText(interim);
+        },
+        onResult: (transcript, isFinal) => {
+          if (transcript) setInputText(transcript);
+          if (isFinal) {
+            setIsListening(false);
+            voiceControllerRef.current = null;
+            inputRef.current?.focus();
+          }
+        },
+        onError: (_code, _msg) => {
+          setIsListening(false);
+          voiceControllerRef.current = null;
+        },
+        onEnd: () => {
+          setIsListening(false);
+          voiceControllerRef.current = null;
+        },
+      });
       return;
     }
 
-    setIsListening(true);
-    voiceControllerRef.current = startSpeechListening({
-      language,
-      onResult: (transcript) => {
-        setInputText(transcript);
+    // Secondary Fallback: MediaRecorder audio streaming via /api/voice/transcribe
+    if (isMediaRecordingSupported()) {
+      try {
+        setIsListening(true);
+        const fallbackRecorder = await startAudioRecordingFallback({
+          language: language as 'en' | 'te',
+          onResult: (transcribedText) => {
+            setIsListening(false);
+            voiceControllerRef.current = null;
+            if (transcribedText) {
+              setInputText(transcribedText);
+              inputRef.current?.focus();
+            }
+          },
+          onError: () => {
+            setIsListening(false);
+            voiceControllerRef.current = null;
+          },
+        });
+        voiceControllerRef.current = fallbackRecorder;
+      } catch (e) {
         setIsListening(false);
         voiceControllerRef.current = null;
-        inputRef.current?.focus();
-      },
-      onError: () => {
-        setIsListening(false);
-        voiceControllerRef.current = null;
-      },
-      onEnd: () => {
-        setIsListening(false);
-        voiceControllerRef.current = null;
-      },
-    });
+      }
+      return;
+    }
+
+    setIsListening(false);
   };
 
   // Run automatically on first load if not loaded yet

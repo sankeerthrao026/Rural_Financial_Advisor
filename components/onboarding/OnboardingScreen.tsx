@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { VoiceButton } from '@/components/ui/voice-button';
+import { parseSpokenTransaction } from '@/lib/voice/speech';
 
 export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
   const { language, setLanguage, inputMode, setInputMode, updateProfile, loadPreset, dictionary } = useApp();
@@ -37,10 +38,13 @@ export function OnboardingScreen({ onComplete }: { onComplete?: () => void }) {
       // otherwise flicker partial text into the fields.
       if (!isFinal) return;
 
-      // Numbers extraction for margin capital
+      // Numbers extraction for margin capital (supports words like "ఒక లక్ష", "one lakh", and digits)
+      const parsedTx = parseSpokenTransaction(transcript);
       const cleanStr = transcript.replace(/₹/g, '').replace(/,/g, '');
       const numbers = cleanStr.match(/\d+/g);
-      if (numbers && numbers.length > 0) {
+      if (parsedTx.amount && parsedTx.amount >= 1000) {
+        setMarginCapital(parsedTx.amount.toString());
+      } else if (numbers && numbers.length > 0) {
         const val = parseInt(numbers.join(''), 10);
         if (val >= 1000) setMarginCapital(val.toString());
       }

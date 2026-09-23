@@ -256,7 +256,7 @@ export async function startAudioRecordingFallback(options: {
    * never start a MediaRecorder (prevents a background microphone leak).
    */
   isCancelled?: () => boolean;
-}): Promise<{ stop: () => void }> {
+}): Promise<SpeechController> {
   if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
     throw new Error('Microphone media recording is not supported in this browser.');
   }
@@ -309,6 +309,14 @@ export async function startAudioRecordingFallback(options: {
     stop: () => {
       if (mediaRecorder.state !== 'inactive') {
         mediaRecorder.stop();
+      }
+    },
+    abort: () => {
+      stream.getTracks().forEach((track) => track.stop());
+      if (mediaRecorder.state !== 'inactive') {
+        try {
+          mediaRecorder.stop();
+        } catch (e) {}
       }
     },
   };

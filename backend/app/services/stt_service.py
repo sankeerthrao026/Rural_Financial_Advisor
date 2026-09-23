@@ -72,37 +72,48 @@ class STTService:
                     f"}}"
                 )
 
-                response = gemini_service.client.models.generate_content(
-                    model="gemini-2.5-flash",
-                    contents=[
-                        types.Part.from_bytes(
-                            data=audio_bytes,
-                            mime_type=content_type or "audio/webm",
-                        ),
-                        prompt,
-                    ],
-                    config=types.GenerateContentConfig(
-                        response_mime_type="application/json",
-                        temperature=0.1,
-                    ),
-                )
+                candidate_models = [
+                    "gemini-flash-latest",
+                    "gemini-2.5-flash",
+                    "gemini-2.0-flash",
+                    "gemini-1.5-flash",
+                ]
 
-                raw_text = (response.text or "").strip()
-                if raw_text.startswith("```"):
-                    lines = raw_text.split("\n")
-                    if lines[0].startswith("```"):
-                        lines = lines[1:]
-                    if lines and lines[-1].startswith("```"):
-                        lines = lines[:-1]
-                    raw_text = "\n".join(lines).strip()
+                for model in candidate_models:
+                    try:
+                        response = gemini_service.client.models.generate_content(
+                            model=model,
+                            contents=[
+                                types.Part.from_bytes(
+                                    data=audio_bytes,
+                                    mime_type=content_type or "audio/webm",
+                                ),
+                                prompt,
+                            ],
+                            config=types.GenerateContentConfig(
+                                response_mime_type="application/json",
+                                temperature=0.1,
+                            ),
+                        )
 
-                parsed = json.loads(raw_text)
-                return {
-                    "success": True,
-                    "transcript": parsed.get("transcript", ""),
-                    "structured": parsed.get("structured"),
-                    "provider": "Google Gemini 2.5 Flash Audio STT",
-                }
+                        raw_text = (response.text or "").strip()
+                        if raw_text.startswith("```"):
+                            lines = raw_text.split("\n")
+                            if lines[0].startswith("```"):
+                                lines = lines[1:]
+                            if lines and lines[-1].startswith("```"):
+                                lines = lines[:-1]
+                            raw_text = "\n".join(lines).strip()
+
+                        parsed = json.loads(raw_text)
+                        return {
+                            "success": True,
+                            "transcript": parsed.get("transcript", ""),
+                            "structured": parsed.get("structured"),
+                            "provider": f"Google Gemini ({model}) Audio STT",
+                        }
+                    except Exception as model_err:
+                        print(f"[WARN] Gemini STT with {model} failed: {model_err}")
             except Exception as e:
                 print(f"[WARN] Gemini audio STT transcription failed: {e}")
 

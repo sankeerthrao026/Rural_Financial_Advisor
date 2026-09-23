@@ -58,8 +58,6 @@ import {
   parseSpokenTransaction,
   SpokenTransactionResult,
 } from '@/lib/voice/speech';
-import { useVoiceInput } from '@/hooks/useVoiceInput';
-import { VoiceButton } from '@/components/ui/voice-button';
 import { VoiceInputModal } from '@/components/voice/VoiceInputModal';
 import { OcrReviewModal } from '@/components/ocr/OcrReviewModal';
 import { LogbookEntry, KhataEntry } from '@/lib/firebase/logbook';
@@ -406,22 +404,7 @@ export function DigitalLogbookScreen() {
     });
   }, [khataEntries, khataFilter]);
 
-  // Voice handler
-  const voiceInput = useVoiceInput({
-    targetLanguage: language as 'en' | 'te',
-    onResult: (transcript, isFinal) => {
-      // Only final transcripts should populate the form — interim results would
-      // otherwise flicker partial entries into the fields.
-      if (!isFinal) return;
-      const parsed = parseSpokenTransaction(transcript);
-      if (parsed.amount) setAmount(parsed.amount.toString());
-      setType(parsed.type);
-      if (parsed.category) setCategory(parsed.category);
-      setNote(parsed.note);
-      setShowAddForm(true);
-    },
-  });
-
+  // Voice handler to open modal
   const handleToggleVoice = () => {
     setShowVoiceModal(true);
   };
@@ -591,14 +574,14 @@ export function DigitalLogbookScreen() {
                 <span>{isTe ? '− ఖర్చు నమోదు' : '− Add Expense'}</span>
               </button>
 
-              <VoiceButton
-                status={voiceInput.status}
-                onToggle={handleToggleVoice}
-                errorMessage={voiceInput.error}
-                onRetry={voiceInput.startListening}
-                label={isTe ? 'వాయిస్' : isHi ? 'वॉइस' : 'Voice'}
-                listeningLabel={isTe ? 'వింటున్నాము...' : isHi ? 'सुन रहे हैं...' : 'Listening...'}
-              />
+              <button
+                type="button"
+                onClick={() => setShowVoiceModal(true)}
+                className="flex items-center gap-1.5 rounded-xl border bg-card px-3.5 py-2 text-xs font-semibold cursor-pointer hover:bg-muted transition-colors shadow-xs"
+              >
+                <Mic className="size-3.5 text-primary" />
+                <span>{isTe ? 'వాయిస్' : isHi ? 'वॉइस' : 'Voice'}</span>
+              </button>
 
               <button
                 type="button"
