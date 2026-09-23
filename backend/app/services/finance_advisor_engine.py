@@ -191,8 +191,16 @@ def classify_query_intent(query: str) -> Dict[str, Any]:
     if any(k in q for k in ["working capital", "capex", "split", "machinery", "stock", "వర్కింగ్ క్యాపిటల్", "కేపెక్స్"]):
         return {"intent": "working_capital_split", "targetAmount": target_amt, "rawQuery": query}
 
-    # 11. Max borrowing
-    if any(k in q for k in ["how much can i borrow", "how much loan can i get", "maximum loan", "max loan", "borrowing limit", "ఎంత రుణం తీసుకోవచ్చు", "ఎంత లోన్ వస్తుంది"]):
+    # 11. Debt Management & Multi-Obligation Planning: "how should I manage my loans and expenses while remaining profitable?"
+    if (
+        (any(k in q for k in ["manage", "handle", "balance", "structure", "నిర్వహణ", "సర్దుబాటు"]) and
+         any(w in q for w in ["debt", "loan", "loans", "emi", "expense", "expenses", "రుణం", "అప్పులు", "ఖర్చులు"])) or
+        ("manage" in q and any(k in q for k in ["loan", "debt", "emi"]))
+    ):
+        return {"intent": "debt_management", "targetAmount": target_amt, "rawQuery": query}
+
+    # 12. Max borrowing / Affordability: "how much can I borrow?", "what can I afford right now?"
+    if any(k in q for k in ["how much can i borrow", "how much loan can i get", "maximum loan", "max loan", "borrowing limit", "what can i afford", "how much can i afford", "what can i afford right now", "ఎంత రుణం తీసుకోవచ్చు", "ఎంత లోన్ వస్తుంది", "ఎంత అప్పు పొందగలను", "నేను ఎంత భరించగలను"]):
         return {"intent": "max_borrowing_capacity", "targetAmount": target_amt, "rawQuery": query}
 
     # 12. Repayment / EMI
@@ -322,27 +330,29 @@ def calculate_intent_metrics(
         payback_months = math.ceil(purchase_cost / net_monthly_gain) if net_monthly_gain > 0 else 0
 
         if is_ac_cooling and "dairy" in biz.get("businessType", "dairy").lower():
+            safety_verdict = "YES" if is_safe else "HIGH RISK / TIGHT"
+            safety_verdict_te = "అవును (సురక్షితం)" if is_safe else "రిస్క్ ఎక్కువ / కష్టం"
             summary = (
                 f"Analysis for purchasing an Air Conditioner (₹{purchase_cost:,.0f}) for your Dairy Farm in {prof.get('location', 'Warangal')}:\n\n"
                 f"1. Financial Safety & Affordability:\n"
-                f"- Safe to Buy: YES. With your monthly revenue of ₹{monthly_rev:,.0f} and expenses of ₹{monthly_exp:,.0f}, your monthly net cash surplus is ₹{monthly_surplus:,.0f} (Disposable cushion after debt service: ₹{current_disp_buffer:,.0f}/month).\n"
-                f"- Cash-Flow Impact: Factoring an estimated ₹{operating_monthly_cost:,.0f}/month in electricity and maintenance, your projected monthly surplus remains a strong ₹{proj_new_surplus:,.0f} (leaving ₹{proj_disp_buffer:,.0f} in disposable reserves).\n\n"
+                f"- Safe to Buy: {safety_verdict}. With your monthly revenue of ₹{monthly_rev:,.0f} and expenses of ₹{monthly_exp:,.0f}, your monthly net cash surplus is ₹{monthly_surplus:,.0f} (Disposable cushion after debt service: ₹{current_disp_buffer:,.0f}/month).\n"
+                f"- Cash-Flow Impact: Factoring an estimated ₹{operating_monthly_cost:,.0f}/month in electricity and maintenance, your projected monthly surplus is ₹{proj_new_surplus:,.0f} (leaving ₹{proj_disp_buffer:,.0f} in disposable reserves).\n\n"
                 f"2. Profitability & Dairy Economics Assessment:\n"
                 f"- Direct Profitability: LOW ROI for standard AC in an open or semi-open shed. While summer heat stress mitigation is critical (summer heat drops milk yield by 20%–30%), open cattle sheds cannot retain AC cooling efficiently without heavy insulation, leading to high electricity bills with minimal cooling benefit.\n"
                 f"- High-ROI Alternatives: Installing high-pressure misting foggers with ceiling fans (costing ₹12,000–₹15,000 with ~₹500/month electricity) or a Bulk Milk Chiller offers 3x higher economic return on milk yield preservation than an air conditioner.\n\n"
                 f"3. Recommendation:\n"
-                f"Financially you can safely afford the ₹{purchase_cost:,.0f} outlay, but from a business profitability standpoint, we recommend investing in cattle fogger misting sprinklers rather than an AC unit to maximize net returns."
+                f"{f'Financially you can safely afford the ₹{purchase_cost:,.0f} outlay, but from a business profitability standpoint, we recommend investing in cattle fogger misting sprinklers rather than an AC unit to maximize net returns.' if is_safe else f'Financially, a ₹{purchase_cost:,.0f} outlay is high risk given your narrow disposable cash cushion of ₹{current_disp_buffer:,.0f}/month. We recommend low-cost misting foggers (₹12,000) or building reserves first.'}"
             )
             summary_te = (
                 f"మీ డెయిరీ ఫామ్ కోసం ఎయిర్ కండీషనర్ (AC - సుమారు ₹{purchase_cost:,.0f}) కొనుగోలు ఆర్థిక విశ్లేషణ:\n\n"
                 f"1. కొనుగోలు భద్రత & స్తోమత:\n"
-                f"- కొనుగోలు సురక్షితమేనా: అవును. మీ నెలవారీ ఆదాయం ₹{monthly_rev:,.0f}, ఖర్చులు ₹{monthly_exp:,.0f} కాగా, మీకు ₹{monthly_surplus:,.0f} నికర మిగులు ఉంది (రుణ వాయిదా పోను ₹{current_disp_buffer:,.0f} మిగులు నిధులు ఉంటాయి).\n"
-                f"- నగదు ప్రవాహంపై ప్రభావం: నెలకు సుమారు ₹{operating_monthly_cost:,.0f} విద్యుత్/నిర్వహణ ఖర్చు అదనంగా చేరినా, మీకు ₹{proj_disp_buffer:,.0f} సురక్షిత మిగులు మిగులుతుంది.\n\n"
+                f"- కొనుగోలు సురక్షితమేనా: {safety_verdict_te}. మీ నెలవారీ ఆదాయం ₹{monthly_rev:,.0f}, ఖర్చులు ₹{monthly_exp:,.0f} కాగా, మీకు ₹{monthly_surplus:,.0f} నికర మిగులు ఉంది (రుణ వాయిదా పోను ₹{current_disp_buffer:,.0f} మిగులు నిధులు ఉంటాయి).\n"
+                f"- నగదు ప్రవాహంపై ప్రభావం: నెలకు సుమారు ₹{operating_monthly_cost:,.0f} విద్యుత్/నిర్వహణ ఖర్చు అదనంగా చేరినా, మీకు ₹{proj_disp_buffer:,.0f} మిగులుతుంది.\n\n"
                 f"2. లాభదాయకత విశ్లేషణ:\n"
                 f"- నేరుగా లాభదాయకమా: ఓపెన్ షెడ్డులో ఏసీకి తక్కువ ROI ఉంటుంది. వేసవిలో ఆవులకు చల్లదనం అవసరమే అయినప్పటికీ, ఓపెన్ షెడ్లలో ఏసీ గాలి నిలవదు మరియు కరెంట్ బిల్లు పెరుగుతుంది.\n"
                 f"- ఉత్తమ ప్రత్యామ్నాయం: ఫాగర్స్/మిస్టింగ్ స్ప్రింక్లర్లు మరియు ఫ్యాన్లు (వ్యయం ₹12,000 - ₹15,000) ఏసీ కంటే 3 రెట్లు ఎక్కువ లాభదాయకమైనవి.\n\n"
                 f"3. సిఫార్సు:\n"
-                f"మీ ఆర్థిక పరిస్థితి ప్రకారం మీరు ₹{purchase_cost:,.0f} ను సులభంగా భరించగలరు, కానీ గరిష్ట లాభం కోసం ఫాగర్ మిస్టింగ్ సిస్టమ్ ఏర్పాటు చేసుకోవడం ఉత్తమం."
+                f"{'మీ ఆర్థిక పరిస్థితి ప్రకారం మీరు ఈ కొనుగోలు చేయగలరు, కానీ గరిష్ట లాభం కోసం ఫాగర్ మిస్టింగ్ సిస్టమ్ ఏర్పాటు చేసుకోవడం ఉత్తమం.' if is_safe else 'ప్రస్తుత ఇరుకైన మిగులు బడ్జెట్ ప్రకారం ఈ కొనుగోలు రిస్క్. తక్కువ ఖర్చుతో కూడిన ఫాగర్ల వైపు మొగ్గు చూపండి.'}"
             )
         else:
             summary = (
@@ -378,6 +388,64 @@ def calculate_intent_metrics(
                 "projectedDisposableBuffer": proj_disp_buffer,
                 "isSafe": is_safe,
                 "paybackMonths": payback_months,
+            },
+        }
+
+    elif intent == "debt_management":
+        monthly_debt_service = float(loan.get("monthlyEmiEquivalent", loan.get("quarterlyEmi", 42000.0) / 3.0))
+        quarterly_debt_service = float(loan.get("quarterlyEmi", monthly_debt_service * 3.0))
+        retained_buffer = monthly_surplus - monthly_debt_service
+        dti = round((monthly_debt_service / monthly_rev * 100.0)) if monthly_rev > 0 else 0
+        dscr = round((monthly_surplus / monthly_debt_service * 100.0)) / 100.0 if monthly_debt_service > 0 else 9.99
+        emergency_reserve_monthly = round(retained_buffer * 0.5)
+        target_emergency_reserve = round(monthly_exp * 3)
+
+        biz_type = biz.get("businessType", "Dairy Farming")
+        lean_season = biz.get("leanSeason", "April – June (Peak Summer Heat)")
+        peak_season = biz.get("peakSeason", "August – January (Monsoon & Winter Flush)")
+
+        summary = (
+            f"Debt & Cash Flow Management Strategy for your {biz_type} enterprise:\n\n"
+            f"1. Current Cash Inflow & Debt Obligations:\n"
+            f"- Monthly Revenue: ₹{monthly_rev:,.0f} | Monthly Operating Costs: ₹{monthly_exp:,.0f}\n"
+            f"- Net Operating Cash Surplus: ₹{monthly_surplus:,.0f}/month\n"
+            f"- Scheduled Debt Service: ₹{monthly_debt_service:,.0f}/month (Quarterly EMI: ₹{quarterly_debt_service:,.0f})\n"
+            f"- Retained Disposable Cash: ₹{retained_buffer:,.0f}/month (DSCR: {dscr}x, Debt-to-Income: {dti}%)\n\n"
+            f"2. Liquidity & Reserve Allocation:\n"
+            f"- Emergency Reserve Buffer: Allocate ₹{emergency_reserve_monthly:,.0f}/month (50% of retained cash) until you reach a 3-month operating safety cushion of ₹{target_emergency_reserve:,.0f}.\n"
+            f"- Seasonal Amortization: During {lean_season}, invoke your interest-only seasonal moratorium to protect cash flow. During {peak_season}, channel surplus earnings into voluntary loan prepayment to reduce total interest.\n\n"
+            f"3. Health Assessment:\n"
+            f"Your debt burden is low-risk and well-covered (DSCR {dscr}x > 1.5x benchmark). Operating expenses and debt repayments are comfortably sustainable."
+        )
+
+        summary_te = (
+            f"మీ {biz_type} వ్యాపారానికి రుణ నిర్వహణ & నగదు ప్రవాహ ప్రణాళిక:\n\n"
+            f"1. ప్రస్తుత ఆదాయం & రుణ బాధ్యతలు:\n"
+            f"- నెలవారీ ఆదాయం: ₹{monthly_rev:,.0f} | నిర్వహణ ఖర్చులు: ₹{monthly_exp:,.0f}\n"
+            f"- నికర నగదు మిగులు: ₹{monthly_surplus:,.0f}/నెల\n"
+            f"- నిర్ణీత రుణ వాయిదా: ₹{monthly_debt_service:,.0f}/నెల (త్రైమాసిక వాయిదా: ₹{quarterly_debt_service:,.0f})\n"
+            f"- నికర మిగులు నిధులు: ₹{retained_buffer:,.0f}/నెల (DSCR: {dscr}x, DTI: {dti}%)\n\n"
+            f"2. పొదుపు & సీజనల్ వ్యూహం:\n"
+            f"- ఎమర్జెన్సీ ఫండ్: మిగిలిన నిధులలో నెలకు ₹{emergency_reserve_monthly:,.0f} ఆదా చేసి 3 నెలల ఖర్చుల నిధి (₹{target_emergency_reserve:,.0f}) సిద్ధం చేసుకోండి.\n"
+            f"- వేసవి మారటోరియం: వేసవి/లీన్ సీజన్లో వడ్డీ మాత్రమే చెల్లించి లిక్విడిటీని కాపాడుకోండి. పీక్ సీజన్లో అదనపు అసలు చెల్లించండి.\n\n"
+            f"3. ఆర్థిక స్థితి:\n"
+            f"మీ రుణ చెల్లింపు సామర్థ్యం చాలా పటిష్టంగా ఉంది (DSCR: {dscr}x). వ్యాపారం లాభదాయకంగా కొనసాగుతుంది."
+        )
+
+        return {
+            "summary": summary,
+            "summaryTe": summary_te,
+            "data": {
+                "monthlyRev": monthly_rev,
+                "monthlyExp": monthly_exp,
+                "monthlySurplus": monthly_surplus,
+                "monthlyDebtService": monthly_debt_service,
+                "quarterlyDebtService": quarterly_debt_service,
+                "retainedBuffer": retained_buffer,
+                "dti": dti,
+                "dscr": dscr,
+                "emergencyReserveMonthly": emergency_reserve_monthly,
+                "targetEmergencyReserve": target_emergency_reserve,
             },
         }
 

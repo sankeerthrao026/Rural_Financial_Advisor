@@ -380,5 +380,107 @@ def test_air_conditioner_investment_telugu():
     assert res.reply is not None
     assert any(k in res.reply for k in ["AC", "ఏసీ", "ఎయిర్ కండీషనర్", "డెయిరీ", "మిగులు"])
 
+def test_user_a_vs_user_b_machine_affordability():
+    """
+    Test Personalized Reasoning:
+    User A has strong surplus (₹33,000/mo, ₹14,000 debt -> ₹19,000 buffer) -> Safe for ₹50,000 machine.
+    User B has tight surplus (₹8,000/mo, ₹7,000 debt -> ₹1,000 buffer) -> High risk / tight buffer warning.
+    """
+    # User A: High surplus
+    req_a = FinanceAdviceRequest(
+        marginCapital=100000.0,
+        loanAmount=900000.0,
+        projectCost=1000000.0,
+        quarterlyEmi=42000.0,
+        category="Dairy Farming",
+        aggregates={"totalIncome": 45700.0, "totalExpenses": 12700.0, "netCashFlow": 33000.0},
+        userQuery="Can I afford a ₹50,000 machine?",
+    )
+    res_a = generate_finance_advice(req_a)
+    assert "YES" in res_a.reply or "safely proceed" in res_a.reply or "safe" in res_a.reply.lower()
+
+    # User B: Low surplus
+    req_b = FinanceAdviceRequest(
+        marginCapital=20000.0,
+        loanAmount=150000.0,
+        projectCost=170000.0,
+        quarterlyEmi=21000.0, # 7000/mo
+        category="Dairy Farming",
+        aggregates={"totalIncome": 20000.0, "totalExpenses": 12000.0, "netCashFlow": 8000.0},
+        userQuery="Can I afford a ₹50,000 machine?",
+    )
+    res_b = generate_finance_advice(req_b)
+    # User B's disposable buffer is only ₹1,000 (8,000 surplus - 7,000 EMI), so operating a machine is tight
+    assert "TIGHT" in res_b.reply or "buffer" in res_b.reply.lower()
+
+def test_debt_management_and_expense_query():
+    """
+    Test: 'How should I manage my loans and expenses while remaining profitable?'
+    """
+    req = FinanceAdviceRequest(
+        marginCapital=100000.0,
+        loanAmount=900000.0,
+        projectCost=1000000.0,
+        quarterlyEmi=42000.0,
+        category="Dairy Farming",
+        gender="female",
+        socialCategory="OBC",
+        location="Warangal, Telangana",
+        profile={"name": "Anita Sharma", "category": "Dairy Farming"},
+        aggregates={"totalIncome": 45700.0, "totalExpenses": 12700.0, "netCashFlow": 33000.0},
+        userQuery="How should I manage my loans and expenses while remaining profitable?",
+    )
+    res = generate_finance_advice(req)
+    reply_lower = res.reply.lower()
+    assert any(k in reply_lower for k in ["debt", "cash flow", "management", "retained", "buffer", "dscr"])
+    assert any(k in res.reply for k in ["45,700", "45700", "12,700", "12700", "33,000", "33000"])
+
+def test_what_can_i_afford_right_now():
+    """
+    Test: 'What can I afford right now?' -> max_borrowing_capacity
+    """
+    req = FinanceAdviceRequest(
+        marginCapital=100000.0,
+        loanAmount=900000.0,
+        projectCost=1000000.0,
+        quarterlyEmi=42000.0,
+        category="Dairy Farming",
+        gender="female",
+        socialCategory="OBC",
+        location="Warangal, Telangana",
+        profile={"name": "Anita Sharma", "category": "Dairy Farming"},
+        aggregates={"totalIncome": 45700.0, "totalExpenses": 12700.0, "netCashFlow": 33000.0},
+        userQuery="What can I afford right now?",
+    )
+    res = generate_finance_advice(req)
+    reply_lower = res.reply.lower()
+    assert any(k in reply_lower for k in ["borrowing limit", "borrow", "capacity", "safe", "emi", "surplus"])
+
+def test_no_context_contamination_consecutive_questions():
+    """
+    Test Context Isolation:
+    History discusses ₹5,00,000 target profit and cows, but current question is about AC purchase.
+    Current response must NOT inject ₹5,00,000 cows plan.
+    """
+    req = FinanceAdviceRequest(
+        marginCapital=100000.0,
+        loanAmount=900000.0,
+        projectCost=1000000.0,
+        quarterlyEmi=42000.0,
+        category="Dairy Farming",
+        aggregates={"totalIncome": 45700.0, "totalExpenses": 12700.0, "netCashFlow": 33000.0},
+        history=[
+            {"role": "user", "content": "How many cows do I need for 5 lakh profit?"},
+            {"role": "assistant", "content": "To generate ₹5,00,000 annual profit you need 7 cows."},
+        ],
+        userQuery="Is it safe for me to buy an air conditioner?",
+    )
+    res = generate_finance_advice(req)
+    reply_lower = res.reply.lower()
+    assert "7 cows" not in reply_lower
+    assert "to achieve a target annual profit of ₹500,000" not in reply_lower
+    assert any(k in reply_lower for k in ["air conditioner", "ac", "cooling"])
+
+
 
 

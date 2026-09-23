@@ -131,7 +131,8 @@ export interface NormalizedFinancialContext {
 export type FinancialIntent =
   | 'loan_affordability' // "can I afford a ₹2 lakh loan?", "can I take this loan?"
   | 'investment_decision' // "should I buy an AC?", "is it safe to buy an air conditioner?", "can I afford a 50k machine?"
-  | 'max_borrowing_capacity' // "how much can I borrow?", "how much loan can I get?"
+  | 'debt_management' // "how should I manage my loans and expenses while remaining profitable?"
+  | 'max_borrowing_capacity' // "how much can I borrow?", "what can I afford right now?"
   | 'savings_planning' // "how much should I save every month?"
   | 'expense_reduction' // "how can I reduce my expenses?", "cut costs"
   | 'profit_analysis' // "how much profit am I making?", "what is my margin?"
@@ -644,9 +645,18 @@ export function classifyFinancialQueryIntent(query: string): IntentAnalysisResul
     return { intent: 'working_capital_split', targetAmount: targetAmt, targetUnit, rawQuery: query };
   }
 
-  // 11. Max borrowing: "how much can I borrow?", "how much loan can I get?"
+  // 11. Debt Management & Multi-Obligation Planning: "how should I manage my loans and expenses while remaining profitable?"
   if (
-    ['how much can i borrow', 'how much loan can i get', 'maximum loan', 'max loan', 'borrowing limit', 'ఎంత రుణం తీసుకోవచ్చు', 'ఎంత లోన్ వస్తుంది', 'ఎంత అప్పు పొందగలను'].some(
+    (['manage', 'handle', 'balance', 'structure', 'నిర్వహణ', 'సర్దుబాటు'].some((k) => q.includes(k)) &&
+      ['debt', 'loan', 'loans', 'emi', 'expense', 'expenses', 'రుణం', 'అప్పులు', 'ఖర్చులు'].some((w) => q.includes(w))) ||
+    (q.includes('manage') && (q.includes('loan') || q.includes('debt') || q.includes('emi')))
+  ) {
+    return { intent: 'debt_management', targetAmount: targetAmt, targetUnit, rawQuery: query };
+  }
+
+  // 12. Max borrowing / Affordability: "how much can I borrow?", "what can I afford right now?"
+  if (
+    ['how much can i borrow', 'how much loan can i get', 'maximum loan', 'max loan', 'borrowing limit', 'what can i afford', 'how much can i afford', 'what can i afford right now', 'ఎంత రుణం తీసుకోవచ్చు', 'ఎంత లోన్ వస్తుంది', 'ఎంత అప్పు పొందగలను', 'నేను ఎంత భరించగలను'].some(
       (k) => q.includes(k)
     )
   ) {
@@ -834,31 +844,34 @@ export function performQuestionSpecificCalculations(
       let summaryTe = '';
 
       if (isACorCooling && ctx.profile.businessType.toLowerCase().includes('dairy')) {
+        const safetyVerdict = isFinanciallySafe ? 'YES' : 'HIGH RISK / TIGHT';
+        const safetyVerdictTe = isFinanciallySafe ? 'అవును (సురక్షితం)' : 'రిస్క్ ఎక్కువ / కష్టం';
+
         summary = `Analysis for purchasing an Air Conditioner (₹${purchaseCost.toLocaleString('en-IN')}) for your Dairy Farm in ${ctx.profile.location}:
 
 1. Financial Safety & Affordability:
-- Safe to Buy: YES. With your monthly revenue of ₹${currentMonthlyRev.toLocaleString('en-IN')} and expenses of ₹${currentMonthlyExp.toLocaleString('en-IN')}, your monthly net cash surplus is ₹${currentMonthlySurplus.toLocaleString('en-IN')} (Disposable cushion after debt service: ₹${currentDisposableBuffer.toLocaleString('en-IN')}/month).
-- Cash-Flow Impact: Factoring an estimated ₹${operatingMonthlyCost.toLocaleString('en-IN')}/month in electricity and maintenance, your projected monthly surplus remains a strong ₹${projectedNewSurplus.toLocaleString('en-IN')} (leaving ₹${projectedDisposableBuffer.toLocaleString('en-IN')} in disposable reserves).
+- Safe to Buy: ${safetyVerdict}. With your monthly revenue of ₹${currentMonthlyRev.toLocaleString('en-IN')} and expenses of ₹${currentMonthlyExp.toLocaleString('en-IN')}, your monthly net cash surplus is ₹${currentMonthlySurplus.toLocaleString('en-IN')} (Disposable cushion after debt service: ₹${currentDisposableBuffer.toLocaleString('en-IN')}/month).
+- Cash-Flow Impact: Factoring an estimated ₹${operatingMonthlyCost.toLocaleString('en-IN')}/month in electricity and maintenance, your projected monthly surplus is ₹${projectedNewSurplus.toLocaleString('en-IN')} (leaving ₹${projectedDisposableBuffer.toLocaleString('en-IN')} in disposable reserves).
 
 2. Profitability & Dairy Economics Assessment:
 - Direct Profitability: LOW ROI for standard AC in an open or semi-open shed. While summer heat stress mitigation is critical (summer heat drops milk yield by 20%–30%), open cattle sheds cannot retain AC cooling efficiently without heavy insulation, leading to high electricity bills with minimal cooling benefit.
 - High-ROI Alternatives: Installing high-pressure misting foggers with ceiling fans (costing ₹12,000–₹15,000 with ~₹500/month electricity) or a Bulk Milk Chiller offers 3x higher economic return on milk yield preservation than an air conditioner.
 
 3. Recommendation:
-Financially you can safely afford the ₹${purchaseCost.toLocaleString('en-IN')} outlay, but from a business profitability standpoint, we recommend investing in cattle fogger misting sprinklers rather than an AC unit to maximize net returns.`;
+${isFinanciallySafe ? `Financially you can safely afford the ₹${purchaseCost.toLocaleString('en-IN')} outlay, but from a business profitability standpoint, we recommend investing in cattle fogger misting sprinklers rather than an AC unit to maximize net returns.` : `Financially, a ₹${purchaseCost.toLocaleString('en-IN')} outlay is high risk given your narrow disposable cash cushion of ₹${currentDisposableBuffer.toLocaleString('en-IN')}/month. We recommend low-cost misting foggers (₹12,000) or building reserves first.`}`;
 
         summaryTe = `మీ డెయిరీ ఫామ్ కోసం ఎయిర్ కండీషనర్ (AC - సుమారు ₹${purchaseCost.toLocaleString('en-IN')}) కొనుగోలు ఆర్థిక విశ్లేషణ:
 
 1. కొనుగోలు భద్రత & స్తోమత:
-- కొనుగోలు సురక్షితమేనా: అవును. మీ నెలవారీ ఆదాయం ₹${currentMonthlyRev.toLocaleString('en-IN')}, ఖర్చులు ₹${currentMonthlyExp.toLocaleString('en-IN')} కాగా, మీకు ₹${currentMonthlySurplus.toLocaleString('en-IN')} నికర మిగులు ఉంది (రుణ వాయిదా పోను ₹${currentDisposableBuffer.toLocaleString('en-IN')} మిగులు నిధులు ఉంటాయి).
-- నగదు ప్రవాహంపై ప్రభావం: నెలకు సుమారు ₹${operatingMonthlyCost.toLocaleString('en-IN')} విద్యుత్/నిర్వహణ ఖర్చు అదనంగా చేరినా, మీకు ₹${projectedDisposableBuffer.toLocaleString('en-IN')} సురక్షిత మిగులు మిగులుతుంది.
+- కొనుగోలు సురక్షితమేనా: ${safetyVerdictTe}. మీ నెలవారీ ఆదాయం ₹${currentMonthlyRev.toLocaleString('en-IN')}, ఖర్చులు ₹${currentMonthlyExp.toLocaleString('en-IN')} కాగా, మీకు ₹${currentMonthlySurplus.toLocaleString('en-IN')} నికర మిగులు ఉంది (రుణ వాయిదా పోను ₹${currentDisposableBuffer.toLocaleString('en-IN')} మిగులు నిధులు ఉంటాయి).
+- నగదు ప్రవాహంపై ప్రభావం: నెలకు సుమారు ₹${operatingMonthlyCost.toLocaleString('en-IN')} విద్యుత్/నిర్వహణ ఖర్చు అదనంగా చేరినా, మీకు ₹${projectedDisposableBuffer.toLocaleString('en-IN')} మిగులుతుంది.
 
 2. లాభదాయకత విశ్లేషణ:
 - నేరుగా లాభదాయకమా: ఓపెన్ షెడ్డులో ఏసీకి తక్కువ ROI ఉంటుంది. వేసవిలో ఆవులకు చల్లదనం అవసరమే అయినప్పటికీ, ఓపెన్ షెడ్లలో ఏసీ గాలి నిలవదు మరియు కరెంట్ బిల్లు పెరుగుతుంది.
 - ఉత్తమ ప్రత్యామ్నాయం: ఫాగర్స్/మిస్టింగ్ స్ప్రింక్లర్లు మరియు ఫ్యాన్లు (వ్యయం ₹12,000 - ₹15,000) ఏసీ కంటే 3 రెట్లు ఎక్కువ లాభదాయకమైనవి.
 
 3. సిఫార్సు:
-మీ ఆర్థిక పరిస్థితి ప్రకారం మీరు ₹${purchaseCost.toLocaleString('en-IN')} ను సులభంగా భరించగలరు, కానీ గరిష్ట లాభం కోసం ఫాగర్ మిస్టింగ్ సిస్టమ్ ఏర్పాటు చేసుకోవడం ఉత్తమం.`;
+${isFinanciallySafe ? 'మీ ఆర్థిక పరిస్థితి ప్రకారం మీరు ఈ కొనుగోలు చేయగలరు, కానీ గరిష్ట లాభం కోసం ఫాగర్ మిస్టింగ్ సిస్టమ్ ఏర్పాటు చేసుకోవడం ఉత్తమం.' : 'ప్రస్తుత ఇరుకైన మిగులు బడ్జెట్ ప్రకారం ఈ కొనుగోలు రిస్క్. తక్కువ ఖర్చుతో కూడిన ఫాగర్ల వైపు మొగ్గు చూపండి.'}`;
       } else {
         summary = `Analysis for investing in ${assetName} (₹${purchaseCost.toLocaleString('en-IN')}):
 
@@ -895,6 +908,67 @@ ${isFinanciallySafe ? `You can safely proceed with this ₹${purchaseCost.toLoca
           projectedDisposableBuffer,
           isFinanciallySafe,
           paybackMonths,
+        },
+      };
+    }
+
+    case 'debt_management': {
+      const monthlyRev = ctx.income.monthlyRevenue;
+      const monthlyExp = ctx.expenses.monthlyExpenses;
+      const monthlySurplus = ctx.calculations.monthlyProfit;
+      const monthlyDebtService = ctx.loan.monthlyEmiEquivalent;
+      const quarterlyDebtService = ctx.loan.quarterlyEmi;
+      const retainedBuffer = monthlySurplus - monthlyDebtService;
+      const dti = ctx.calculations.debtToIncomeRatio;
+      const dscr = ctx.calculations.debtServiceCoverageRatio;
+      const emergencyReserveMonthly = Math.round(retainedBuffer * 0.5);
+      const targetEmergencyReserve = monthlyExp * 3;
+
+      const summary = `Debt & Cash Flow Management Strategy for your ${ctx.profile.businessType} enterprise:
+
+1. Current Cash Inflow & Debt Obligations:
+- Monthly Revenue: ₹${monthlyRev.toLocaleString('en-IN')} | Monthly Operating Costs: ₹${monthlyExp.toLocaleString('en-IN')}
+- Net Operating Cash Surplus: ₹${monthlySurplus.toLocaleString('en-IN')}/month
+- Scheduled Debt Service: ₹${monthlyDebtService.toLocaleString('en-IN')}/month (Quarterly EMI: ₹${quarterlyDebtService.toLocaleString('en-IN')})
+- Retained Disposable Cash: ₹${retainedBuffer.toLocaleString('en-IN')}/month (DSCR: ${dscr}x, Debt-to-Income: ${dti}%)
+
+2. Liquidity & Reserve Allocation:
+- Emergency Reserve Buffer: Allocate ₹${emergencyReserveMonthly.toLocaleString('en-IN')}/month (50% of retained cash) until you reach a 3-month operating safety cushion of ₹${targetEmergencyReserve.toLocaleString('en-IN')}.
+- Seasonal Amortization: During ${ctx.business.leanSeason}, invoke your interest-only seasonal moratorium to protect cash flow. During ${ctx.business.peakSeason}, channel surplus earnings into voluntary loan prepayment to reduce total interest.
+
+3. Health Assessment:
+Your debt burden is low-risk and well-covered (DSCR ${dscr}x > 1.5x benchmark). Operating expenses and debt repayments are comfortably sustainable.`;
+
+      const summaryTe = `మీ ${ctx.profile.businessType} వ్యాపారానికి రుణ నిర్వహణ & నగదు ప్రవాహ ప్రణాళిక:
+
+1. ప్రస్తుత ఆదాయం & రుణ బాధ్యతలు:
+- నెలవారీ ఆదాయం: ₹${monthlyRev.toLocaleString('en-IN')} | నిర్వహణ ఖర్చులు: ₹${monthlyExp.toLocaleString('en-IN')}
+- నికర నగదు మిగులు: ₹${monthlySurplus.toLocaleString('en-IN')}/నెల
+- నిర్ణీత రుణ వాయిదా: ₹${monthlyDebtService.toLocaleString('en-IN')}/నెల (త్రైమాసిక వాయిదా: ₹${quarterlyDebtService.toLocaleString('en-IN')})
+- నికర మిగులు నిధులు: ₹${retainedBuffer.toLocaleString('en-IN')}/నెల (DSCR: ${dscr}x, DTI: ${dti}%)
+
+2. పొదుపు & సీజనల్ వ్యూహం:
+- ఎమర్జెన్సీ ఫండ్: మిగిలిన నిధులలో నెలకు ₹${emergencyReserveMonthly.toLocaleString('en-IN')} ఆదా చేసి 3 నెలల ఖర్చుల నిధి (₹${targetEmergencyReserve.toLocaleString('en-IN')}) సిద్ధం చేసుకోండి.
+- వేసవి మారటోరియం: వేసవి/లీన్ సీజన్లో వడ్డీ మాత్రమే చెల్లించి లిక్విడిటీని కాపాడుకోండి. పీక్ సీజన్లో అదనపు అసలు చెల్లించండి.
+
+3. ఆర్థిక స్థితి:
+మీ రుణ చెల్లింపు సామర్థ్యం చాలా పటిష్టంగా ఉంది (DSCR: ${dscr}x). వ్యాపారం లాభదాయకంగా కొనసాగుతుంది.`;
+
+      return {
+        intent,
+        summary,
+        summaryTe,
+        data: {
+          monthlyRev,
+          monthlyExp,
+          monthlySurplus,
+          monthlyDebtService,
+          quarterlyDebtService,
+          retainedBuffer,
+          dti,
+          dscr,
+          emergencyReserveMonthly,
+          targetEmergencyReserve,
         },
       };
     }
