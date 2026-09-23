@@ -53,6 +53,110 @@ def parse_target_amount(text: str) -> Optional[float]:
 
     return None
 
+def detect_business_domain(
+    query: str = "",
+    history: Optional[List[Any]] = None,
+    fallback_category: str = "Dairy Farming"
+) -> str:
+    """
+    Dynamically extracts the active business domain from the user's current query, recent history, or fallback.
+    Returns:
+      - "handloom_weaving"
+      - "dairy_farming"
+      - "retail_shop"
+      - "poultry_farming"
+      - "tailoring_garments"
+      - "agri_processing"
+      - "agriculture_crop"
+      - "general_enterprise"
+    """
+    def check_text(text: str) -> Optional[str]:
+        if not text:
+            return None
+        t = text.lower()
+        # Handloom / Weaving
+        if any(w in t for w in [
+            "handloom", "weaving", "powerloom", "loom", "looms", "saree", "sarees", "ikat",
+            "pochampally", "yarn", "fabric", "textile", "textiles", "weaver", "weavers",
+            "చేనేత", "మగ్గం", "మగ్గాలు", "చీరలు", "నూలు", "వస్త్రాలు", "పవర్లూమ్", "हथकरघा", "बुनकर"
+        ]):
+            return "handloom_weaving"
+        # Dairy Farming
+        if any(w in t for w in [
+            "dairy", "cow", "cows", "buffalo", "buffaloes", "milch", "milk", "fodder", "cattle",
+            "butter", "ghee", "curd", "lactation", "dairy farm", "పాడి", "ఆవు", "ఆవులు", "బర్రె",
+            "గేదె", "గేదెలు", "పాలు", "దాణా", "పశువులు", "డెయిరీ", "दुग्ध", "गाय", "भैंस"
+        ]):
+            return "dairy_farming"
+        # Retail / Kirana Shop
+        if any(w in t for w in [
+            "kirana", "grocery", "provision", "shop", "retail", "store", "supermarket", "general store",
+            "fmcg", "కిరాణా", "షాప్", "దుకాణం", "జనరల్ స్టోర్", "స్టోర్", "కిరాణా దుకాణం", "किराना"
+        ]):
+            return "retail_shop"
+        # Poultry Farming
+        if any(w in t for w in [
+            "poultry", "chicken", "broiler", "layers", "egg", "eggs", "bird", "birds", "natukodi",
+            "desi murgi", "hatchery", "కోళ్లు", "పౌల్ట్రీ", "కోడి", "గుడ్లు", "నాటు కోడి", "కుక్కుట"
+        ]):
+            return "poultry_farming"
+        # Tailoring & Boutique
+        if any(w in t for w in [
+            "tailor", "tailoring", "boutique", "stitching", "garment", "garments", "blouse", "embroidery",
+            "maggam work", "sewing", "టైలరింగ్", "కుట్లు", "బోటిక్", "రవికె", "మగ్గం వర్క్", "సంచులు"
+        ]):
+            return "tailoring_garments"
+        # Agri-Processing & Flour/Spice Mill
+        if any(w in t for w in [
+            "flour mill", "spice mill", "rice mill", "chilli powder", "milling", "processing mill",
+            "పిండి మిల్లు", "మిర్చి మిల్లు", "వరి మిల్లు", "మసాలా మిల్లు"
+        ]):
+            return "agri_processing"
+        # Agriculture / Crops
+        if any(w in t for w in [
+            "crop", "farming", "cotton", "paddy", "chilli", "turmeric", "horticulture", "seeds",
+            "fertilizer", "pesticide", "harvest", "వ్యవసాయం", "పంట", "పత్తి", "వరి", "మిర్చి", "పసుపు"
+        ]):
+            return "agriculture_crop"
+        return None
+
+    # Priority 1: Current query
+    if query:
+        dom = check_text(query)
+        if dom:
+            return dom
+
+    # Priority 2: Recent history (newest user messages first)
+    if history:
+        for msg in reversed(history):
+            content = msg.get("content", "") if isinstance(msg, dict) else getattr(msg, "content", "")
+            role = msg.get("role", "") if isinstance(msg, dict) else getattr(msg, "role", "")
+            if role == "user" and content:
+                dom = check_text(content)
+                if dom:
+                    return dom
+
+    # Priority 3: Fallback category from profile
+    fb_dom = check_text(fallback_category)
+    if fb_dom:
+        return fb_dom
+
+    fb_lower = fallback_category.lower()
+    if "weave" in fb_lower or "handloom" in fb_lower or "textile" in fb_lower:
+        return "handloom_weaving"
+    if "dairy" in fb_lower or "milk" in fb_lower or "cow" in fb_lower:
+        return "dairy_farming"
+    if "kirana" in fb_lower or "grocery" in fb_lower or "retail" in fb_lower or "shop" in fb_lower:
+        return "retail_shop"
+    if "poultry" in fb_lower or "chicken" in fb_lower or "bird" in fb_lower:
+        return "poultry_farming"
+    if "tailor" in fb_lower or "garment" in fb_lower:
+        return "tailoring_garments"
+    if "mill" in fb_lower or "agri" in fb_lower:
+        return "agri_processing"
+
+    return "general_enterprise"
+
 class BusinessCalculationEngine:
     """
     Deterministic business calculation and intent classification engine.
@@ -60,7 +164,11 @@ class BusinessCalculationEngine:
     """
 
     @staticmethod
-    def classify_intent(query: str) -> Dict[str, Any]:
+    def classify_intent(
+        query: str,
+        history: Optional[List[Any]] = None,
+        fallback_category: str = "Dairy Farming"
+    ) -> Dict[str, Any]:
         """
         Classifies query intent deterministically.
         Returns:
@@ -69,9 +177,16 @@ class BusinessCalculationEngine:
             "targetAmount": Optional[float],
             "isNumerical": bool,
             "entity": Optional[str],
-            "timeframe": str ("annual" | "monthly" | "daily")
+            "timeframe": str ("annual" | "monthly" | "daily"),
+            "domain": str
           }
         """
+        detected_domain = detect_business_domain(
+            query=query,
+            history=history,
+            fallback_category=fallback_category
+        )
+
         if not query:
             return {
                 "intent": "general_advisory",
@@ -79,6 +194,7 @@ class BusinessCalculationEngine:
                 "isNumerical": False,
                 "entity": None,
                 "timeframe": "annual",
+                "domain": detected_domain,
             }
 
         q = query.lower().strip()
@@ -89,70 +205,97 @@ class BusinessCalculationEngine:
         is_daily = any(w in q for w in ["day", "daily", "రోజు", "రోజుకు", "రోజూ", "प्रति दिन"])
         timeframe = "daily" if is_daily else ("monthly" if is_monthly else "annual")
 
-        # 1. Capacity / Quantity needed calculation
-        # e.g. "how many cows/buffaloes/birds/hens/looms do i need to get a profit of 500000"
+        # 1. Location Selection / Business Location Analysis (HIGH PRIORITY)
+        # e.g. "Suggest me places where if I establish my handloom shop I can get great profits",
+        # "which localities can give me the best profits", "where should I open my shop"
+        is_location_selection = any(w in q for w in [
+            "where should i establish", "where can i establish", "where should i open", "where can i open",
+            "where should i start", "where to establish", "where to open", "where to set up", "where to start",
+            "suggest me places", "suggest places", "suggest some places", "which localities", "which locality",
+            "which area", "which location", "best locations", "best location", "best localities", "best place",
+            "best places", "good location", "good place", "profitable location", "where i can get great profits",
+            "where if i establish", "which area is better", "suitable location", "cluster", "location for my",
+            "place for my", "where to locate", "area for my", "localities can give", "places where",
+            "ఎక్కడ ప్రారంభించాలి", "ఎక్కడ పెట్టాలి", "ఎక్కడ స్థాపించాలి", "ఏ ప్రాంతం", "ఏ ప్రదేశాలు",
+            "స్థలాలు", "మంచి ప్రదేశం", "లొకేషన్", "ఏ ఊరు", "ప్రదేశం", "స్థలం ఎంపిక", "ఏ ఏరియా", "ప్రదేశాలు"
+        ])
+
+        # 2. Feed / Raw Material / Input Sourcing (Check before generic buy/invest)
+        is_feed = any(w in q for w in [
+            "feed", "fodder", "raw material", "input cost", "cost of feed", "yarn", "fabric", "daana", "దాణా",
+            "పచ్చిగడ్డి", "ముడిసరుకు", "తక్కువ ఖర్చు", "నూలు", "చౌకగా", "buy feed", "cheaper"
+        ])
+
+        # 3. Investment Decision / Asset Purchase (e.g. AC, machine, equipment, vehicle)
+        is_investment_decision = (not is_feed) and any(w in q for w in [
+            "should i buy", "can i buy", "want to buy", "is that a good investment", "good investment",
+            "is it safe to buy", "safe for me to buy", "is it safe to invest", "worth buying", "worth investing",
+            "air conditioner", "buy an ac", "buy a machine", "buy equipment", "కొనవచ్చా", "మంచి పెట్టుబడేనా"
+        ])
+
+        # 4. Capacity / Quantity needed calculation
         is_quantity_calc = any(w in q for w in [
             "how many", "how much animal", "number of", "ఎన్ని ఆవులు", "ఎన్ని బర్రెలు", "ఎన్ని కోళ్లు", "ఎన్ని మగ్గాలు",
             "ఎన్ని", "కౌస్", "ఆవులు కావాలి", "బర్రెలు కావాలి", "how many cows", "how many buffalo", "how many birds",
             "how many looms", "how much capacity", "cows do i need", "buffaloes do i need"
         ])
 
-        # 2. Profitability / Expected profit
-        # e.g. "what is my expected monthly profit", "how much profit can i make"
+        # 5. Profitability / Expected profit
         is_profit_inquiry = any(w in q for w in [
-            "profit", "net profit", "income", "earning", "earnings", "లాభం", "నికర లాభం", "ఆదాయం",
-            "సంపాదన", "मुनाफा", "लाभ", "kamayi"
+            "how much profit", "my profit", "expected profit", "profit margin", "what profit",
+            "net profit", "income of", "earning", "earnings", "లాభం ఎంత", "నికర లాభం", "ఎంత లాభం",
+            "సంపాదన", "मुनाफा कितना"
         ])
 
-        # 3. Break-even calculation
-        # e.g. "what is my break-even point", "break even"
+        # 6. Break-even calculation
         is_break_even = any(w in q for w in [
             "break even", "break-even", "breakeven", "నో లాస్ నో ప్రాఫిట్", "బ్రేక్ ఈవెన్", "ఖర్చులు రాబట్టడం", "समविच्छेद"
         ])
 
-        # 4. Revenue / Volume target calculation
-        # e.g. "how much milk do i need to sell to make 1 lakh", "how much sales needed"
+        # 7. Revenue / Volume target calculation
         is_volume_target = any(w in q for w in [
-            "how much milk", "milk do i need to sell", "litres", "how much sales", "volume to sell",
+            "how much milk", "milk do i need to sell", "how much sales", "volume to sell", "how much turnover",
             "ఎంత పాలు", "ఎన్ని లీటర్లు", "ఎంత అమ్మాలి", "అమ్మకాలు ఎంత చేయాలి"
         ])
 
-        # 5. Capital / Expansion requirements
-        # e.g. "how much capital do i need to expand", "cost to add 2 cows", "expansion cost"
+        # 8. Capital / Expansion requirements
         is_expansion_calc = any(w in q for w in [
-            "capital do i need", "cost to expand", "investment to expand", "how much capital", "విస్తరణ ఖర్చు",
-            "పెట్టుబడి ఎంత కావాలి", "మరో 2 ఆవులు కొనడానికి", "ఎంత పెట్టుబడి", "విస్తరించడానికి"
+            "expand", "expansion", "expanding", "next village", "scale up", "capital do i need",
+            "cost to expand", "investment to expand", "how much capital", "విస్తరణ ఖర్చు",
+            "పెట్టుబడి ఎంత కావాలి", "మరో 2 ఆవులు కొనడానికి", "ఎంత పెట్టుబడి", "విస్తరించడానికి", "విస్తరణ"
         ])
 
-        # 6. Feed / Input cost reduction
-        is_feed = any(w in q for w in [
-            "feed", "fodder", "raw material", "input cost", "cost of feed", "yarn", "fabric", "దాణా",
-            "పచ్చిగడ్డి", "ముడిసరుకు", "తక్కువ ఖర్చు", "నూలు", "చౌకగా"
-        ])
-
-        # 7. Pricing guidance
+        # 9. Pricing guidance
         is_pricing = any(w in q for w in [
-            "price", "pricing", "rate", "cost per", "charge", "ధర", "ఎంత అమ్మాలి", "ధర నిర్ణయం", "రేటు", "కిలో ధర"
+            "pricing", "selling price", "rate per", "cost per", "ధర", "ఎంత అమ్మాలి", "ధర నిర్ణయం", "రేటు", "కిలో ధర"
         ])
 
-        # 8. Government schemes
+        # 10. Government schemes
         is_schemes = any(w in q for w in [
-            "scheme", "subsidy", "government", "mudra", "pmegp", "nbcfdc", "vishwakarma", "సబ్సిడీ", "పథకం", "ప్రభుత్వ", "రాయితీ"
+            "scheme", "subsidy", "subsidies", "government", "mudra", "pmegp", "nbcfdc", "vishwakarma", "stand-up",
+            "సబ్సిడీ", "పథకం", "ప్రభుత్వ పథకాలు", "రాయితీ"
         ])
 
-        # 9. Summer heat / Seasonal operational advice
+        # 11. Summer heat / Seasonal operational advice
         is_summer_heat = any(w in q for w in [
-            "summer", "heat", "hot", "yield in summer", "temperature", "weather", "ఎండ", "వేసవి", "దిగుబడి", "గ్రామాలలో"
+            "summer", "heat", "hot", "yield in summer", "temperature", "weather", "lean season", "flush season",
+            "ఎండ", "వేసవి", "దిగుబడి", "గ్రామాలలో"
         ])
 
-        # 10. Cash flow / Customer credit management
+        # 12. Cash flow / Customer credit management
         is_cash_flow = any(w in q for w in [
             "cash flow", "low sales", "lean month", "off-season", "working capital", "udhaari", "credit", "బాకీలు",
             "నగదు", "తక్కువ అమ్మకాలు", "ఖర్చులు"
         ])
 
         # Intent resolution priority
-        if is_quantity_calc and (target_amt or is_profit_inquiry):
+        if is_location_selection:
+            intent = "location_selection"
+            is_num = False
+        elif is_investment_decision:
+            intent = "investment_decision"
+            is_num = False
+        elif is_quantity_calc and (target_amt or is_profit_inquiry):
             intent = "capacity_calculation"
             is_num = True
         elif is_volume_target and target_amt:
@@ -211,6 +354,7 @@ class BusinessCalculationEngine:
             "isNumerical": is_num,
             "entity": entity,
             "timeframe": timeframe,
+            "domain": detected_domain,
         }
 
     @staticmethod
@@ -475,3 +619,5 @@ classify_intent = BusinessCalculationEngine.classify_intent
 calculate_capacity_for_target_profit = BusinessCalculationEngine.calculate_capacity_for_target_profit
 calculate_volume_for_target_revenue = BusinessCalculationEngine.calculate_volume_for_target_revenue
 calculate_break_even = BusinessCalculationEngine.calculate_break_even
+
+

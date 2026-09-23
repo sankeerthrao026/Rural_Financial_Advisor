@@ -47,10 +47,10 @@ import { OnboardingScreen } from './onboarding/OnboardingScreen';
 
 const navigation = [
   { label: 'Overview', icon: LayoutDashboard },
-  { label: 'Business', icon: BriefcaseBusiness, items: ['Business Profile', 'Digital Logbook', 'Business Plan'] },
-  { label: 'Finances', icon: WalletCards, items: ['Financial Analytics', 'Cash Flow'] },
   { label: 'Advisor', icon: Sparkles, items: ['Business Advisor', 'Finance Advisor'] },
   { label: 'Opportunities', icon: FileText, items: ['Scheme Matching', 'Credit Score'] },
+  { label: 'Business', icon: BriefcaseBusiness, items: ['Business Profile', 'Digital Logbook', 'Business Plan'] },
+  { label: 'Finances', icon: WalletCards, items: ['Financial Analytics', 'Cash Flow'] },
   { label: 'Risk Alerts', icon: ShieldAlert },
 ];
 
@@ -374,15 +374,17 @@ function MainContent({ active, setActive }: { active: string; setActive: (value:
   const copy = pageCopy[active] || pageCopy.Overview;
 
   return (
-    <div key={active} className="page-enter mx-auto max-w-[1440px] px-5 py-7 sm:px-8 sm:py-9">
-      {/* Page Header */}
-      <div className="mb-7">
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">{copy.eyebrow}</p>
-        <h1 className="mt-2 text-3xl font-bold font-sora tracking-tight text-foreground">{copy.title}</h1>
-        <p className="mt-1.5 max-w-2xl text-xs text-muted-foreground leading-relaxed">
-          {copy.description}
-        </p>
-      </div>
+    <div key={active} className="page-enter mx-auto max-w-[1440px] px-4 py-6 sm:px-8 sm:py-8">
+      {/* Page Header (Hidden on Overview because Overview has dedicated dark hero banner) */}
+      {active !== 'Overview' && (
+        <div className="mb-7">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">{copy.eyebrow}</p>
+          <h1 className="mt-2 text-3xl font-bold font-sora tracking-tight text-foreground">{copy.title}</h1>
+          <p className="mt-1.5 max-w-2xl text-xs text-muted-foreground leading-relaxed">
+            {copy.description}
+          </p>
+        </div>
+      )}
 
       {/* Screen Router */}
       {active === 'Overview' && <OverviewScreen setActive={setActive} />}

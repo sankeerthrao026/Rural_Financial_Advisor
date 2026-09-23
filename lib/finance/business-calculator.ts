@@ -3,8 +3,20 @@
  * Provides exact unit economics calculations for rural micro-enterprises.
  */
 
+export type BusinessDomain =
+  | 'handloom_weaving'
+  | 'dairy_farming'
+  | 'retail_shop'
+  | 'poultry_farming'
+  | 'tailoring_garments'
+  | 'agri_processing'
+  | 'agriculture_crop'
+  | 'general_enterprise';
+
 export interface ParsedQueryIntent {
   intent:
+    | 'location_selection'
+    | 'investment_decision'
     | 'capacity_calculation'
     | 'profitability_calculation'
     | 'break_even_calculation'
@@ -20,6 +32,7 @@ export interface ParsedQueryIntent {
   isNumerical: boolean;
   entity: 'cow' | 'buffalo' | 'bird' | 'loom' | 'milk_litre' | null;
   timeframe: 'annual' | 'monthly' | 'daily';
+  domain: BusinessDomain;
 }
 
 export interface CapacityCalculationResult {
@@ -30,63 +43,174 @@ export interface CapacityCalculationResult {
   annualTargetProfit: number;
   exactUnitsNeeded: number;
   recommendedUnits: number;
-  unitMetrics: {
-    dailyYieldLitres?: number;
-    milkingDaysPerYear?: number;
-    annualProductionLitres?: number;
-    sellingPricePerLitre?: number;
-    annualRevenuePerUnit?: number;
-    annualOpexPerUnit?: number;
-    netProfitPerUnitAnnual: number;
-    netProfitPerUnitMonthly: number;
-    capexPerUnit: number;
-    [key: string]: any;
-  };
+  unitMetrics: Record<string, any>;
   financialOutlay: {
     totalProjectCost: number;
     promoterMarginRequired: number;
     bankLoanEligible: number;
   };
-  assumptions: string[];
-  assumptionsTe: string[];
+  assumptions?: string[];
+  assumptionsTe?: string[];
 }
 
 export function parseTargetAmount(text: string): number | null {
   if (!text) return null;
   const clean = text.toLowerCase().replace(/,/g, '').trim();
 
-  // 1. Lakhs pattern
-  const lakhMatch = clean.match(/(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)\s*(?:lakhs?|lacs?|lac|l|లక్షలు|లక్షల|లక్ష)(?:\b|\s|$|[^\w])/);
-  if (lakhMatch && lakhMatch[1]) {
-    const val = parseFloat(lakhMatch[1]);
+  // Lakhs pattern
+  const mLakh = clean.match(/(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)\s*(?:lakhs?|lacs?|lac|l|లక్షలు|లక్షల|లక్ష)/i);
+  if (mLakh && mLakh[1]) {
+    const val = parseFloat(mLakh[1]);
     if (!isNaN(val)) return val * 100000;
   }
 
-  // 2. Crores pattern
-  const crMatch = clean.match(/(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)\s*(?:crores?|crs?|cr|కోట్లు|కోట్ల|కోటి)(?:\b|\s|$|[^\w])/);
-  if (crMatch && crMatch[1]) {
-    const val = parseFloat(crMatch[1]);
+  // Crores pattern
+  const mCr = clean.match(/(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)\s*(?:crores?|crs?|cr|కోట్లు|కోట్ల|కోటి)/i);
+  if (mCr && mCr[1]) {
+    const val = parseFloat(mCr[1]);
     if (!isNaN(val)) return val * 10000000;
   }
 
-  // 3. Thousands / K pattern
-  const kMatch = clean.match(/(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)\s*(?:k|thousand|వేలు|వేల)(?:\b|\s|$|[^\w])/);
-  if (kMatch && kMatch[1]) {
-    const val = parseFloat(kMatch[1]);
+  // Thousands pattern
+  const mK = clean.match(/(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)\s*(?:k|thousand|వేలు|వేల)/i);
+  if (mK && mK[1]) {
+    const val = parseFloat(mK[1]);
     if (!isNaN(val)) return val * 1000;
   }
 
-  // 4. Raw numbers (>= 1000)
-  const numMatch = clean.match(/(?:₹|rs\.?|inr\s*)?\s*(\d{4,9})(?:\.\d+)?/);
-  if (numMatch && numMatch[1]) {
-    const val = parseFloat(numMatch[1]);
+  // Raw numbers >= 1000
+  const mNum = clean.match(/(?:₹|rs\.?|inr\s*)?\s*(\d{4,9})(?:\.\d+)?/i);
+  if (mNum && mNum[1]) {
+    const val = parseFloat(mNum[1]);
     if (!isNaN(val) && val >= 1000) return val;
   }
 
   return null;
 }
 
-export function classifyQueryIntent(query: string): ParsedQueryIntent {
+export function detectBusinessDomain(
+  query: string = '',
+  history?: { role: string; content: string }[],
+  fallbackCategory: string = 'Dairy Farming'
+): BusinessDomain {
+  const checkText = (text: string): BusinessDomain | null => {
+    if (!text) return null;
+    const t = text.toLowerCase();
+
+    // Handloom / Weaving
+    if (
+      [
+        'handloom', 'weaving', 'powerloom', 'loom', 'looms', 'saree', 'sarees', 'ikat',
+        'pochampally', 'yarn', 'fabric', 'textile', 'textiles', 'weaver', 'weavers',
+        'చేనేత', 'మగ్గం', 'మగ్గాలు', 'చీరలు', 'నూలు', 'వస్త్రాలు', 'పవర్లూమ్', 'हथकरघा'
+      ].some((w) => t.includes(w))
+    ) {
+      return 'handloom_weaving';
+    }
+
+    // Dairy Farming
+    if (
+      [
+        'dairy', 'cow', 'cows', 'buffalo', 'buffaloes', 'milch', 'milk', 'fodder', 'cattle',
+        'butter', 'ghee', 'curd', 'lactation', 'dairy farm', 'పాడి', 'ఆవు', 'ఆవులు', 'బర్రె',
+        'గేదె', 'గేదెలు', 'పాలు', 'దాణా', 'పశువులు', 'డెయిరీ', 'దుగ్ధ'
+      ].some((w) => t.includes(w))
+    ) {
+      return 'dairy_farming';
+    }
+
+    // Retail / Kirana Shop
+    if (
+      [
+        'kirana', 'grocery', 'provision', 'shop', 'retail', 'store', 'supermarket', 'general store',
+        'fmcg', 'కిరాణా', 'షాప్', 'దుకాణం', 'జనరల్ స్టోర్', 'స్టోర్', 'కిరాణా దుకాణం'
+      ].some((w) => t.includes(w))
+    ) {
+      return 'retail_shop';
+    }
+
+    // Poultry Farming
+    if (
+      [
+        'poultry', 'chicken', 'broiler', 'layers', 'egg', 'eggs', 'bird', 'birds', 'natukodi',
+        'desi murgi', 'hatchery', 'కోళ్లు', 'పౌల్ట్రీ', 'కోడి', 'గుడ్లు', 'నాటు కోడి'
+      ].some((w) => t.includes(w))
+    ) {
+      return 'poultry_farming';
+    }
+
+    // Tailoring & Boutique
+    if (
+      [
+        'tailor', 'tailoring', 'boutique', 'stitching', 'garment', 'garments', 'blouse', 'embroidery',
+        'maggam work', 'sewing', 'టైలరింగ్', 'కుట్లు', 'బోటిక్', 'రవికె', 'మగ్గం వర్క్'
+      ].some((w) => t.includes(w))
+    ) {
+      return 'tailoring_garments';
+    }
+
+    // Agri-Processing & Milling
+    if (
+      [
+        'flour mill', 'spice mill', 'rice mill', 'chilli powder', 'milling', 'processing mill',
+        'పిండి మిల్లు', 'మిర్చి మిల్లు', 'వరి మిల్లు', 'మసాలా మిల్లు'
+      ].some((w) => t.includes(w))
+    ) {
+      return 'agri_processing';
+    }
+
+    // Agriculture / Crops
+    if (
+      [
+        'crop', 'farming', 'cotton', 'paddy', 'chilli', 'turmeric', 'horticulture', 'seeds',
+        'fertilizer', 'pesticide', 'harvest', 'వ్యవసాయం', 'పంట', 'పత్తి', 'వరి', 'మిర్చి', 'పసుపు'
+      ].some((w) => t.includes(w))
+    ) {
+      return 'agriculture_crop';
+    }
+
+    return null;
+  };
+
+  // Priority 1: Current query
+  if (query) {
+    const dom = checkText(query);
+    if (dom) return dom;
+  }
+
+  // Priority 2: Recent user messages in history
+  if (history && history.length > 0) {
+    for (let i = history.length - 1; i >= 0; i--) {
+      const msg = history[i];
+      if (msg.role === 'user' && msg.content) {
+        const dom = checkText(msg.content);
+        if (dom) return dom;
+      }
+    }
+  }
+
+  // Priority 3: Fallback category
+  const fbDom = checkText(fallbackCategory);
+  if (fbDom) return fbDom;
+
+  const fbLower = fallbackCategory.toLowerCase();
+  if (fbLower.includes('weave') || fbLower.includes('handloom') || fbLower.includes('textile')) return 'handloom_weaving';
+  if (fbLower.includes('dairy') || fbLower.includes('milk') || fbLower.includes('cow')) return 'dairy_farming';
+  if (fbLower.includes('kirana') || fbLower.includes('grocery') || fbLower.includes('retail') || fbLower.includes('shop')) return 'retail_shop';
+  if (fbLower.includes('poultry') || fbLower.includes('chicken') || fbLower.includes('bird')) return 'poultry_farming';
+  if (fbLower.includes('tailor') || fbLower.includes('garment')) return 'tailoring_garments';
+  if (fbLower.includes('mill') || fbLower.includes('agri')) return 'agri_processing';
+
+  return 'general_enterprise';
+}
+
+export function classifyQueryIntent(
+  query: string,
+  history?: { role: string; content: string }[],
+  fallbackCategory: string = 'Dairy Farming'
+): ParsedQueryIntent {
+  const domain = detectBusinessDomain(query, history, fallbackCategory);
+
   if (!query) {
     return {
       intent: 'general_advisory',
@@ -94,6 +218,7 @@ export function classifyQueryIntent(query: string): ParsedQueryIntent {
       isNumerical: false,
       entity: null,
       timeframe: 'annual',
+      domain,
     };
   }
 
@@ -104,15 +229,44 @@ export function classifyQueryIntent(query: string): ParsedQueryIntent {
   const isDaily = ['day', 'daily', 'రోజు', 'రోజుకు', 'రోజూ', 'प्रति दिन'].some((w) => q.includes(w));
   const timeframe = isDaily ? 'daily' : isMonthly ? 'monthly' : 'annual';
 
+  // 1. Location Selection / Business Location Analysis (HIGH PRIORITY)
+  const isLocationSelection = [
+    'where should i establish', 'where can i establish', 'where should i open', 'where can i open',
+    'where should i start', 'where to establish', 'where to open', 'where to set up', 'where to start',
+    'suggest me places', 'suggest places', 'suggest some places', 'which localities', 'which locality',
+    'which area', 'which location', 'best locations', 'best location', 'best localities', 'best place',
+    'best places', 'good location', 'good place', 'profitable location', 'where i can get great profits',
+    'where if i establish', 'which area is better', 'suitable location', 'cluster', 'location for my',
+    'place for my', 'where to locate', 'area for my', 'localities can give', 'places where',
+    'ఎక్కడ ప్రారంభించాలి', 'ఎక్కడ పెట్టాలి', 'ఎక్కడ స్థాపించాలి', 'ఏ ప్రాంతం', 'ఏ ప్రదేశాలు',
+    'స్థలాలు', 'మంచి ప్రదేశం', 'లొకేషన్', 'ఏ ఊరు', 'ప్రదేశం', 'స్థలం ఎంపిక', 'ఏ ఏరియా', 'ప్రదేశాలు'
+  ].some((w) => q.includes(w));
+
+  // 2. Feed / Raw Material / Input Sourcing (Check before generic buy/invest)
+  const isFeed = [
+    'feed', 'fodder', 'raw material', 'input cost', 'cost of feed', 'yarn', 'fabric', 'daana', 'దాణా',
+    'పచ్చిగడ్డి', 'ముడిసరుకు', 'తక్కువ ఖర్చు', 'నూలు', 'చౌకగా', 'buy feed', 'cheaper'
+  ].some((w) => q.includes(w));
+
+  // 3. Investment Decision
+  const isInvestmentDecision = !isFeed && [
+    'should i buy', 'can i buy', 'want to buy', 'is that a good investment', 'good investment',
+    'is it safe to buy', 'safe for me to buy', 'is it safe to invest', 'worth buying', 'worth investing',
+    'air conditioner', 'buy an ac', 'buy a machine', 'buy equipment', 'కొనవచ్చా', 'మంచి పెట్టుబడేనా'
+  ].some((w) => q.includes(w));
+
+  // 4. Quantity / Capacity calculation
   const isQuantityCalc = [
     'how many', 'how much animal', 'number of', 'ఎన్ని ఆవులు', 'ఎన్ని బర్రెలు', 'ఎన్ని కోళ్లు', 'ఎన్ని మగ్గాలు',
     'ఎన్ని', 'కౌస్', 'ఆవులు కావాలి', 'బర్రెలు కావాలి', 'how many cows', 'how many buffalo', 'how many birds',
     'how many looms', 'how much capacity', 'cows do i need', 'buffaloes do i need'
   ].some((w) => q.includes(w));
 
+  // 5. Profitability inquiry
   const isProfitInquiry = [
-    'profit', 'net profit', 'income', 'earning', 'earnings', 'లాభం', 'నికర లాభం', 'ఆదాయం',
-    'సంపాదన', 'मुनाफा', 'लाभ', 'kamayi'
+    'how much profit', 'my profit', 'expected profit', 'profit margin', 'what profit',
+    'net profit', 'income of', 'earning', 'earnings', 'లాభం ఎంత', 'నికర లాభం', 'ఎంత లాభం',
+    'సంపాదన', 'मुनाफा'
   ].some((w) => q.includes(w));
 
   const isBreakEven = [
@@ -120,30 +274,28 @@ export function classifyQueryIntent(query: string): ParsedQueryIntent {
   ].some((w) => q.includes(w));
 
   const isVolumeTarget = [
-    'how much milk', 'milk do i need to sell', 'litres', 'how much sales', 'volume to sell',
+    'how much milk', 'milk do i need to sell', 'litres', 'how much sales', 'volume to sell', 'how much turnover',
     'ఎంత పాలు', 'ఎన్ని లీటర్లు', 'ఎంత అమ్మాలి', 'అమ్మకాలు ఎంత చేయాలి'
   ].some((w) => q.includes(w));
 
   const isExpansionCalc = [
-    'capital do i need', 'cost to expand', 'investment to expand', 'how much capital', 'విస్తరణ ఖర్చు',
-    'పెట్టుబడి ఎంత కావాలి', 'మరో 2 ఆవులు కొనడానికి', 'ఎంత పెట్టుబడి', 'విస్తరించడానికి'
-  ].some((w) => q.includes(w));
-
-  const isFeed = [
-    'feed', 'fodder', 'raw material', 'input cost', 'cost of feed', 'yarn', 'fabric', 'దాణా',
-    'పచ్చిగడ్డి', 'ముడిసరుకు', 'తక్కువ ఖర్చు', 'నూలు', 'చౌకగా'
+    'expand', 'expansion', 'expanding', 'next village', 'scale up', 'capital do i need',
+    'cost to expand', 'investment to expand', 'how much capital', 'విస్తరణ ఖర్చు',
+    'పెట్టుబడి ఎంత కావాలి', 'మరో 2 ఆవులు కొనడానికి', 'ఎంత పెట్టుబడి', 'విస్తరించడానికి', 'విస్తరణ'
   ].some((w) => q.includes(w));
 
   const isPricing = [
-    'price', 'pricing', 'rate', 'cost per', 'charge', 'ధర', 'ఎంత అమ్మాలి', 'ధర నిర్ణయం', 'రేటు', 'కిలో ధర'
+    'pricing', 'selling price', 'rate per', 'cost per', 'charge', 'ధర', 'ఎంత అమ్మాలి', 'ధర నిర్ణయం', 'రేటు', 'కిలో ధర'
   ].some((w) => q.includes(w));
 
   const isSchemes = [
-    'scheme', 'subsidy', 'government', 'mudra', 'pmegp', 'nbcfdc', 'vishwakarma', 'సబ్సిడీ', 'పథకం', 'ప్రభుత్వ', 'రాయితీ'
+    'scheme', 'subsidy', 'subsidies', 'government', 'mudra', 'pmegp', 'nbcfdc', 'vishwakarma', 'stand-up',
+    'సబ్సిడీ', 'పథకం', 'ప్రభుత్వ పథకాలు', 'రాయితీ'
   ].some((w) => q.includes(w));
 
   const isSummerHeat = [
-    'summer', 'heat', 'hot', 'yield in summer', 'temperature', 'weather', 'ఎండ', 'వేసవి', 'దిగుబడి'
+    'summer', 'heat', 'hot', 'yield in summer', 'temperature', 'weather', 'lean season',
+    'ఎండ', 'వేసవి', 'దిగుబడి'
   ].some((w) => q.includes(w));
 
   const isCashFlow = [
@@ -154,7 +306,13 @@ export function classifyQueryIntent(query: string): ParsedQueryIntent {
   let intent: ParsedQueryIntent['intent'] = 'general_advisory';
   let isNumerical = false;
 
-  if (isQuantityCalc && (targetAmt || isProfitInquiry)) {
+  if (isLocationSelection) {
+    intent = 'location_selection';
+    isNumerical = false;
+  } else if (isInvestmentDecision) {
+    intent = 'investment_decision';
+    isNumerical = false;
+  } else if (isQuantityCalc && (targetAmt || isProfitInquiry)) {
     intent = 'capacity_calculation';
     isNumerical = true;
   } else if (isVolumeTarget && targetAmt) {
@@ -205,6 +363,7 @@ export function classifyQueryIntent(query: string): ParsedQueryIntent {
     isNumerical,
     entity,
     timeframe,
+    domain,
   };
 }
 

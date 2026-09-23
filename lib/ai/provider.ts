@@ -224,15 +224,130 @@ function synthesizeGroundedLocalAdvisor(
   const distName = isTe ? cleanForTelugu(dData.name || input.location) : cleanForEnglish(dData.name || input.location);
 
   const basePrice = (Object.values(cData.pricingBenchmarks || {})[0] as string) || '₹55 - ₹70 per unit';
-  const intentInfo: ParsedQueryIntent = classifyQueryIntent(input.userQuery || '');
+  const intentInfo: ParsedQueryIntent = classifyQueryIntent(input.userQuery || '', input.history, input.category);
   const intent = intentInfo.intent;
   const targetAmt = intentInfo.targetAmount;
   const timeframe = intentInfo.timeframe;
+  const domain = intentInfo.domain || 'general_enterprise';
 
   let replyText = '';
 
-  // 1. Capacity / Quantity Calculation Intent
-  if (intent === 'capacity_calculation' || (intentInfo.isNumerical && targetAmt && intent !== 'volume_target_calculation' && intent !== 'expansion_capital_calculation')) {
+  // 1. Location Selection / Cluster Recommendations
+  if (intent === 'location_selection') {
+    if (domain === 'handloom_weaving') {
+      if (isTe) {
+        replyText =
+          `${distName} లో చేనేత దుకాణం (Handloom Shop) ప్రారంభించడానికి అనువైన స్థలాలు మరియు మార్గదర్శకాలు:\n\n` +
+          `1. ${distName} లోని ప్రధాన క్లస్టర్లు:\n` +
+          `• పెంబర్తి & జనగామ కారిడార్: నేత కార్మికులు, మాస్టర్ వీవర్స్ మరియు నూలు డిపోలు ఎక్కువగా ఉండే ప్రసిద్ధ చేనేత ప్రాంతాలు.\n` +
+          `• హనుమకొండ (చౌరస్తా / సుబేదారి) & పరకాల: వివాహాలు మరియు పండుగల షాపింగ్ కోసం అధిక సంఖ్యలో కస్టమర్లు వచ్చే ప్రధాన వాణిజ్య కేంద్రాలు.\n` +
+          `• పర్యాటక & దేవాలయ మార్గాలు (వేయి స్తంభాల గుడి / భద్రకాళి పరిసరాలు): పర్యాటకులు నేరుగా నాణ్యమైన చేనేత వస్త్రాలు, చీరలు కొనుగోలు చేయడానికి అనుకూలం.\n\n` +
+          `2. స్థల ఎంపికకు 4 కీలక అంశాలు:\n` +
+          `• ముడిసరుకు లభ్యత: నూలు డిపోలకు దగ్గరగా ఉండటం వల్ల రవాణా ఖర్చు 8-12% ఆదా అవుతుంది.\n` +
+          `• కస్టమర్ రద్దీ: బట్టల దుకాణాలు మరియు నగల షాపులు ఉన్న ప్రధాన మార్కెట్ లైన్‌లో గ్రౌండ్ ఫ్లోర్ ఎంచుకోండి.\n` +
+          `• తక్కువ అద్దె: నెలవారీ అద్దె ₹6,000 - ₹10,000 లోపు ఉండేలా చూసుకోండి (అమ్మకాలలో 10% మించకూడదు).\n` +
+          `• తేమ రహిత నిల్వ: వర్షాకాలంలో పట్టు మరియు నూలు రంగు మారకుండా పొడి వాతావరణం ఉన్న గదిని ఎంచుకోండి.`;
+      } else {
+        replyText =
+          `Strategic location recommendations for establishing a Handloom & Weaving shop in ${distName}:\n\n` +
+          `1. High-Potential Clusters in ${distName}:\n` +
+          `• Pembarti & Jangaon belt: Established craft and artisan corridors with direct access to skilled master weavers and raw yarn depots.\n` +
+          `• Hanamkonda (Subedari / Chowrasta commercial core) & Parkal: Major retail trading hubs with high footfall for festive and wedding saree shopping.\n` +
+          `• Temple & Heritage Tourist Routes (e.g., Thousand Pillar / Bhadrakali access roads): Excellent for high-margin direct-to-consumer handloom silk and cotton sales.\n\n` +
+          `2. Four Critical Site Selection Criteria:\n` +
+          `• Raw Material Logistics: Proximity to APCO/NHDC yarn collection centers saves 8-12% on transportation.\n` +
+          `• Footfall & Visibility: Ground-floor shop facing main market thoroughfare near apparel/jewellery clusters.\n` +
+          `• Commercial Overhead: Target monthly rent under ₹6,000–₹10,000 to keep fixed overhead within 10% of monthly sales.\n` +
+          `• Storage Integrity: Dry, well-ventilated space protected against monsoon moisture to prevent yarn and silk discoloration.`;
+      }
+    } else if (domain === 'retail_shop') {
+      if (isTe) {
+        replyText =
+          `${distName} లో కిరాణా / జనరల్ స్టోర్ కోసం అనువైన స్థలాలు:\n\n` +
+          `1. బస్టాండ్ జంక్షన్ & గ్రామ పంచాయతీ కేంద్రం: నిరంతర ప్రయాణికులు మరియు స్థానికుల రాకపోకలు ఉంటాయి.\n` +
+          `2. ప్రధాన నివాస కాలనీ ప్రవేశ ద్వారం: ఉదయం మరియు సాయంత్రం వేళల్లో పాల, కిరాణా కొనుగోళ్లకు అనుకూలం.\n` +
+          `3. స్థల ఎంపిక నియమం: ఇప్పటికే ఉన్న పెద్ద కిరాణా దుకాణానికి కనీసం 150 మీటర్ల దూరంలో షాపును ఏర్పాటు చేయండి.`;
+      } else {
+        replyText =
+          `Prime location strategy for a Kirana & General Store in ${distName}:\n\n` +
+          `1. Mandal Bus Stand Junction / Gram Panchayat Center: Highest daily pedestrian footfall and morning/evening commuters.\n` +
+          `2. Residential Colony Entrance / Main Village Thoroughfare: Steady recurring household purchases for daily provisions.\n` +
+          `3. Site Evaluation Rule: Ensure at least 150-200 meters separation from established wholesale general stores to protect pricing power.`;
+      }
+    } else if (domain === 'dairy_farming') {
+      if (isTe) {
+        replyText =
+          `${distName} లో పాడి పరిశ్రమ ఏర్పాటుకు అనువైన స్థలం:\n\n` +
+          `1. డైరీ కోఆపరేటివ్ సొసైటీ లేదా బల్క్ మిల్క్ కూలర్ (BMC) మార్గానికి 2-3 కి.మీ పరిధిలో ఉండాలి.\n` +
+          `2. పచ్చిగడ్డి సాగుకు అనువైన నీటి వనరు మరియు సులభమైన రవాణా రోడ్డు ఉండాలి.\n` +
+          `3. గాలి, వెలుతురు ధారాళంగా వచ్చే ఎత్తైన ప్రదేశం షెడ్ నిర్మాణానికి అనుకూలం.`;
+      } else {
+        replyText =
+          `Location criteria for setting up a Dairy Farm in ${distName}:\n\n` +
+          `1. Proximity to Bulk Milk Coolers (BMC) or cooperative milk route (within 2-3 km) to minimize spoilage and transport overhead.\n` +
+          `2. Reliable perennial water source for green fodder irrigation (Super Napier/Co-4) and cattle drinking.\n` +
+          `3. Elevated, well-drained terrain with east-west orientation for optimal shed ventilation.`;
+      }
+    } else {
+      if (isTe) {
+        replyText =
+          `${distName} లో ${catName} వ్యాపారానికి అనువైన స్థలం:\n\n` +
+          `1. మండల ప్రధాన కూడలి లేదా వాణిజ్య మార్కెట్ యార్డ్ పరిసరాలు.\n` +
+          `2. రవాణా సౌకర్యం, విద్యుత్ లభ్యత మరియు తక్కువ అద్దె ఉండే ప్రాంతాన్ని ఎంచుకోండి.\n` +
+          `3. కస్టమర్ రద్దీ మరియు సరుకు రవాణా రెండింటికీ అనుకూలంగా ఉండాలి.`;
+      } else {
+        replyText =
+          `Location selection strategy for ${catName} in ${distName}:\n\n` +
+          `1. Mandal Commercial Center / Market Yard corridor with high consumer density.\n` +
+          `2. Assure multi-modal transport accessibility, reliable utility connections, and reasonable shop rentals.\n` +
+          `3. Prioritize customer visibility while keeping fixed overhead under 10% of gross margin.`;
+      }
+    }
+  }
+
+  // 2. Investment Decision Evaluation (e.g., AC on dairy farm, jacquard, freezer)
+  else if (intent === 'investment_decision') {
+    if (domain === 'dairy_farming') {
+      if (isTe) {
+        replyText =
+          `పాడి పరిశ్రమకు ఎయిర్ కండీషనర్ (AC) కొనుగోలుపై ఆర్థిక విశ్లేషణ:\n\n` +
+          `1. ఆర్థిక సాధ్యాసాధ్యం: పశువుల పాకలో రెసిడెన్షియల్ AC ఏర్పాటు చేయడం లాభదాయకం కాదు. నెలకు కరెంట్ బిల్లు ₹12,000 పైగా వస్తుంది మరియు పెట్టుబడి తిరిగి రావడానికి 8 సంవత్సరాలు పడుతుంది.\n` +
+          `2. ప్రత్యామ్నాయ తక్కువ ఖర్చు పరిష్కారం: గ్రీన్ షేడ్ నెట్ (75% షేడ్), స్ప్రింక్లర్ ఫాగర్లు (Misting Nozzles) మరియు రూఫ్ ఎగ్జాస్ట్ ఫ్యాన్లు ఏర్పాటు చేయండి. మొత్తం ఖర్చు ₹25,000 మాత్రమే.\n` +
+          `3. ఫలితం: ఇది పాక ఉష్ణోగ్రతను 4-6°C తగ్గిస్తుంది, పాల దిగుబడిని 95% కాపాడుతుంది మరియు నెలకు విద్యుత్ ఖర్చు కేవలం ₹1,500 లోపే ఉంటుంది.`;
+      } else {
+        replyText =
+          `Financial evaluation of purchasing an Air Conditioner (AC) for your Dairy Farm:\n\n` +
+          `1. Financial Viability: Installing a residential AC in open/semi-open dairy sheds is financially unfeasible. High monthly power costs (₹12,000+) result in an unviable payback period (>8 years).\n` +
+          `2. Recommended Cost-Effective Alternative: Install high-density green agro-shade nets (75% shade), low-pressure misting/fogger nozzles, and heavy-duty ceiling fans. Total outlay is ~₹25,000.\n` +
+          `3. Operating Impact: Lowers shed temperature by 4-6°C, preserves 95% of summer milk yield, and consumes less than ₹1,500/month in power.`;
+      }
+    } else if (domain === 'handloom_weaving') {
+      if (isTe) {
+        replyText =
+          `చేనేత వ్యాపారంలో ఎలక్ట్రానిక్ జకార్డ్ / ఆధునిక అమరిక పెట్టుబడి విశ్లేషణ:\n\n` +
+          `1. పెట్టుబడి ఖర్చు: ఎలక్ట్రానిక్ జకార్డ్ బాక్స్ మరియు మోటరైజ్డ్ సెటప్ ఖర్చు సుమారు ₹45,000 - ₹60,000.\n` +
+          `2. లాభం & పేబ్యాక్: ఇది సంక్లిష్ట డిజైన్ల నేత వేగాన్ని 35% పెంచుతుంది, ప్రతి చీరకు ₹1,500 అదనపు మార్జిన్ అందిస్తుంది. 8-10 నెలల్లో పెట్టుబడి రికవర్ అవుతుంది.\n` +
+          `3. ప్రభుత్వ సహకారం: పీఎం విశ్వకర్మ పథకం కింద 5% రాయితీ వడ్డీతో ఈ కొనుగోలుకు రుణం పొందవచ్చు.`;
+      } else {
+        replyText =
+          `Investment evaluation for Electronic Jacquard / Loom Upgrades in Handloom Weaving:\n\n` +
+          `1. Capital Outlay: Electronic Jacquard conversion setup costs ~₹45,000 - ₹60,000 per loom.\n` +
+          `2. Productivity & Payback: Increases complex pattern weaving output by 35%, commanding ₹1,500 higher value-add per saree. Full payback achieved in 8-10 months.\n` +
+          `3. Scheme Linkage: Eligible for 5% concessional credit under PM Vishwakarma / Weavers MUDRA scheme.`;
+      }
+    } else {
+      if (isTe) {
+        replyText =
+          `${distName} లో ${catName} కోసం ప్రతిపాదిత పరికరాల పెట్టుబడి విశ్లేషణ: యంత్రం/పరికరాల కొనుగోలు నిర్వహణ వ్యయాన్ని తగ్గించి రోజువారీ ఉత్పాదకతను 25-30% పెంచుతుంది. పేబ్యాక్ పిరియడ్ సుమారు 10-14 నెలలుగా అంచనా వేయబడింది.`;
+      } else {
+        replyText =
+          `Financial evaluation for proposed equipment investment in ${catName} (${distName}): Modern machinery expands throughput by 25-30% while trimming unit labor expenses. Capital payback is achieved within 10 to 14 months.`;
+      }
+    }
+  }
+
+  // 3. Capacity / Quantity Calculation Intent
+  else if (intent === 'capacity_calculation' || (intentInfo.isNumerical && targetAmt && intent !== 'volume_target_calculation' && intent !== 'expansion_capital_calculation')) {
     const calc = calculateCapacityForTargetProfit(
       catName,
       targetAmt || 500000,
@@ -243,7 +358,7 @@ function synthesizeGroundedLocalAdvisor(
     const tLabel = timeframe === 'annual' ? 'సంవత్సరానికి' : 'నెలకు';
     const tLabelEn = timeframe === 'annual' ? 'per year' : 'per month';
 
-    if (catName.toLowerCase().includes('dairy') || input.category?.toLowerCase().includes('dairy') || input.category?.toLowerCase().includes('పాడి')) {
+    if (domain === 'dairy_farming' || catName.toLowerCase().includes('dairy') || input.category?.toLowerCase().includes('dairy') || input.category?.toLowerCase().includes('పాడి')) {
       if (isTe) {
         replyText =
           `సమాధానం: ${tLabel} ₹${calc.targetProfit.toLocaleString('en-IN')} నికర లాభం పొందడానికి మీకు సుమారు ${calc.recommendedUnits} పాడి ఆవులు (ఖచ్చితంగా ${calc.exactUnitsNeeded}) అవసరం.\n\n` +
@@ -273,19 +388,19 @@ function synthesizeGroundedLocalAdvisor(
           `• Your 10% Promoter Margin: ₹${fo.promoterMarginRequired.toLocaleString('en-IN')}.\n` +
           `• 90% MUDRA / Institutional Term Loan: ₹${fo.bankLoanEligible.toLocaleString('en-IN')}.`;
       }
-    } else if (catName.toLowerCase().includes('poultry') || input.category?.toLowerCase().includes('poultry')) {
+    } else if (domain === 'poultry_farming' || catName.toLowerCase().includes('poultry') || input.category?.toLowerCase().includes('poultry')) {
       if (isTe) {
         replyText =
           `సమాధానం: ${tLabel} ₹${calc.targetProfit.toLocaleString('en-IN')} లాభం పొందడానికి మీకు ${calc.recommendedUnits.toLocaleString('en-IN')} పౌల్ట్రీ పక్షుల షెడ్ సామర్థ్యం అవసరం.\n\n` +
-          `లెక్కింపు: సంవత్సరానికి 6 బ్యాచ్‌లు × బ్యాచ్‌కు ₹${um.netProfitPerBirdBatch} నికర లాభం = పక్షికి సంవత్సరానికి ₹${um.netProfitPerUnitAnnual}. ` +
+          `లెక్కింపు: సంవత్సరానికి 6 బ్యాచ్‌లు × బ్యాచ్‌కు ₹${um.netProfitPerBirdBatch || 15} నికర లాభం = పక్షికి సంవత్సరానికి ₹${um.netProfitPerUnitAnnual}. ` +
           `మొత్తం ప్రాజెక్ట్ ఖర్చు: ₹${fo.totalProjectCost.toLocaleString('en-IN')} (స్వంత వాటా 10%: ₹${fo.promoterMarginRequired.toLocaleString('en-IN')}, బ్యాంక్ రుణం: ₹${fo.bankLoanEligible.toLocaleString('en-IN')}).`;
       } else {
         replyText =
           `Answer: To generate ₹${calc.targetProfit.toLocaleString('en-IN')} net profit ${tLabelEn}, you need a shed capacity of approximately ${calc.recommendedUnits.toLocaleString('en-IN')} broiler birds.\n\n` +
-          `Calculation: 6 batches/year × ₹${um.netProfitPerBirdBatch} net profit/bird = ₹${um.netProfitPerUnitAnnual}/year per capacity unit. ` +
+          `Calculation: 6 batches/year × ₹${um.netProfitPerBirdBatch || 15} net profit/bird = ₹${um.netProfitPerUnitAnnual}/year per capacity unit. ` +
           `Project outlay: ₹${fo.totalProjectCost.toLocaleString('en-IN')} (10% Promoter equity: ₹${fo.promoterMarginRequired.toLocaleString('en-IN')}, 90% Term Loan: ₹${fo.bankLoanEligible.toLocaleString('en-IN')}).`;
       }
-    } else if (catName.toLowerCase().includes('weaving') || input.category?.toLowerCase().includes('weaving')) {
+    } else if (domain === 'handloom_weaving' || catName.toLowerCase().includes('weaving') || input.category?.toLowerCase().includes('weaving')) {
       if (isTe) {
         replyText =
           `సమాధానం: ${tLabel} ₹${calc.targetProfit.toLocaleString('en-IN')} నికర లాభం పొందడానికి మీకు ${calc.recommendedUnits} సాంప్రదాయ చేనేత మగ్గాలు అవసరం.\n\n` +
@@ -310,55 +425,131 @@ function synthesizeGroundedLocalAdvisor(
           `You can secure priority working capital credit under MUDRA Kishore up to ₹5 Lakhs.`;
       }
     }
-  } else if (intent === 'expansion_capital_calculation') {
-    if (isTe) {
-      replyText = `${distName} లో ${catName} విస్తరణకు మూలధన అంచనా: 1) 2 అదనపు పాడి ఆవులు మరియు షెడ్ విస్తరణకు ప్రాజెక్ట్ ఖర్చు: సుమారు ₹1,50,000 (ఆవుకు ₹75,000). 2) మీ 10% స్వంత మార్జిన్: ₹15,000. 3) ముద్రా / కిసాన్ క్రెడిట్ కార్డ్ (KCC) / AHIDF కింద 90% బ్యాంకు రుణం: ₹1,35,000. 4) ఆశించిన అదనపు నికర లాభం: నెలకు ₹15,000 (సంవత్సరానికి ₹1,80,000).`;
+  }
+
+  // 4. Expansion Capital Calculation
+  else if (intent === 'expansion_capital_calculation') {
+    if (domain === 'dairy_farming') {
+      if (isTe) {
+        replyText = `${distName} లో పాడి పరిశ్రమ విస్తరణకు మూలధన అంచనా: 1) 2 అదనపు పాడి ఆవులు మరియు షెడ్ విస్తరణకు ప్రాజెక్ట్ ఖర్చు: సుమారు ₹1,50,000 (ఆవుకు ₹75,000). 2) మీ 10% స్వంత మార్జిన్: ₹15,000. 3) ముద్రా / కిసాన్ క్రెడిట్ కార్డ్ (KCC) / AHIDF కింద 90% బ్యాంకు రుణం: ₹1,35,000. 4) ఆశించిన అదనపు నికర లాభం: నెలకు ₹15,000 (సంవత్సరానికి ₹1,80,000).`;
+      } else {
+        replyText = `Capital requirements to expand your dairy farm in ${distName}: 1) Total project outlay to add a 2-cow unit: ~₹150,000 (₹75,000 per animal including shed extension). 2) Required 10% promoter equity: ₹15,000. 3) Eligible 90% bank term loan (MUDRA / KCC / AHIDF): ₹135,000. 4) Incremental net monthly surplus generated: ~₹15,000/month (₹180,000/year).`;
+      }
+    } else if (domain === 'handloom_weaving') {
+      if (isTe) {
+        replyText = `${distName} లో చేనేత మగ్గాల విస్తరణకు మూలధన అంచనా: 1) 2 అదనపు జకార్డ్ పిట్ మగ్గాల ప్రాజెక్ట్ ఖర్చు: సుమారు ₹1,20,000. 2) మీ 10% స్వంత మార్జిన్: ₹12,000. 3) పీఎం విశ్వకర్మ / వీవర్స్ ముద్రా కింద 90% రుణం: ₹1,08,000. 4) ఆశించిన అదనపు నికర లాభం: నెలకు ₹14,000.`;
+      } else {
+        replyText = `Capital requirements to expand your Handloom setup in ${distName}: 1) Total project outlay for 2 additional Jacquard pit looms: ~₹120,000. 2) Required 10% promoter equity: ₹12,000. 3) Eligible 90% loan (PM Vishwakarma / Weavers MUDRA): ₹108,000. 4) Incremental net monthly surplus: ~₹14,000/month.`;
+      }
     } else {
-      replyText = `Capital requirements to expand your ${catName} business in ${distName}: 1) Total project outlay to add a 2-cow unit: ~₹150,000 (₹75,000 per milch animal including shed extension). 2) Required 10% promoter equity: ₹15,000. 3) Eligible 90% bank term loan (MUDRA / KCC / AHIDF): ₹135,000. 4) Incremental net monthly surplus generated: ~₹15,000/month (₹180,000/year).`;
+      if (isTe) {
+        replyText = `${distName} లో ${catName} విస్తరణకు మూలధన అంచనా: 1) విస్తరణ ప్రాజెక్ట్ ఖర్చు: సుమారు ₹1,20,000. 2) మీ 10% స్వంత మార్జిన్: ₹12,000. 3) ముద్రా కింద 90% బ్యాంకు రుణం: ₹1,08,000. 4) అదనపు నెలవారీ మిగులు: నెలకు ₹12,000 - ₹15,000.`;
+      } else {
+        replyText = `Capital requirements to expand your ${catName} business in ${distName}: 1) Total project expansion outlay: ~₹120,000. 2) Required 10% promoter equity: ₹12,000. 3) Eligible 90% bank term loan (MUDRA): ₹108,000. 4) Incremental net monthly surplus: ~₹12,000 to ₹15,000/month.`;
+      }
     }
-  } else if (intent === 'volume_target_calculation') {
-    const vtAmt = targetAmt || 100000;
-    const pricePerL = 55;
-    const litresNeeded = Math.ceil(vtAmt / pricePerL);
-    const dailyLitres = Math.ceil(litresNeeded / 30);
-    if (isTe) {
-      replyText = `సమాధానం: ₹${vtAmt.toLocaleString('en-IN')} స్థూల ఆదాయం సాధించడానికి మీరు లీటరుకు సగటున ₹${pricePerL} చొప్పున మొత్తం ${litresNeeded.toLocaleString('en-IN')} లీటర్ల పాలు (నెలకు రోజుకు సుమారు ${dailyLitres} లీటర్లు) విక్రయించాలి.`;
+  }
+
+  // 5. Profitability Inquiry
+  else if (intent === 'profitability_calculation') {
+    if (domain === 'handloom_weaving') {
+      if (isTe) {
+        replyText = `${distName} లో చేనేత (Handloom) వ్యాపార లాభదాయకత వివరాలు: 1) ఒక మగ్గానికి నికర లాభం: నెలకు దాదాపు ₹7,000 (సంవత్సరానికి ₹84,000). 2) 2 మగ్గాల సెటప్‌తో నెలకు ₹14,000 నికర ఆదాయం లభిస్తుంది. 3) నేరుగా రిటైల్ విక్రయాలు చేయడం ద్వారా లాభ మార్జిన్ 35% వరకు పెరుగుతుంది.`;
+      } else {
+        replyText = `Profitability benchmarks for Handloom Weaving in ${distName}: 1) Net profit per active loom is ~₹7,000/month (₹84,000/year). 2) A standard 2-loom family unit delivers ~₹14,000/month net surplus. 3) Direct retail sales of silk and festive sarees expand operating margins to 30%–35%.`;
+      }
+    } else if (domain === 'dairy_farming') {
+      if (isTe) {
+        replyText = `${distName} లో పాడి పరిశ్రమ వ్యాపారానికి సగటు లాభదాయకత: ఒక పాడి ఆవుకు నెలకు దాదాపు ₹7,500 (సంవత్సరానికి ₹90,000) నికర లాభం లభిస్తుంది. 2 ఆవుల ప్రాథమిక యూనిట్‌తో నెలకు ₹15,000 నికర ఆదాయం పొందవచ్చు.`;
+      } else {
+        replyText = `Profitability benchmarks for Dairy in ${distName}: Net profit per milch animal is ~₹7,500/month (₹90,000/year). A starter 2-cow unit delivers ~₹15,000/month net surplus.`;
+      }
     } else {
-      replyText = `Answer: To generate ₹${vtAmt.toLocaleString('en-IN')} gross revenue at ₹${pricePerL}/Litre, you need to produce and sell ${litresNeeded.toLocaleString('en-IN')} Litres of milk (approximately ${dailyLitres} Litres/day over a monthly cycle).`;
+      if (isTe) {
+        replyText = `${distName} లో ${catName} వ్యాపారానికి సగటు నికర లాభ మార్జిన్ 18% నుండి 25%. క్రమబద్ధమైన నిర్వహణ ద్వారా స్థిరమైన మిగులు పొందవచ్చు.`;
+      } else {
+        replyText = `Profitability benchmarks for ${catName} in ${distName}: Average net profit margin ranges from 18% to 25% based on direct customer off-take and disciplined cost control.`;
+      }
     }
-  } else if (intent === 'break_even_calculation') {
-    if (isTe) {
-      replyText = `సమాధానం: మీ ${catName} వ్యాపారానికి బ్రేక్-ఈవెన్ పాయింట్ (నష్టం లేని అమ్మకాలు): నెలకు దాదాపు ₹60,000 (రోజుకు ₹2,000), ఇది స్థిర ఖర్చులు ₹15,000 మరియు 25% స్థూల మార్జిన్ ఆధారంగా లెక్కించబడింది.`;
+  }
+
+  // 6. Raw Material / Sourcing Optimization
+  else if (intent === 'raw_material_optimization') {
+    if (domain === 'handloom_weaving') {
+      replyText = isTe
+        ? `${distName} లో చేనేత ముడిసరుకు (నూలు & జరీ) ఖర్చులను తగ్గించే వ్యూహాలు: 1) NHDC లేదా APCO నూలు డిపోల ద్వారా నేరుగా కొనుగోలు చేయడం (10% రవాణా రాయితీ). 2) సహకార సంఘం ద్వారా ఉమ్మడిగా బల్క్ యార్న్ ఆర్డర్ చేయడం. 3) ఖచ్చితమైన వార్పింగ్ ద్వారా దారాల వృథాను తగ్గించడం.`
+        : `To optimize raw yarn costs in ${distName}: 1) Procure hank yarn directly through NHDC depots with 10% freight subsidy. 2) Form cluster purchasing groups with local weaver societies for mill-gate pricing. 3) Minimize end-breakage yarn wastage through precision warping.`;
+    } else if (domain === 'dairy_farming') {
+      replyText = isTe
+        ? `${distName} లో పశువుల దాణా మరియు ముడిసరుకు ఖర్చులను తగ్గించడానికి: 1) స్థానిక APMC మండి లేదా PACS ద్వారా టోకుగా నేరుగా కొనుగోలు చేయడం (8-15% ఆదా). 2) సైలేజ్ (పాతర గడ్డి) మరియు అజోల్లా ఉత్పత్తి ద్వారా ప్రొటీన్ ఖర్చును తగ్గించడం. 3) సమీప రైతులతో కలిసి ఉమ్మడిగా దాణా ఆర్డర్ చేయడం.`
+        : `To reduce feed and raw material costs in ${distName}: 1) Procure feed grains and oil cakes in bulk directly through ${distName} APMC mandis or Primary Agricultural Cooperative Societies (PACS) to cut retail markup by 10-15%. 2) Supplement with on-farm silage preservation and high-protein Azolla cultivation. 3) Form a joint-buying cluster with neighboring producers to negotiate wholesale mill rates and split freight.`;
     } else {
-      replyText = `Answer: The break-even sales threshold for your ${catName} unit is approximately ₹60,000/month (₹2,000/day), assuming fixed monthly overheads of ₹15,000 at a 25% gross margin.`;
+      replyText = isTe
+        ? `${distName} లో ${catName} ముడిసరుకు ఖర్చులను తగ్గించడానికి టోకు వ్యాపారుల నుండి నేరుగా కొనుగోలు చేయండి మరియు 7-రోజుల క్రెడిట్ నిబంధనలను సద్వినియోగం చేసుకోండి.`
+        : `To optimize raw material procurement for ${catName} in ${distName}: Procure directly from wholesale mandis and establish 7-day revolving trade credit.`;
     }
-  } else if (intent === 'profitability_calculation') {
-    if (isTe) {
-      replyText = `${distName} లో ${catName} వ్యాపారానికి సగటు లాభదాయకత: ఒక పాడి ఆవుకు నెలకు దాదాపు ₹7,500 (సంవత్సరానికి ₹90,000) నికర లాభం లభిస్తుంది. 2 ఆవుల ప్రాథమిక యూనిట్‌తో నెలకు ₹15,000 నికర ఆదాయం పొందవచ్చు.`;
+  }
+
+  // 7. Pricing Guidance
+  else if (intent === 'pricing_guidance') {
+    if (domain === 'handloom_weaving') {
+      replyText = isTe
+        ? `${distName} చేనేత మార్కెట్ ధరల విశ్లేషణ: కాటన్ చీరలకు ₹1,800 - ₹3,500, పట్టు మరియు జరీ చీరలకు ₹4,500 - ₹12,000 వరకు ధర లభిస్తుంది. నేరుగా విక్రయిస్తే 30-35% పూర్తి లాభ మార్జిన్ పొందవచ్చు.`
+        : `Pricing benchmarks for Handloom in ${distName}: Handloom cotton sarees command ₹1,800 to ₹3,500, while silk/zari sarees fetch ₹4,500 to ₹12,000 based on weave intricacy. Direct retail sales secure a 30%–35% gross margin.`;
+    } else if (domain === 'dairy_farming') {
+      replyText = isTe
+        ? `${distName} మార్కెట్ ప్రకారం ధర నిర్ణయం: పాల ఫ్యాట్ మరియు SNF ఆధారంగా స్థానిక డైరీ కోఆపరేటివ్‌లకు విక్రయించేటప్పుడు లీటరుకు ₹42 - ₹48 లభిస్తుంది. అయితే స్థానిక మండల హోటళ్ళు, స్వీట్ షాపులు లేదా నేరుగా ఇళ్లకు విక్రయిస్తే లీటరుకు ₹58 - ₹68 వరకు పూర్తి రిటైల్ మార్జిన్ పొందవచ్చు.`
+        : `For Dairy in ${distName}, prevailing pricing dynamics: Direct cooperative off-take yields ₹42 - ₹48/L based on Fat/SNF testing benchmarks. Direct-to-consumer and local commercial retail supply (tea stalls, canteens, sweet shops) commands ${basePrice} (₹58 - ₹68/L), capturing a 25-30% higher operating margin.`;
     } else {
-      replyText = `Profitability benchmarks for ${catName} in ${distName}: Net profit per milch animal is ~₹7,500/month (₹90,000/year). A starter 2-cow unit delivers ~₹15,000/month net surplus.`;
+      replyText = isTe
+        ? `${distName} మార్కెట్ ప్రకారం ${catName} ధరల సరళి: స్థానిక నాణ్యత మరియు గిరాకీ ఆధారంగా ధర నిర్ణయించి 20-25% మార్జిన్ సాధించండి.`
+        : `For ${catName} in ${distName}: Maintain transparent unit pricing aligned with ${basePrice} to protect a 20%–25% profit margin.`;
     }
-  } else if (intent === 'raw_material_optimization') {
+  }
+
+  // 8. Government Schemes
+  else if (intent === 'government_schemes') {
+    if (domain === 'handloom_weaving') {
+      replyText = isTe
+        ? `${distName} లో చేనేత కార్మికుల కోసం ప్రధాన ప్రభుత్వ పథకాలు: 1) పీఎం విశ్వకర్మ యోజన: 5% రాయితీ వడ్డీతో ₹3 లక్షల వరకు తాకట్టు లేని రుణం. 2) వీవర్స్ ముద్రా స్కీమ్: ₹2 లక్షల వరకు 7% వడ్డీ రాయితీతో వర్కింగ్ క్యాపిటల్ రుణం. 3) నేషనల్ హ్యాండ్‌లూమ్ డెవలప్‌మెంట్ ప్రోగ్రామ్ (NHDP): నూలుపై 10% సబ్సిడీ.`
+        : `Key government schemes for Handloom & Weaving in ${distName}: 1) PM Vishwakarma Scheme: Collateral-free credit up to ₹3 Lakhs at 5% concessional interest. 2) Weavers MUDRA Scheme: Working capital credit up to ₹2 Lakhs with 7% interest subvention. 3) National Handloom Development Programme (NHDP): 10% raw yarn subsidy.`;
+    } else if (domain === 'dairy_farming') {
+      replyText = isTe
+        ? `${distName} లో పాడి పరిశ్రమ కోసం ప్రధాన ప్రభుత్వ పథకాలు: 1) PMEGP: గ్రామీణ ప్రాంతాల్లో 25% నుండి 35% మూలధన సబ్సిడీ. 2) MUDRA (కిశోర్ విభాగం): ₹5 లక్షల వరకు తాకట్టు లేని తక్కువ వడ్డీ రుణం. 3) నేషనల్ లైవ్‌స్టాక్ మిషన్ (NLM): డెయిరీ మరియు పశుగ్రాస అభివృద్ధికి ప్రత్యేక సబ్సిడీ.`
+        : `Key government subsidy and credit schemes for Dairy in ${distName}: 1) PMEGP (Prime Minister Employment Generation Programme): 25% to 35% capital subsidy for rural micro-units. 2) MUDRA (Kishor tier up to ₹5L): Collateral-free priority-sector working capital and asset term loans. 3) National Livestock Mission (NLM) & AHIDF: Interest subvention of 3% for value-addition and cattle infrastructure.`;
+    } else {
+      replyText = isTe
+        ? `${distName} లో ${catName} కోసం లభించే ప్రధాన ప్రభుత్వ పథకాలు: 1) PMEGP (25-35% సబ్సిడీ). 2) MUDRA లోన్ (రూ. 50,000 నుండి రూ. 10 లక్షల వరకు). 3) స్టాండప్ ఇండియా.`
+        : `Key government subsidy and credit schemes for ${catName} in ${distName}: 1) PMEGP: 25% to 35% capital subsidy for rural micro-units. 2) MUDRA: Collateral-free priority-sector working capital and asset term loans. 3) Stand-Up India for greenfield enterprises.`;
+    }
+  }
+
+  // 9. Seasonal Operational Advice
+  else if (intent === 'seasonal_operational_advice') {
+    if (domain === 'handloom_weaving') {
+      replyText = isTe
+        ? `చేనేత వ్యాపారంలో కాలానుగుణ నిర్వహణ జాగ్రత్తలు (${distName}): 1) వర్షాకాలంలో తేమ వల్ల పట్టు, నూలు దారాలు పాడవకుండా డ్రై స్టోరేజ్ వాడండి. 2) దసరా, దీపావళి మరియు వివాహాల సీజన్ల కోసం 2 నెలల ముందే స్టాక్ సిద్ధం చేసుకోండి.`
+        : `Seasonal operational advice for Handloom Weaving in ${distName}: 1) Protect silk and cotton yarn from monsoon humidity using elevated dry storage. 2) Build up inventory 60 days in advance of the festive (Dussehra/Diwali) and wedding seasons.`;
+    } else if (domain === 'dairy_farming') {
+      replyText = isTe
+        ? `వేసవి కాలంలో ${distName} లో పాల దిగుబడి తగ్గకుండా తీసుకోవాల్సిన కీలక జాగ్రత్తలు: 1) పశువుల పాకపై గ్రీన్ షేడ్ నెట్ లేదా గడ్డి పైకప్పు ఏర్పాటు చేసి ఉష్ణోగ్రతను 4-6°C తగ్గించడం. 2) స్వచ్ఛమైన చల్లని తాగునీరు 24 గంటలు అందుబాటులో ఉంచడం మరియు ఎలక్ట్రోలైట్లు అందించడం. 3) వేడి తక్కువగా ఉండే రాత్రి వేళల్లో మాత్రమే దాణా తినిపించడం.`
+        : `To maintain milk yield during peak summer heat in ${distName}: 1) Install green agro-shade nets or thatched thatch roofs with water sprinkler/mist systems to lower shed temperature by 4-6°C. 2) Provide unlimited access to cool, clean drinking water enriched with electrolytes and mineral mixtures. 3) Shift the heavy concentrate feeding schedule to cooler nighttime and early morning hours to encourage digestion without heat stress.`;
+    } else {
+      replyText = isTe
+        ? `${distName} లో ${catName} కోసం కాలానుగుణ ప్రణాళిక: స్థానిక పండుగలు మరియు పంటల కాలానికి అనుగుణంగా వర్కింగ్ క్యాపిటల్ సర్దుబాటు చేసుకోండి.`
+        : `Seasonal operational advice for ${catName} in ${distName}: Align inventory buildup with festive liquidity and maintain a 45-day operational cash buffer.`;
+    }
+  }
+
+  // 10. Cash Flow / Credit Optimization
+  else if (intent === 'cash_flow_optimization') {
     replyText = isTe
-      ? `${distName} లో పశువుల దాణా మరియు ముడిసరుకు ఖర్చులను తగ్గించడానికి: 1) స్థానిక APMC మండి లేదా PACS ద్వారా టోకుగా నేరుగా కొనుగోలు చేయడం (8-15% ఆదా). 2) సైలేజ్ (పాతర గడ్డి) మరియు అజోల్లా ఉత్పత్తి ద్వారా ప్రొటీన్ ఖర్చును తగ్గించడం. 3) సమీప రైతులతో కలిసి ఉమ్మడిగా దాణా ఆర్డర్ చేయడం.`
-      : `To reduce feed and raw material costs in ${distName}: 1) Procure feed grains and oil cakes in bulk directly through ${distName} APMC mandis or Primary Agricultural Cooperative Societies (PACS) to cut retail markup by 10-15%. 2) Supplement with on-farm silage preservation and high-protein Azolla cultivation. 3) Form a joint-buying cluster with neighboring producers to negotiate wholesale mill rates and split freight.`;
-  } else if (intent === 'seasonal_operational_advice') {
-    replyText = isTe
-      ? `వేసవి కాలంలో ${distName} లో పాల దిగుబడి తగ్గకుండా తీసుకోవాల్సిన కీలక జాగ్రత్తలు: 1) పశువుల పాకపై గ్రీన్ షేడ్ నెట్ లేదా గడ్డి పైకప్పు ఏర్పాటు చేసి ఉష్ణోగ్రతను 4-6°C తగ్గించడం. 2) స్వచ్ఛమైన చల్లని తాగునీరు 24 గంటలు అందుబాటులో ఉంచడం మరియు ఎలక్ట్రోలైట్లు అందించడం. 3) వేడి తక్కువగా ఉండే రాత్రి వేళల్లో మాత్రమే దాణా తినిపించడం.`
-      : `To maintain milk yield during peak summer heat in ${distName}: 1) Install green agro-shade nets or thatched thatch roofs with water sprinkler/mist systems to lower shed temperature by 4-6°C. 2) Provide unlimited access to cool, clean drinking water enriched with electrolytes and mineral mixtures. 3) Shift the heavy concentrate feeding schedule to cooler nighttime and early morning hours to encourage digestion without heat stress.`;
-  } else if (intent === 'pricing_guidance') {
-    replyText = isTe
-      ? `${distName} మార్కెట్ ప్రకారం ధర నిర్ణయం: పాల ఫ్యాట్ మరియు SNF ఆధారంగా స్థానిక డైరీ కోఆపరేటివ్‌లకు విక్రయించేటప్పుడు లీటరుకు ₹42 - ₹48 లభిస్తుంది. అయితే స్థానిక మండల హోటళ్ళు, స్వీట్ షాపులు లేదా నేరుగా ఇళ్లకు విక్రయిస్తే లీటరుకు ₹58 - ₹68 వరకు పూర్తి రిటైల్ మార్జిన్ పొందవచ్చు.`
-      : `For ${catName} in ${distName}, prevailing pricing dynamics: Direct cooperative off-take yields ₹42 - ₹48/L based on Fat/SNF testing benchmarks. Direct-to-consumer and local commercial retail supply (tea stalls, canteens, sweet shops) commands ${basePrice} (₹58 - ₹68/L), capturing a 25-30% higher operating margin.`;
-  } else if (intent === 'government_schemes') {
-    replyText = isTe
-      ? `${distName} లో ${catName} కోసం లభించే ప్రధాన ప్రభుత్వ పథకాలు: 1) PMEGP: గ్రామీణ ప్రాంతాల్లో 25% నుండి 35% మూలధన సబ్సిడీ. 2) MUDRA (కిశోర్ విభాగం): ₹5 లక్షల వరకు తాకట్టు లేని తక్కువ వడ్డీ రుణం. 3) నేషనల్ లైవ్‌స్టాక్ మిషన్ (NLM): డెయిరీ మరియు పశుగ్రాస అభివృద్ధికి ప్రత్యేక సబ్సిడీ.`
-      : `Key government subsidy and credit schemes for ${catName} in ${distName}: 1) PMEGP (Prime Minister Employment Generation Programme): 25% to 35% capital subsidy for rural micro-units. 2) MUDRA (Kishor tier up to ₹5L): Collateral-free priority-sector working capital and asset term loans. 3) National Livestock Mission (NLM) & AHIDF: Interest subvention of 3% for value-addition and cattle infrastructure.`;
-  } else if (intent === 'cash_flow_optimization') {
-    replyText = isTe
-      ? `తక్కువ అమ్మకాలు ఉండే కాలంలో (ఆఫ్-సీజన్) నగదు నిల్వలను నిర్వహించే వ్యూహం: 1) అనవసర మూలధన ఖర్చులను వాయిదా వేయండి. 2) పాత కస్టమర్ల బాకీలను UPI QR ద్వారా వేగంగా వసూలు చేయండి. 3) సహకార బ్యాంకులు లేదా స్వయం సహాయక సంఘాల ద్వారా తక్కువ వడ్డీ వర్కింగ్ క్యాపిటల్ కుషన్ సిద్ధంగా ఉంచుకోండి.`
+      ? `తక్కువ అమ్మకాలు ఉండే కాలంలో (ఆఫ్-సీజన్) నగదు నిల్వలను నిర్వహించే వ్యూహం (${distName}): 1) అనవసర మూలధన ఖర్చులను వాయిదా వేయండి. 2) పాత కస్టమర్ల బాకీలను UPI QR ద్వారా వేగంగా వసూలు చేయండి. 3) సహకార బ్యాంకులు లేదా స్వయం సహాయక సంఘాల ద్వారా తక్కువ వడ్డీ వర్కింగ్ క్యాపిటల్ కుషన్ సిద్ధంగా ఉంచుకోండి.`
       : `To navigate lean-sales months in ${distName}: 1) Defer all discretionary capital expenditures and non-urgent asset purchases. 2) Accelerate recovery of outstanding customer credit balances via instant UPI QR settlements. 3) Maintain a 45-day operational cash buffer from peak-season profits to service quarterly EMIs comfortably.`;
-  } else if (input.userQuery) {
+  }
+
+  // 11. General User Query
+  else if (input.userQuery) {
     replyText = isTe
       ? `${distName} లోని స్థానిక మార్కెట్ విశ్లేషణ ప్రకారం మీ ప్రశ్న (${input.userQuery}): మీ ${catName} వ్యాపారానికి నాణ్యత, స్థానిక సరఫరా గొలుసు మరియు సమయపాలన ప్రధాన లాభదాయక అంశాలు. మార్జిన్ ${cData.marginRange || '20-25%'} నిలబెట్టుకోవడానికి పారదర్శక ధరలు మరియు నేరుగా కొనుగోలుదారులతో సంబంధాలపై దృష్టి పెట్టండి.`
       : `Addressing your inquiry regarding '${input.userQuery}' in ${distName}: For ${catName}, focusing on direct customer off-take, disciplined feed/stock sourcing, and punctuality maintains your target ${cData.marginRange || '20-25%'} profit margin.`;
@@ -466,6 +657,24 @@ function getAdvisorCacheKey(input: BusinessAnalysisInput): string {
   return `${input.location}|${input.category}|${input.marginCapital}|${input.language}|${input.userQuery || ''}|${histSummary}`;
 }
 
+function hasCrossDomainContamination(text: string, domain: string, isTe: boolean): boolean {
+  if (!text || domain === 'dairy_farming') return false;
+  const dairyRegexEn = /\b(?:milch|cow|cows|buffalo|buffaloes|milking|lactation|cattle|2-cow\s*unit|milk\s*yield|litres?\s*of\s*milk)\b/i;
+  const dairyRegexTe = /(?:పాడి\s*ఆవు|ఆవులు|గేదెలు|గేదె|పాల\s*దిగుబడి)/i;
+  return isTe ? dairyRegexTe.test(text) : dairyRegexEn.test(text);
+}
+
+const DOMAIN_NAMES_EN: Record<string, string> = {
+  handloom_weaving: 'Handloom & Powerloom Weaving',
+  dairy_farming: 'Dairy Farming & Milk Production',
+  retail_shop: 'Kirana & General Retail Shop',
+  poultry_farming: 'Poultry Farming & Broiler Unit',
+  tailoring_garments: 'Tailoring & Garment Boutique',
+  agri_processing: 'Agri-Processing & Milling Unit',
+  agriculture_crop: 'Crop Farming & Agriculture',
+  general_enterprise: 'Micro Enterprise',
+};
+
 /**
  * Grounded AI Business Advisor Generator.
  * Routes to FastAPI ChromaDB RAG backend when online; uses Gemini with local grounding when standalone.
@@ -498,8 +707,15 @@ export async function generateBusinessAnalysis(input: BusinessAnalysisInput): Pr
   }
 
   // 2. Secondary Path: Direct Next.js Google Gemini Call (Grounded on local indices)
-  const grounded = lookupGroundedContext(input.location, input.category);
   const isTe = input.language === 'te';
+  const intentInfo = classifyQueryIntent(input.userQuery || '', input.history, input.category);
+  const domain = intentInfo.domain || 'general_enterprise';
+
+  const activeCategory = (domain !== 'general_enterprise' && DOMAIN_NAMES_EN[domain])
+    ? DOMAIN_NAMES_EN[domain]
+    : (input.category || 'Micro Enterprise');
+
+  const grounded = lookupGroundedContext(input.location, activeCategory);
 
   const system = isTe
     ? `You are the RuralCred Advisor AI Engine.
@@ -511,13 +727,12 @@ This applies unconditionally to all keys: 'reply', 'marketReach' ('headline', 'd
 STRICT RULES:
 1. Do NOT write in English. Do NOT return bilingual or mixed English-Telugu text.
 2. Even if the user question is in English, output pure Telugu.
-3. For numerical / business questions (e.g. how many cows/birds/looms needed, target profit, break-even, required sales):
-   - You MUST answer the exact question directly in the 'reply' field using the exact figures from the DETERMINISTIC BUSINESS CALCULATION block.
-   - Show the step-by-step numbers clearly: (Target ÷ Profit per Unit = Required Units).
-   - State the unit economics and assumptions clearly in Telugu.
-   - NEVER provide vague generic boilerplate or dodge the calculation.
-4. Ground all factual claims strictly on the provided district profile, mandi price trends, and category benchmarks.
-5. Output ONLY valid JSON matching the exact schema requested.`
+3. STRICT ANTI-CONTAMINATION: The active domain is ${domain} (${activeCategory}). DO NOT mention unrelated domains (e.g. if Handloom, do NOT mention cows/dairy).
+4. For numerical / business questions:
+   - Answer the exact question directly in the 'reply' field using figures from the DETERMINISTIC BUSINESS CALCULATION block.
+   - Show step-by-step numbers clearly in Telugu.
+5. Ground all factual claims strictly on the provided district profile and category benchmarks.
+6. Output ONLY valid JSON matching the exact schema requested.`
     : `You are the RuralCred Advisor AI Engine.
 You provide realistic, grounded, and concise business advisory for rural Indian micro-entrepreneurs.
 CRITICAL MANDATORY LANGUAGE RULE:
@@ -526,24 +741,22 @@ You MUST generate EVERY user-facing string value in the output JSON in clear, si
 STRICT RULES:
 1. Output pure English with clear rural business terminology.
 2. Even if the user question is written in Telugu script, translate and respond completely in English.
-3. For numerical / business questions (e.g. how many cows/birds/looms needed, target profit, break-even, required sales):
-   - You MUST answer the exact question directly in the 'reply' field using the exact figures from the DETERMINISTIC BUSINESS CALCULATION block.
-   - Show the step-by-step numbers clearly: (Target ÷ Profit per Unit = Required Units).
-   - State the unit economics and assumptions clearly in English.
-   - NEVER provide vague generic boilerplate or dodge the calculation.
-4. Ground all factual claims strictly on the provided district profile, mandi price trends, and category benchmarks.
-5. Output ONLY valid JSON matching the exact schema requested.`;
+3. STRICT ANTI-CONTAMINATION: The active domain is ${domain} (${activeCategory}). DO NOT mention unrelated domains (e.g. if Handloom, do NOT mention cows/dairy).
+4. For numerical / business questions:
+   - Answer the exact question directly in the 'reply' field using figures from the DETERMINISTIC BUSINESS CALCULATION block.
+   - Show step-by-step numbers clearly in English.
+5. Ground all factual claims strictly on the provided district profile and category benchmarks.
+6. Output ONLY valid JSON matching the exact schema requested.`;
 
   const historyBlock = input.history && input.history.length > 0
     ? `CONVERSATION HISTORY (RECENT TURNS):\n${input.history.slice(-6).map(m => `${m.role === 'user' ? 'Entrepreneur' : 'Advisor'}: ${m.content}`).join('\n')}\n\n`
     : '';
 
-  const intentInfo = classifyQueryIntent(input.userQuery || '');
   let calcSummary = '';
 
   if (intentInfo.intent === 'capacity_calculation' || (intentInfo.isNumerical && intentInfo.targetAmount)) {
     const calcData = calculateCapacityForTargetProfit(
-      input.category,
+      activeCategory,
       intentInfo.targetAmount || 500000,
       intentInfo.timeframe
     );
@@ -552,10 +765,8 @@ STRICT RULES:
     calcSummary = `\n\n[DETERMINISTIC BUSINESS CALCULATION ENGINE RESULT]:
 - Target Profit: ₹${calcData.targetProfit.toLocaleString('en-IN')} (${intentInfo.timeframe})
 - Unit Economics for ${calcData.category} (${input.location}):
-  * Yield/Output: ${um.dailyYieldLitres || 10} L/day (${um.milkingDaysPerYear || 300} milking days/year = ${(um.annualProductionLitres || 3000).toLocaleString('en-IN')} L/year per cow)
-  * Selling Price: ₹${um.sellingPricePerLitre || 55}/Litre
-  * Annual Revenue per unit: ₹${(um.annualRevenuePerUnit || 165000).toLocaleString('en-IN')}
-  * Annual Operating Cost per unit: ₹${(um.annualOpexPerUnit || 75000).toLocaleString('en-IN')} (Feed 55%, Vet 10%, Labor 20%, Utilities 15%)
+  * Yield/Output: ${domain === 'dairy_farming' ? `${um.dailyYieldLitres || 10} L/day` : `${um.annualSareesProduced || 36} units/year`}
+  * Selling Price: ₹${um.sellingPricePerLitre || um.sellingPricePerSaree || 55}
   * Net Profit per unit: ₹${um.netProfitPerUnitAnnual.toLocaleString('en-IN')}/year (₹${um.netProfitPerUnitMonthly.toLocaleString('en-IN')}/month)
 - Exact Units Required: ${calcData.exactUnitsNeeded} ${calcData.unitNameEn} (Recommended: ${calcData.recommendedUnits} ${calcData.unitNameEn})
 - Total Capital Outlay Required: ₹${fo.totalProjectCost.toLocaleString('en-IN')} (10% Promoter Margin: ₹${fo.promoterMarginRequired.toLocaleString('en-IN')}, 90% Bank Loan: ₹${fo.bankLoanEligible.toLocaleString('en-IN')})
@@ -564,10 +775,10 @@ STRICT RULES:
 
   const userPrompt = `${historyBlock}BUSINESS PROFILE:
 - Location: ${input.location}
-- Enterprise Category: ${input.category}
+- Enterprise Category: ${activeCategory} (Domain: ${domain})
 - Promoter Margin Capital: ₹${input.marginCapital.toLocaleString('en-IN')}
 
-${input.userQuery ? `CURRENT USER QUESTION:\n${input.userQuery}${calcSummary}\n\nINSTRUCTION: In the 'reply' field, answer the user's question directly with the exact calculated figures. Show the step-by-step breakdown (Target ÷ Profit per unit = Units needed) and assumptions clearly.` : 'CURRENT INQUIRY:\nProvide an initial comprehensive business viability assessment for starting or operating this enterprise.'}
+${input.userQuery ? `CURRENT USER QUESTION:\n${input.userQuery}${calcSummary}\n\nINSTRUCTION: In the 'reply' field, answer the user's question directly for ${activeCategory}. Do not mention unrelated domains.` : 'CURRENT INQUIRY:\nProvide an initial comprehensive business viability assessment for starting or operating this enterprise.'}
 
 GROUNDING CONTEXT (Local Market Data, Mandi Price Trends & District Demographics):
 ${grounded.summaryContext}
@@ -593,21 +804,26 @@ Return pure JSON with keys:
       const rawJson = (jsonMatch[1] || response.text).trim();
       const parsed = JSON.parse(rawJson);
 
-      const result: BusinessAdvisorOutput = {
-        ...parsed,
-        groundedFacts: {
-          district: grounded.districtData.name,
-          category: grounded.categoryData.name,
-          benchmarkOpex: (grounded.categoryData.typicalCosts || []).map((c: any) => ({
-            item: c.item,
-            percentage: c.percentageOfOpex,
-          })),
-        },
-        sourcesUsed: ['Local District Profile', 'NBCFDC Category Benchmarks'],
-        providerUsed: response.provider,
-      };
-      advisorCache.set(cacheKey, { timestamp: Date.now(), data: result });
-      return result;
+      // Verify anti-contamination on Gemini response
+      if (!hasCrossDomainContamination(parsed.reply || '', domain, isTe)) {
+        const result: BusinessAdvisorOutput = {
+          ...parsed,
+          groundedFacts: {
+            district: grounded.districtData.name,
+            category: grounded.categoryData.name,
+            benchmarkOpex: (grounded.categoryData.typicalCosts || []).map((c: any) => ({
+              item: c.item,
+              percentage: c.percentageOfOpex,
+            })),
+          },
+          sourcesUsed: ['Local District Profile', 'NBCFDC Category Benchmarks'],
+          providerUsed: response.provider,
+        };
+        advisorCache.set(cacheKey, { timestamp: Date.now(), data: result });
+        return result;
+      } else {
+        console.warn(`[GUARD TRIGGERED] Gemini response contained cross-domain contamination for domain ${domain}. Falling back to domain-grounded synthesis.`);
+      }
     } catch (e) {
       console.warn('[AI Pipeline Warning] Failed to parse Gemini response JSON, using grounded local synthesis:', e);
     }
